@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "348851475077",
+    "project_id": "group-1-nt118-q13",
+    "storage_bucket": "group-1-nt118-q13.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:348851475077:android:4e4cbb398433898c0f0fec",
+        "android_client_info": {
+          "package_name": "com.example.metube"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBa_dOYYNIPOQo3Kckce_IdsfHaXJy66K8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
