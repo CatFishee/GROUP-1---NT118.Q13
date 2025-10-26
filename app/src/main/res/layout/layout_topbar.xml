@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    android:orientation="horizontal"
+    android:paddingHorizontal="12dp"
+    android:gravity="center_vertical"
+    android:background="@color/white">
+    <!-- Logo + tên app -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/logo"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/logo_metube"
+            android:contentDescription="App Logo"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:layout_marginEnd="6dp" />
+        <TextView
+            android:id="@+id/appTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Metube"
+            android:textStyle="bold"
+            android:textSize="20sp"
+            android:textColor="@color/app_main_color"/>
+    </LinearLayout>
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1" />
+    <!-- Icon bên phải -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center_vertical" >
+
+        <ImageView
+            android:id="@+id/btnNotifications"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="16dp"
+            android:src="@drawable/ic_notifications"
+            android:contentDescription="Notifications"/>
+
+        <ImageView
+            android:id="@+id/btnSearch"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginEnd="2dp"
+            android:src="@drawable/ic_search"
+            android:contentDescription="Search"/>
+    </LinearLayout>
+</LinearLayout>

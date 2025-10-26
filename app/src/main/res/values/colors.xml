@@ -2,4 +2,6 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- Màu chủ đạo của app -->
+    <color name="app_main_color">#63A361</color>
 </resources>
