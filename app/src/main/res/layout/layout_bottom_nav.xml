@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="60dp"
+    android:orientation="horizontal"
+    android:background="@color/white"
+    android:weightSum="5"
+    android:elevation="8dp">
+
+    <!-- Home -->
+    <LinearLayout
+        android:id="@+id/tabHome"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_home"/>
+        <!-- Text cho Home -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Home"
+            android:textSize="11sp"
+            android:textColor="#000000"/>
+    </LinearLayout>
+
+    <!-- Content Creator -->
+    <LinearLayout
+        android:id="@+id/tabCreator"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:src="@drawable/ic_creator"
+            app:tint="@color/app_main_color" />
+        <!-- Text cho Shorts -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Content Creator"
+            android:textSize="11sp"
+            android:textColor="#000000"/>
+    </LinearLayout>
+
+    <!-- Upload (nút giữa, dạng tròn) -->
+    <FrameLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1">
+
+        <ImageView
+            android:id="@+id/tabUpload"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_circle_button"
+            android:backgroundTint="@color/app_main_color"
+            android:src="@drawable/ic_add"
+            android:padding="12dp"
+            android:elevation="4dp"
+            app:tint="@android:color/white" />
+    </FrameLayout>
+
+    <!-- Subscriptions -->
+    <LinearLayout
+        android:id="@+id/tabSubs"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_subscriptions"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Subscriptions"
+            android:textSize="11sp"
+            android:textColor="#000000"/>
+    </LinearLayout>
+
+    <!-- Profile -->
+    <LinearLayout
+        android:id="@+id/tabProfile"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:clickable="true"
+        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_person"/>
+        <!-- Text cho You -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="You"
+            android:textSize="11sp"
+            android:textColor="#000000"/>
+    </LinearLayout>
+
+</LinearLayout>
