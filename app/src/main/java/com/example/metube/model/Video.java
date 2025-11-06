@@ -1,6 +1,8 @@
 package com.example.metube.model;
 
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.ServerTimestamp;
+
 import java.util.List;
 
 public class Video {
@@ -12,6 +14,7 @@ public class Video {
     private String thumbnailURL;
     private String videoURL;
     private long duration;
+    @ServerTimestamp
     private Timestamp createdAt; //timestamp của Firebase
     public Video() {}
 
@@ -24,7 +27,6 @@ public class Video {
         this.thumbnailURL = thumbnailURL;
         this.videoURL = videoURL;
         this.duration = duration;
-        this.createdAt = createdAt;
     }
         public String getVideoID() { return videoID; }
         public void setVideoID(String videoID) { this.videoID = videoID; }
