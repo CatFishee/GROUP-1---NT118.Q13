@@ -16,9 +16,11 @@ import com.example.metube.model.Video;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import android.content.Intent;
+import com.example.metube.ui.upload.UploadActivity;
 
 
-public class HomepageActivity extends AppCompatActivity {
+public class HomepageActivity extends AppCompatActivity{
 
     private List<String> topics;
     private LinearLayout topicContainer;
@@ -28,12 +30,13 @@ public class HomepageActivity extends AppCompatActivity {
     private VideoAdapter videoAdapter;
     private List<Video> videoList;
     private FirebaseFirestore db;
+    private static final String TAG = "HomepageActivity_Debug";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_homepage);
-
+        db = FirebaseFirestore.getInstance();
         topicContainer = findViewById(R.id.topicContainer);
 
         topics = new ArrayList<>();
@@ -49,6 +52,25 @@ public class HomepageActivity extends AppCompatActivity {
         setupTopicFilters(topics);
         setupRecyclerView();
         fetchVideosFromFirestore();
+        View bottomNavView = findViewById(R.id.bottomNav);
+        if (bottomNavView != null) {
+            View uploadButton = bottomNavView.findViewById(R.id.tabUpload);
+
+            if (uploadButton != null) {
+                uploadButton.setOnClickListener(v -> {
+                    // --- THÊM DÒNG LOG CỦA BẠN VÀO ĐÂY ---
+                    Log.d(TAG, "Nút Upload đã được nhấn! Đang chuẩn bị mở UploadActivity...");
+
+                    // Các dòng code cũ giữ nguyên
+                    Intent intent = new Intent(HomepageActivity.this, UploadActivity.class);
+                    startActivity(intent);
+                });
+            } else {
+                Log.e(TAG, "Lỗi: Không tìm thấy uploadButton (R.id.tabUpload) bên trong bottomNavView!");
+            }
+        } else {
+            Log.e(TAG, "Lỗi: Không tìm thấy bottomNavView (R.id.bottomNav)!");
+        }
     }
 
     private void setupTopicFilters(List<String> topicList) {
@@ -96,7 +118,7 @@ public class HomepageActivity extends AppCompatActivity {
         videoList = new ArrayList<>();
 
         // Khởi tạo adapter với context và một danh sách rỗng
-        videoAdapter = new VideoAdapter(this, videoList);
+        videoAdapter = new VideoAdapter(this, videoList, null);
 
         recyclerViewVideos.setLayoutManager(new LinearLayoutManager(this));
         recyclerViewVideos.setAdapter(videoAdapter);

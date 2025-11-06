@@ -18,24 +18,30 @@
         android:theme="@style/Theme.MeTube">
 
         <!-- LOGIN activity launches first -->
+<!--        <activity-->
+<!--            android:name=".login.LoginActivity"-->
+<!--            android:exported="true">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
+
+        <!-- MAIN activity (opened after login) -->
         <activity
-            android:name=".login.LoginActivity"
+            android:name=".ui.home.HomepageActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- MAIN activity (opened after login) -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true" />
+        <activity android:name=".ui.upload.UploadActivity" />
 
         <!-- Facebook SDK requires this metadata -->
-        <meta-data
-            android:name="com.facebook.sdk.ApplicationId"
-            android:value="@string/facebook_app_id" />
+<!--        <meta-data-->
+<!--            android:name="com.facebook.sdk.ApplicationId"-->
+<!--            android:value="@string/facebook_app_id" />-->
 
     </application>
 

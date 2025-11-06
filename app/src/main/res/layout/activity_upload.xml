@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginTop="16dp"
+    tools:context=".ui.upload.UploadActivity"
+    android:padding="20dp">
+
+    <!-- Xem trước thumbnail -->
+    <ImageView
+        android:id="@+id/iv_thumbnail_preview"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:scaleType="centerCrop"
+        android:background="#E0E0E0"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Nút chọn Thumbnail -->
+    <Button
+        android:id="@+id/btn_select_thumbnail"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Select Thumbnail"
+        android:backgroundTint="@color/app_main_color"
+        android:layout_marginStart="16dp"
+        app:layout_constraintTop_toTopOf="@id/iv_thumbnail_preview"
+        app:layout_constraintStart_toEndOf="@id/iv_thumbnail_preview"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Nút chọn Video -->
+    <Button
+        android:id="@+id/btn_select_video"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Select Video"
+        android:backgroundTint="@color/app_main_color"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/btn_select_thumbnail"
+        app:layout_constraintStart_toStartOf="@id/btn_select_thumbnail"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Tên video đã chọn -->
+    <TextView
+        android:id="@+id/tv_selected_video_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="No video selected"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/btn_select_video"
+        app:layout_constraintStart_toStartOf="@id/btn_select_video"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Nhập tiêu đề -->
+    <EditText
+        android:id="@+id/et_video_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Video Title"
+        android:inputType="text"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/iv_thumbnail_preview"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Nhập mô tả -->
+    <EditText
+        android:id="@+id/et_video_description"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:hint="Description"
+        android:inputType="textMultiLine"
+        android:minLines="3"
+        android:gravity="top"
+        android:layout_marginTop="16dp"
+        app:layout_constraintTop_toBottomOf="@id/et_video_title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Nút Upload -->
+    <Button
+        android:id="@+id/btn_upload_video"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Upload Video"
+        android:backgroundTint="@color/app_main_color"
+        android:layout_marginTop="24dp"
+        app:layout_constraintTop_toBottomOf="@id/et_video_description"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Vòng xoay tiến trình -->
+    <ProgressBar
+        android:id="@+id/progress_bar_upload"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
