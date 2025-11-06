@@ -28,6 +28,13 @@
             android:orientation="vertical" >
             <include layout="@layout/layout_topic_filter" />
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerViewVideos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+
 <!--            <TextView-->
 <!--                android:id="@+id/textView"-->
 <!--                android:layout_width="match_parent"-->

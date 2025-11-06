@@ -50,6 +50,11 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
     implementation(libs.firebase.database)
+    implementation("de.hdodenhof:circleimageview:3.1.0")
+
+    // --- Tải thumbnailURL của video
+    implementation ("com.github.bumptech.glide:glide:4.12.0")
+    annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0")
 
     // --- Google Sign-In ---
     implementation(libs.play.services.auth)
