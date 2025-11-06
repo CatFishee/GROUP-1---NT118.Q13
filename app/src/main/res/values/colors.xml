@@ -4,4 +4,5 @@
     <color name="white">#FFFFFFFF</color>
     <!-- Màu chủ đạo của app -->
     <color name="app_main_color">#63A361</color>
+    <color name="light_green_background">#EAF3EA</color>
 </resources>

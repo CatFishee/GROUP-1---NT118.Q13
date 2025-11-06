@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Khi nút được chọn -->
+    <item android:drawable="@drawable/button_topic_selected" android:state_selected="true" />
+    <!-- Trạng thái mặc định -->
+    <item android:drawable="@drawable/button_topic_unselected" />
+</selector>

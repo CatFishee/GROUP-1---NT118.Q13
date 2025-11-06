@@ -5,6 +5,7 @@
     android:orientation="horizontal"
     android:paddingHorizontal="12dp"
     android:gravity="center_vertical"
+    android:paddingTop="20dp"
     android:background="@color/white">
     <!-- Logo + tên app -->
     <LinearLayout
@@ -28,7 +29,7 @@
             android:layout_height="wrap_content"
             android:text="Metube"
             android:textStyle="bold"
-            android:textSize="20sp"
+            android:textSize="26sp"
             android:textColor="@color/app_main_color"/>
     </LinearLayout>
 
