@@ -12,7 +12,20 @@
           "package_name": "com.example.metube"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "348851475077-ndq542uh4i5he31cd3a0k9vi2f9ohm3c.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.metube",
+            "certificate_hash": "e8281c27174184e91adf96c716d9c9d0b2eafe75"
+          }
+        },
+        {
+          "client_id": "348851475077-3njqp39r3fvcqi8a7mmomc7gk3seepuu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBa_dOYYNIPOQo3Kckce_IdsfHaXJy66K8"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "348851475077-3njqp39r3fvcqi8a7mmomc7gk3seepuu.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

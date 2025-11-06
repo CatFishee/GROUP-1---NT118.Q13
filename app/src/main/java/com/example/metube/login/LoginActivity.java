@@ -10,8 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.metube.MainActivity;
 import com.example.metube.model.User;
-import com.example.metube.ui.home.HomepageActivity;
 import com.facebook.*;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
@@ -144,7 +144,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void startMainActivity() {
-        startActivity(new Intent(this, HomepageActivity.class));
+        startActivity(new Intent(this, com.example.metube.MainActivity.class));
         finish();
     }
 
