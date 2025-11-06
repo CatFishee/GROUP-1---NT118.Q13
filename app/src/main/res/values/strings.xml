@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">MeTube</string>
+    <string name="facebook_app_id">YOUR_FACEBOOK_APP_ID_HERE</string>
 </resources>
