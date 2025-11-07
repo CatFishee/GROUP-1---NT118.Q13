@@ -7,7 +7,7 @@
     android:gravity="center"
     android:padding="32dp"
     android:background="#FFFFFF"
-    tools:context=".login.LoginActivity">
+    tools:context=".ui.login.LoginActivity">
 
     <ImageView
         android:id="@+id/appLogo"

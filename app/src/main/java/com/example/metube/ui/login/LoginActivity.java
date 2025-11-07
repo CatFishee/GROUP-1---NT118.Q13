@@ -1,4 +1,4 @@
-package com.example.metube.login;
+package com.example.metube.ui.login;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -7,10 +7,8 @@ import android.widget.Button;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.metube.MainActivity;
 import com.example.metube.model.User;
 import com.facebook.*;
 import com.facebook.login.LoginManager;
@@ -57,7 +55,7 @@ public class LoginActivity extends AppCompatActivity {
 
         // If already logged in, skip to main activity
         if (mAuth.getCurrentUser() != null) {
-            startMainActivity();
+            startHomeActivity();
             return;
         }
 
@@ -139,12 +137,13 @@ public class LoginActivity extends AppCompatActivity {
                 usersRef.child(userID).setValue(newUser);
             }
 
-            startMainActivity();
+            startHomeActivity();
         });
     }
 
-    private void startMainActivity() {
-        startActivity(new Intent(this, com.example.metube.MainActivity.class));
+    private void startHomeActivity() {
+        Intent intent = new Intent(this, com.example.metube.ui.home.HomepageActivity.class);
+        startActivity(intent);
         finish();
     }
 

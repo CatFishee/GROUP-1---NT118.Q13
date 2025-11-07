@@ -3,25 +3,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.metube">
 
+    <!-- Internet permissions for Firebase, Google, Facebook -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
+        android:name=".service.FirebaseInitializer"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MeTube">
+        android:theme="@style/Theme.MeTube"
+        tools:replace="android:theme">
 
-        <!-- LOGIN activity launches first -->
-<!--        <activity-->
-<!--            android:name=".login.LoginActivity"-->
-<!--            android:exported="true">-->
-<!--            <intent-filter>-->
-<!--                <action android:name="android.intent.action.MAIN" />-->
-<!--                <category android:name="android.intent.category.LAUNCHER" />-->
-<!--            </intent-filter>-->
-<!--        </activity>-->
-
-        <!-- MAIN activity (opened after login) -->
         <!-- Facebook SDK initialization -->
         <provider
             android:name="com.facebook.internal.FacebookInitProvider"
@@ -41,8 +36,7 @@
         <activity
             android:name="com.facebook.FacebookActivity"
             android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
-            android:label="@string/app_name"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:theme="@style/com_facebook_activity_theme"
             tools:replace="android:theme" />
 
         <!-- Facebook Custom Tabs -->
@@ -57,23 +51,18 @@
             </intent-filter>
         </activity>
 
-        <!-- Your main app activity -->
+        <!-- LOGIN activity launches first -->
         <activity
-            android:name=".ui.home.HomepageActivity"
+            android:name=".ui.login.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ui.upload.UploadActivity" />
 
-        <!-- Facebook SDK requires this metadata -->
-<!--        <meta-data-->
-<!--            android:name="com.facebook.sdk.ApplicationId"-->
-<!--            android:value="@string/facebook_app_id" />-->
-
-
+        <!-- MAIN app activity -->
+        <activity android:name=".ui.home.HomepageActivity" android:exported="true" />
+        <activity android:name=".ui.upload.UploadActivity" android:exported="true" />
     </application>
-
 </manifest>
