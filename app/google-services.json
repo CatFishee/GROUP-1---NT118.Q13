@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "348851475077",
+    "firebase_url": "https://group-1-nt118-q13-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "group-1-nt118-q13",
     "storage_bucket": "group-1-nt118-q13.firebasestorage.app"
   },
@@ -14,11 +15,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "348851475077-ndq542uh4i5he31cd3a0k9vi2f9ohm3c.apps.googleusercontent.com",
+          "client_id": "348851475077-0s6vufchjk6fdou3265og1gu5h7tln1q.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.metube",
-            "certificate_hash": "e8281c27174184e91adf96c716d9c9d0b2eafe75"
+            "certificate_hash": "445f4c28d72bc63649a0066e24a430a6b5fe032b"
           }
         },
         {

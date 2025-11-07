@@ -3,23 +3,31 @@ package com.example.metube.ui.login;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Button;
-
+import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-
+import com.example.metube.R;
 import com.example.metube.model.User;
-import com.facebook.*;
+import com.example.metube.ui.home.HomepageActivity;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
-import com.google.android.gms.auth.api.signin.*;
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.*;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.example.metube.R;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.FacebookAuthProvider;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Arrays;
 
@@ -32,15 +40,18 @@ public class LoginActivity extends AppCompatActivity {
 
     private final ActivityResultLauncher<Intent> googleSignInLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
-                if (result.getData() != null) {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(result.getData());
                     try {
                         GoogleSignInAccount account = task.getResult(ApiException.class);
                         if (account != null) {
+                            Log.d(TAG, "Google account: " + account.getEmail());
+                            Log.d(TAG, "ID Token: " + account.getIdToken());
                             firebaseAuthWithGoogle(account.getIdToken());
                         }
                     } catch (ApiException e) {
                         Log.w(TAG, "Google sign-in failed", e);
+                        Toast.makeText(this, "Google Sign-in Failed", Toast.LENGTH_SHORT).show();
                     }
                 }
             });
@@ -50,10 +61,8 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
 
-        // If already logged in, skip to main activity
         if (mAuth.getCurrentUser() != null) {
             startHomeActivity();
             return;
@@ -64,92 +73,107 @@ public class LoginActivity extends AppCompatActivity {
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
                 .build();
-
         googleSignInClient = GoogleSignIn.getClient(this, gso);
-
-        findViewById(R.id.btnGoogleSignIn).setOnClickListener(v -> {
-            Intent signInIntent = googleSignInClient.getSignInIntent();
-            googleSignInLauncher.launch(signInIntent);
-        });
+        findViewById(R.id.btnGoogleSignIn).setOnClickListener(v -> googleSignInLauncher.launch(googleSignInClient.getSignInIntent()));
 
         // ---- FACEBOOK SIGN-IN ----
-        FacebookSdk.sdkInitialize(getApplicationContext());
         callbackManager = CallbackManager.Factory.create();
 
-        Button facebookButton = findViewById(R.id.btnFacebookSignIn);
-        facebookButton.setOnClickListener(v -> {
+        LoginManager.getInstance().registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                handleFacebookAccessToken(loginResult.getAccessToken());
+            }
+            @Override
+            public void onCancel() {
+                Log.d(TAG, "Facebook sign-in canceled");
+            }
+            @Override
+            public void onError(FacebookException error) {
+                Log.w(TAG, "Facebook sign-in failed", error);
+                Toast.makeText(LoginActivity.this, "Facebook Sign-in Failed", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        findViewById(R.id.btnFacebookSignIn).setOnClickListener(v -> {
             LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("email", "public_profile"));
-            LoginManager.getInstance().registerCallback(callbackManager, new FacebookCallback<LoginResult>() {
-                @Override
-                public void onSuccess(LoginResult loginResult) {
-                    handleFacebookAccessToken(loginResult.getAccessToken());
-                }
-
-                @Override
-                public void onCancel() {
-                    Log.d(TAG, "Facebook sign-in canceled");
-                }
-
-                @Override
-                public void onError(FacebookException error) {
-                    Log.w(TAG, "Facebook sign-in failed", error);
-                }
-            });
         });
     }
 
     private void firebaseAuthWithGoogle(String idToken) {
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
-        mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
-            if (task.isSuccessful()) {
-                createUserIfNew();
-            } else {
-                Log.w(TAG, "Google authentication failed", task.getException());
-            }
-        });
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, task -> {
+                    if (task.isSuccessful()) {
+                        Log.d(TAG, "Google auth successful.");
+                        createUserIfNew(() -> startHomeActivity()); // callback sau khi tạo user
+                    } else {
+                        Log.w(TAG, "Google auth failed", task.getException());
+                        Toast.makeText(this, "Login failed!", Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
-    private void handleFacebookAccessToken(AccessToken token) {
+    private void handleFacebookAccessToken(com.facebook.AccessToken token) {
         AuthCredential credential = FacebookAuthProvider.getCredential(token.getToken());
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
             if (task.isSuccessful()) {
-                createUserIfNew();
+                Log.d(TAG, "Facebook auth successful. Navigating to Home.");
+                createUserIfNew(() -> startHomeActivity()); // Chạy tác vụ nền để tạo user
             } else {
-                Log.w(TAG, "Facebook authentication failed", task.getException());
+                Log.w(TAG, "Facebook auth failed", task.getException());
             }
         });
     }
 
-    private void createUserIfNew() {
+    private void createUserIfNew(Runnable onComplete) {
         FirebaseUser firebaseUser = mAuth.getCurrentUser();
-        if (firebaseUser == null) return;
+        if (firebaseUser == null) {
+            Log.w(TAG, "FirebaseUser null when creating user.");
+            onComplete.run();
+            return;
+        }
 
-        DatabaseReference usersRef = FirebaseDatabase.getInstance().getReference("Users");
-        String userID = firebaseUser.getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        DocumentReference userDocRef = db.collection("users").document(firebaseUser.getUid());
 
-        usersRef.child(userID).get().addOnCompleteListener(task -> {
-            if (!task.isSuccessful() || task.getResult() == null || !task.getResult().exists()) {
-                String name = firebaseUser.getDisplayName() != null ? firebaseUser.getDisplayName() : "New User";
-                String email = firebaseUser.getEmail() != null ? firebaseUser.getEmail() : "";
-                String profileURL = firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : "";
-
-                User newUser = new User(userID, name, email, false, false, profileURL);
-                usersRef.child(userID).setValue(newUser);
+        userDocRef.get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null && !task.getResult().exists()) {
+                User newUser = new User(
+                        firebaseUser.getUid(),
+                        firebaseUser.getDisplayName() != null ? firebaseUser.getDisplayName() : "New User",
+                        firebaseUser.getEmail() != null ? firebaseUser.getEmail() : "",
+                        false, false,
+                        firebaseUser.getPhotoUrl() != null ? firebaseUser.getPhotoUrl().toString() : ""
+                );
+                userDocRef.set(newUser)
+                        .addOnSuccessListener(aVoid -> {
+                            Log.d(TAG, "New user created.");
+                            onComplete.run();
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "Error creating user", e);
+                            onComplete.run();
+                        });
+            } else {
+                Log.d(TAG, "User exists or failed check.");
+                onComplete.run();
             }
-
-            startHomeActivity();
         });
     }
+
 
     private void startHomeActivity() {
-        Intent intent = new Intent(this, com.example.metube.ui.home.HomepageActivity.class);
+        Intent intent = new Intent(this, HomepageActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }
 
+    // Facebook SDK vẫn cần phương thức này để nhận kết quả
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
         callbackManager.onActivityResult(requestCode, resultCode, data);
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }

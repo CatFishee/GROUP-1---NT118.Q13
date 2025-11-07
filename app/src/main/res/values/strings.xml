@@ -1,7 +1,8 @@
 <resources>
     <string name="app_name">MeTube</string>
     <string name="facebook_app_id">846187834526871</string>
-    <string name="default_web_client_id">348851475077-ndq542uh4i5he31cd3a0k9vi2f9ohm3c.apps.googleusercontent.com</string>
+    <string name="default_web_client_id">348851475077-3njqp39r3fvcqi8a7mmomc7gk3seepuu.apps.googleusercontent.com</string>
     <string name="facebook_client_token">39a0104c9bfebcfc3f8cb090902a9bce</string>
     <string name="fb_login_protocol_scheme">fb846187834526871</string>
 </resources>
+
