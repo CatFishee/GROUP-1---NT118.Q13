@@ -53,8 +53,8 @@ dependencies {
     implementation("de.hdodenhof:circleimageview:3.1.0")
     implementation("com.google.firebase:firebase-firestore-ktx:24.4.1")
     // --- Tải thumbnailURL của video
-    implementation ("com.github.bumptech.glide:glide:5.0.5")
-    annotationProcessor ("com.github.bumptech.glide:compiler:5.0.5")
+    implementation ("com.github.bumptech.glide:glide:4.12.0")
+    annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0")
 
     // --- Google Sign-In ---
     implementation(libs.play.services.auth)

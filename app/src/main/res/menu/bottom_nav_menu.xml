@@ -4,9 +4,9 @@
     android:layout_width="match_parent"
     android:layout_height="60dp"
     android:orientation="horizontal"
-    android:background="@color/white"
-    android:weightSum="5"
-    android:elevation="8dp">
+    android:background="@android:color/white"
+    android:elevation="8dp"
+    android:clipChildren="false"> <!-- CHO PHÉP NÚT CON "TRÀN" RA NGOÀI -->
 
     <!-- Home -->
     <LinearLayout
@@ -14,68 +14,56 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:orientation="vertical"
         android:gravity="center"
-        android:clickable="true"
-        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        android:orientation="vertical">
         <ImageView
-            android:id="@+id/iv_home"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_home" />
-        <!-- Text cho Home -->
+            android:src="@drawable/ic_home"/>
         <TextView
-            android:id="@+id/tv_home"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Home"
-            android:textSize="11sp"
-            android:textColor="#000000"/>
+            android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Content Creator -->
+    <!-- Creator -->
     <LinearLayout
         android:id="@+id/tabCreator"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:orientation="vertical"
         android:gravity="center"
-        android:clickable="true"
-        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        android:orientation="vertical">
         <ImageView
-            android:id="@+id/iv_creator"
             android:layout_width="26dp"
             android:layout_height="26dp"
-            android:src="@drawable/ic_creator" />
-        <!-- Text cho Content Creator -->
+            android:src="@drawable/ic_creator"/>
         <TextView
-            android:id="@+id/tv_creator"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Content Creator"
-            android:textSize="11sp"
-            android:textColor="#000000"/>
+            android:text="Creator"
+            android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Upload (nút giữa, dạng tròn) -->
+    <!-- Upload (NÚT GIỮA ĐÃ ĐƯỢC NÂNG CẤP) -->
     <FrameLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1">
-
         <ImageView
             android:id="@+id/tabUpload"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:layout_gravity="center"
+            android:translationY="-16dp"
             android:background="@drawable/bg_circle_button"
-            android:backgroundTint="@color/app_main_color"
             android:src="@drawable/ic_add"
-            android:padding="12dp"
+            android:scaleType="center"
             android:elevation="4dp"
             app:tint="@android:color/white" />
     </FrameLayout>
+
 
     <!-- Subscriptions -->
     <LinearLayout
@@ -83,47 +71,36 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:orientation="vertical"
         android:gravity="center"
-        android:clickable="true"
-        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        android:orientation="vertical">
         <ImageView
-            android:id="@+id/iv_subs"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_subscriptions" />
+            android:src="@drawable/ic_subscriptions"/>
         <TextView
-            android:id="@+id/tv_subs"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Subscriptions"
-            android:textSize="11sp"
-            android:textColor="#000000"/>
+            android:textSize="11sp" />
     </LinearLayout>
 
-    <!-- Profile -->
+    <!-- You -->
     <LinearLayout
         android:id="@+id/tabProfile"
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"
-        android:orientation="vertical"
         android:gravity="center"
-        android:clickable="true"
-        android:foreground="?android:attr/selectableItemBackgroundBorderless">
+        android:orientation="vertical">
         <ImageView
-            android:id="@+id/iv_profile"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_person"/>
-        <!-- Text cho You -->
         <TextView
-            android:id="@+id/tv_profile"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="You"
-            android:textSize="11sp"
-            android:textColor="#000000"/>
+            android:textSize="11sp" />
     </LinearLayout>
 
 </LinearLayout>

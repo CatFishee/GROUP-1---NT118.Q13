@@ -3,6 +3,20 @@
     <style name="Base.Theme.MeTube" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- 1. Màu chủ đạo: Dùng cho các thành phần quan trọng như FloatingActionButton -->
+        <item name="colorPrimary">@color/app_main_color</item>
+        <!-- Màu chữ/icon trên nền màu chủ đạo -->
+        <item name="colorOnPrimary">@color/white</item>
+
+        <!-- 2. Màu cho "viên thuốc" chỉ báo (indicator) trong BottomNavigationView -->
+        <item name="colorSecondaryContainer">@color/light_green_background</item>
+        <!-- Màu chữ/icon bên trong "viên thuốc" -->
+        <item name="colorOnSecondaryContainer">@color/app_main_color</item>
+
+        <!-- 3. Màu cho các bề mặt như BottomAppBar, CardView... -->
+        <item name="colorSurface">@color/white</item>
+        <!-- Màu chữ/icon trên các bề mặt đó -->
+        <item name="colorOnSurface">@color/black</item>
     </style>
 
     <style name="Theme.MeTube" parent="Base.Theme.MeTube" />

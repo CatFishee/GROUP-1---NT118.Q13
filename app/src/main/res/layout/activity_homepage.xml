@@ -1,60 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
     <include
-        layout="@layout/layout_topbar"
         android:id="@+id/topBar"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        layout="@layout/layout_topbar"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ScrollView
-        android:layout_width="match_parent"
+        android:id="@+id/home_content_container"
+        android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="#FFFFFF"
         app:layout_constraintTop_toBottomOf="@id/topBar"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/bottomNav">
-
+        app:layout_constraintEnd_toEndOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" >
+            android:orientation="vertical">
             <include layout="@layout/layout_topic_filter" />
-
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerViewVideos"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
-
-<!--            <TextView-->
-<!--                android:id="@+id/textView"-->
-<!--                android:layout_width="match_parent"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:text="What would you like to watch?"-->
-<!--                android:textAlignment="center"-->
-<!--                android:textStyle="bold"-->
-<!--                android:textColor="#63A361"-->
-<!--                android:layout_marginTop="24dp"-->
-<!--                android:textSize="25dp"/>-->
+                android:layout_height="wrap_content" />
         </LinearLayout>
     </ScrollView>
+    <!-- KHUNG CHỨA CHO CÁC FRAGMENT KHÁC -->
+    <FrameLayout
+        android:id="@+id/fragment_container"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/topBar"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <include
-        layout="@layout/layout_bottom_nav"
         android:id="@+id/bottomNav"
+        layout="@layout/layout_bottom_nav"
         android:layout_width="0dp"
         android:layout_height="60dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
