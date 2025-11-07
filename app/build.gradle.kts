@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.gms.google.services)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -44,17 +45,16 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
 
-    // --- Firebase ---
+    // --- Firebase (only keep Auth + Firestore + Database)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
     implementation(libs.firebase.database)
-    implementation("de.hdodenhof:circleimageview:3.1.0")
-    implementation("com.google.firebase:firebase-firestore-ktx:24.4.1")
-    // --- Tải thumbnailURL của video
-    implementation ("com.github.bumptech.glide:glide:4.12.0")
-    annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0")
+    implementation(libs.circleimageview)
+
+    // --- Glide for thumbnails ---
+    implementation(libs.glide)
+    annotationProcessor(libs.glide.compiler)
 
     // --- Google Sign-In ---
     implementation(libs.play.services.auth)
@@ -66,6 +66,15 @@ dependencies {
     implementation(libs.credentials)
     implementation(libs.credentials.play.services.auth)
     implementation(libs.googleid)
+
+    // --- Supabase ---
+    // implementation(libs.supabase.gotrue)
+    implementation(libs.supabase.storage)
+    implementation(libs.supabase.postgrest)
+    implementation(libs.supabase.realtime)
+    implementation(libs.okhttp)
+    // --- Kotlinx Serialization ---
+    implementation(libs.kotlinx.serialization.json)
 
     // --- Testing ---
     testImplementation(libs.junit)
