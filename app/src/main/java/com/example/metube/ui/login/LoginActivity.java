@@ -1,4 +1,4 @@
-package com.example.metube.login;
+package com.example.metube.ui.login;
 
 import android.content.Intent;
 import android.os.Bundle;
