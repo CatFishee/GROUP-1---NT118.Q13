@@ -9,7 +9,6 @@
     <path
         android:pathData="M 0,20 Q 25,0 50,20 T 100,20 L 100,100 L 0,100 Z">
 
-        <!-- THAY THẾ "fillColor" BẰNG ĐOẠN CODE GRADIENT NÀY -->
         <aapt:attr name="android:fillColor">
             <gradient
                 android:startX="50"

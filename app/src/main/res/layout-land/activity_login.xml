@@ -52,7 +52,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="-100dp"
             android:layout_marginBottom="20dp"
-            android:text="Metube"
+            android:text="MeTube"
             android:textColor="@color/app_main_color"
             android:textSize="40sp"
             android:textStyle="bold"/>
@@ -128,7 +128,6 @@
         app:layout_constraintStart_toStartOf="@id/btnGoogleSignIn"
         app:layout_constraintEnd_toEndOf="@id/btnGoogleSignIn">
 
-        <!-- NỘI DUNG NÚT FACEBOOK-->
         <ImageView
             android:id="@+id/iv_facebook_logo"
             android:layout_width="30dp"
