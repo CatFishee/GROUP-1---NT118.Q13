@@ -5,4 +5,7 @@
     <!-- Màu chủ đạo của app -->
     <color name="app_main_color">#63A361</color>
     <color name="light_green_background">#EAF3EA</color>
+
+    <color name="login_gradient_end">#32964f</color> <!-- Xanh lá đậm -->
+    <color name="login_gradient_start">#67e088</color>   <!-- Xanh lá nhạt -->
 </resources>

@@ -7,85 +7,98 @@
     android:background="@android:color/white"
     tools:context=".ui.login.LoginActivity">
 
-    <!-- HÌNH DẠNG SÓNG MÀU XANH LÁ -->
+    <!-- HÌNH DẠNG SÓNG -->
     <ImageView
-        android:id="@+id/iv_bottom_shape"
+        android:id="@+id/iv_side_shape"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:src="@drawable/background_login_wave"
+        android:src="@drawable/background_login_wave_land"
         android:scaleType="fitXY"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintHeight_percent="0.65"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintWidth_percent="0.7"
         tools:ignore="ContentDescription" />
 
-    <!-- LOGO VÀ TÊN APP -->
-    <ImageView
-        android:id="@+id/appLogo"
-        android:layout_width="130dp"
-        android:layout_height="130dp"
-        android:src="@drawable/logo_metube"
-        app:layout_constraintBottom_toTopOf="@id/iv_bottom_shape"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="110dp"/>
-
-    <TextView
-        android:id="@+id/tvAppName"
+    <!-- Đường phân chia ảo -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_center"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Metube"
-        android:textColor="@color/app_main_color"
-        android:textSize="45sp"
-        android:textStyle="bold"
-        android:layout_marginTop="0dp"
-        app:layout_constraintTop_toBottomOf="@id/appLogo"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.45" />
 
-    <TextView
-        android:id="@+id/tvSlogan"
+    <!-- CỘT BÊN TRÁI (Logo, Tên, Slogan) -->
+    <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="40dp"
-        android:layout_marginTop="30dp"
-        android:text="For Those Who Expect \nMore Than YouTube"
-        android:textColor="@color/app_main_color"
-        android:textSize="25sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        app:layout_constraintTop_toBottomOf="@id/tvAppName"
-        app:layout_constraintBottom_toTopOf="@id/iv_bottom_shape"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toStartOf="@id/guideline_center">
 
+        <ImageView
+            android:id="@+id/appLogo"
+            android:layout_width="110dp"
+            android:layout_height="110dp"
+            android:layout_marginBottom="100dp"
+            android:src="@drawable/logo_metube"/>
+
+        <TextView
+            android:id="@+id/tvAppName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="-100dp"
+            android:layout_marginBottom="20dp"
+            android:text="Metube"
+            android:textColor="@color/app_main_color"
+            android:textSize="40sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/tvSlogan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="For Those Who Expect \nMore Than YouTube"
+            android:textColor="@color/app_main_color"
+            android:textSize="20sp"
+            android:textStyle="bold"/>
+
+    </LinearLayout>
+
+    <!-- CỘT BÊN PHẢI (Các nút bấm) -->
     <!-- Nút Google -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/btnGoogleSignIn"
         android:layout_width="0dp"
         android:layout_height="60dp"
-        android:layout_marginHorizontal="40dp"
-        android:layout_marginBottom="30dp"
+        android:layout_marginStart="40dp"
+        android:layout_marginEnd="40dp"
+        android:layout_marginBottom="10dp"
         android:background="@drawable/button_background_white"
         android:clickable="true"
         android:focusable="true"
+        app:layout_constraintVertical_chainStyle="packed"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/btnFacebookSignIn"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toEndOf="@id/guideline_center"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageView
             android:id="@+id/iv_google_logo"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:src="@drawable/ic_google_logo"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/tv_google_text"
             app:layout_constraintHorizontal_chainStyle="packed"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tv_google_text"
             tools:ignore="ContentDescription" />
-
         <TextView
             android:id="@+id/tv_google_text"
             android:layout_width="wrap_content"
@@ -93,13 +106,12 @@
             android:layout_marginStart="12dp"
             android:text="Continue with Google"
             android:textColor="@color/app_main_color"
-            android:textSize="21sp"
             android:textStyle="bold"
+            android:textSize="20dp"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/iv_google_logo"
-            app:layout_constraintTop_toTopOf="parent" />
-
+            app:layout_constraintEnd_toEndOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Nút Facebook -->
@@ -107,40 +119,40 @@
         android:id="@+id/btnFacebookSignIn"
         android:layout_width="0dp"
         android:layout_height="60dp"
-        android:layout_marginHorizontal="40dp"
-        android:layout_marginBottom="120dp"
+        android:layout_marginTop="20dp"
         android:background="@drawable/button_background_white"
         android:clickable="true"
         android:focusable="true"
+        app:layout_constraintTop_toBottomOf="@id/btnGoogleSignIn"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
+        app:layout_constraintStart_toStartOf="@id/btnGoogleSignIn"
+        app:layout_constraintEnd_toEndOf="@id/btnGoogleSignIn">
 
+        <!-- NỘI DUNG NÚT FACEBOOK-->
         <ImageView
             android:id="@+id/iv_facebook_logo"
             android:layout_width="30dp"
             android:layout_height="30dp"
             android:src="@drawable/ic_facebook_logo"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/tv_facebook_text"
             app:layout_constraintHorizontal_chainStyle="packed"
-            app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/tv_facebook_text"
             tools:ignore="ContentDescription" />
-
         <TextView
             android:id="@+id/tv_facebook_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:text="Continue with Facebook"
+            android:textSize="20dp"
             android:textColor="@color/app_main_color"
-            android:textSize="21sp"
             android:textStyle="bold"
+            app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toEndOf="@id/iv_facebook_logo"
-            app:layout_constraintTop_toTopOf="parent" />
-
+            app:layout_constraintEnd_toEndOf="parent" />
     </androidx.constraintlayout.widget.ConstraintLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
