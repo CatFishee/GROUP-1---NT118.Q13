@@ -29,7 +29,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
+import com.example.metube.ui.search.SearchActivity;
 import com.example.metube.ui.upload.UploadActivity;
 
 
@@ -93,6 +93,14 @@ public class HomepageActivity extends AppCompatActivity{
         topBar.findViewById(R.id.btnBack).setOnClickListener(v -> {
             showHomeContent();
         });
+        View searchButton = topBar.findViewById(R.id.btnSearch);
+        if (searchButton != null) {
+            searchButton.setOnClickListener(v -> {
+                // Khi nhấn nút tìm kiếm, mở SearchActivity
+                Intent intent = new Intent(HomepageActivity.this, SearchActivity.class);
+                startActivity(intent);
+            });
+        }
     }
     private void setupBottomNav() {
         View bottomNavView = findViewById(R.id.bottomNav);

@@ -14,6 +14,7 @@ public class Video {
     private String thumbnailURL; // Supabase Thumbnails bucket URL
     private String videoURL;     // Supabase Videos bucket URL
     private long duration;
+    private List<String> searchKeywords;
     @ServerTimestamp
     private Timestamp createdAt;
 
@@ -57,6 +58,8 @@ public class Video {
 
     public long getDuration() { return duration; }
     public void setDuration(long duration) { this.duration = duration; }
+    public List<String> getSearchKeywords() { return searchKeywords;}
+    public void setSearchKeywords(List<String> searchKeywords) { this.searchKeywords = searchKeywords;}
 
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
