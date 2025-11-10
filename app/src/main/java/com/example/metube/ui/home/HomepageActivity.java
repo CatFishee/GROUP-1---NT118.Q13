@@ -4,6 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -27,6 +29,7 @@ import android.widget.ScrollView;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.google.firebase.firestore.ListenerRegistration;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.example.metube.ui.search.SearchActivity;
@@ -42,6 +45,7 @@ public class HomepageActivity extends AppCompatActivity{
     private VideoAdapter videoAdapter;
     private List<Video> videoList;
     private FirebaseFirestore db;
+    private ListenerRegistration firestoreListener;
     private FrameLayout fragmentContainer;
     private ScrollView homeContentContainer;
     private List<ImageView> tabImageViews;
@@ -53,6 +57,7 @@ public class HomepageActivity extends AppCompatActivity{
     private LinearLayout notificationsTitleLayout;
 
     private static final String TAG = "HomepageActivity_Debug";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -74,11 +79,45 @@ public class HomepageActivity extends AppCompatActivity{
         setupTopicFilters(createDummyTopics());
         setupRecyclerView();
         fetchVideosFromFirestore();
+        listenForVideoUpdates();
 
         setupBottomNav();
         setupTopBarActions();
         // Mặc định hiển thị Home khi khởi động
         showHomeContent();
+
+    }
+    private void listenForVideoUpdates() {
+        if (firestoreListener != null) {
+            firestoreListener.remove(); // Hủy listener cũ nếu có
+        }
+
+        firestoreListener = db.collection("videos")
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .addSnapshotListener((value, e) -> {
+                    if (e != null) {
+                        Log.w("HomePageActivity", "Listen failed.", e);
+                        return;
+                    }
+
+                    if (value != null) {
+                        videoList.clear();
+                        for (QueryDocumentSnapshot document : value) {
+                            Video video = document.toObject(Video.class);
+                            videoList.add(video);
+                        }
+                        videoAdapter.setVideos(videoList);
+                        Log.d("HomePageActivity", "Data updated. Total videos: " + videoList.size());
+                    }
+                });
+    }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Khi Activity bị hủy, ngừng lắng nghe
+        if (firestoreListener != null) {
+            firestoreListener.remove();
+        }
     }
     private void setupTopBarActions() {
         if (topBar == null) return;
@@ -143,11 +182,15 @@ public class HomepageActivity extends AppCompatActivity{
             updateTabSelection(ivProfile);
             loadFragment(new PersonFragment());
         });
-
         tabHome.setOnClickListener(v -> {
             updateTabSelection(ivHome);
             showHomeContent();
         });
+        if (tabUpload != null) {
+            tabUpload.setOnClickListener(v -> {
+                startActivity(new Intent(this, UploadActivity.class));
+            });
+        }
         // Mặc định chọn Home
         updateTabSelection(ivHome);
 

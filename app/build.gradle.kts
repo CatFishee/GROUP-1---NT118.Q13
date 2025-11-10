@@ -67,6 +67,10 @@ dependencies {
     implementation(libs.credentials.play.services.auth)
     implementation(libs.googleid)
 
+    // Cloudinary
+    implementation("com.cloudinary:cloudinary-android:2.4.0")
+
+
     // --- Supabase ---
     // implementation(libs.supabase.gotrue)
     implementation(libs.supabase.storage)
