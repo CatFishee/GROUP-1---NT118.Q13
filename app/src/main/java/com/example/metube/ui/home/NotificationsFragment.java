@@ -25,14 +25,11 @@ public class NotificationsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        // Tìm đến "khay chứa"
         LinearLayout filterContainer = view.findViewById(R.id.filter_container);
 
-        // Dùng "nhà máy" để tạo 2 nút
         Button btnAll = createFilterButton("All");
         Button btnMentions = createFilterButton("Mentions");
 
-        // Thêm 2 nút vào "khay"
         filterContainer.addView(btnAll);
         filterContainer.addView(btnMentions);
 
@@ -42,9 +39,7 @@ public class NotificationsFragment extends Fragment {
         currentlySelectedButton = btnAll;
     }
 
-
     private Button createFilterButton(String text) {
-        // Sử dụng requireContext() vì đây là Fragment
         Button button = new Button(requireContext(), null, 0, R.style.Widget_App_TopicButton);
         button.setText(text);
 
@@ -55,7 +50,6 @@ public class NotificationsFragment extends Fragment {
         params.setMarginEnd(20);
         button.setLayoutParams(params);
 
-        // Logic click y hệt của bạn
         button.setOnClickListener(v -> {
             if (currentlySelectedButton != null) {
                 currentlySelectedButton.setSelected(false);

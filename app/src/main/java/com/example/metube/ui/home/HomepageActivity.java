@@ -23,7 +23,7 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import android.content.Intent;
 import androidx.fragment.app.Fragment;
-import android.widget.ScrollView; // Thêm import này
+import android.widget.ScrollView;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -79,26 +79,6 @@ public class HomepageActivity extends AppCompatActivity{
         setupTopBarActions();
         // Mặc định hiển thị Home khi khởi động
         showHomeContent();
-    }
-    private void setupTopBar() {
-        if (topBar == null) return;
-
-        homeTitleLayout = topBar.findViewById(R.id.layout_home_title);
-        notificationsTitleLayout = topBar.findViewById(R.id.layout_notifications_title);
-
-        // Nút chuông thông báo
-        topBar.findViewById(R.id.btnNotifications).setOnClickListener(v -> {
-            // Tải NotificationsFragment và đổi giao diện Top Bar
-            // loadFragment(new NotificationsFragment()); // Sẽ bỏ comment khi bạn tạo file này
-            switchToNotificationsView();
-        });
-
-        // Nút quay lại (Back)
-        topBar.findViewById(R.id.btnBack).setOnClickListener(v -> {
-            // KHÔNG TẢI FRAGMENT NỮA, CHỈ HIỂN THỊ LẠI NỘI DUNG HOME
-            showHomeContent();
-            switchToHomeView();
-        });
     }
     private void setupTopBarActions() {
         if (topBar == null) return;
@@ -156,13 +136,6 @@ public class HomepageActivity extends AppCompatActivity{
             loadFragment(new PersonFragment());
         });
 
-//        tabUpload.setOnClickListener(v -> {
-//            startActivity(new Intent(this, UploadActivity.class));
-//        });
-//
-//        // Mặc định chọn Home
-//        updateTabSelection(ivHome);
-//        showHomeContent();
         tabHome.setOnClickListener(v -> {
             updateTabSelection(ivHome);
             showHomeContent();
