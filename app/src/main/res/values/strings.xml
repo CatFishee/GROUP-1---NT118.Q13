@@ -4,5 +4,9 @@
     <string name="default_web_client_id">348851475077-3njqp39r3fvcqi8a7mmomc7gk3seepuu.apps.googleusercontent.com</string>
     <string name="facebook_client_token">39a0104c9bfebcfc3f8cb090902a9bce</string>
     <string name="fb_login_protocol_scheme">fb846187834526871</string>
+    <string name="supabase_bucket_videos">Videos</string>
+    <string name="supabase_bucket_thumbnails">Thumbnails</string>
+    <string name="supabase_project_url">https://fhoohenjdvrmeywfoclg.supabase.co</string>
+    <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZob29oZW5qZHZybWV5d2ZvY2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1MjY3NzEsImV4cCI6MjA3ODEwMjc3MX0.N36LxMSVmVpxbX-K7DhaYtsGTgRUJS4WYgw6U74asak</string>
 </resources>
 
