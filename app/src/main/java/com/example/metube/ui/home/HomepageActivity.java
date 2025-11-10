@@ -48,6 +48,10 @@ public class HomepageActivity extends AppCompatActivity{
     private List<TextView> tabTextViews;
     private ImageView ivHome, ivCreator, ivSubs, ivProfile;
     private TextView tvHome, tvCreator, tvSubs, tvProfile;
+    private View topBar;
+    private LinearLayout homeTitleLayout;
+    private LinearLayout notificationsTitleLayout;
+
     private static final String TAG = "HomepageActivity_Debug";
 
     @Override
@@ -60,6 +64,11 @@ public class HomepageActivity extends AppCompatActivity{
         fragmentContainer = findViewById(R.id.fragment_container);
         topicContainer = findViewById(R.id.topicContainer);
         recyclerViewVideos = findViewById(R.id.recyclerViewVideos);
+        topBar = findViewById(R.id.topBar);
+        if (topBar != null) {
+            homeTitleLayout = topBar.findViewById(R.id.layout_home_title);
+            notificationsTitleLayout = topBar.findViewById(R.id.layout_notifications_title);
+        }
 
         db = FirebaseFirestore.getInstance();
         setupTopicFilters(createDummyTopics());
@@ -67,6 +76,43 @@ public class HomepageActivity extends AppCompatActivity{
         fetchVideosFromFirestore();
 
         setupBottomNav();
+        setupTopBarActions();
+        // Mặc định hiển thị Home khi khởi động
+        showHomeContent();
+    }
+    private void setupTopBar() {
+        if (topBar == null) return;
+
+        homeTitleLayout = topBar.findViewById(R.id.layout_home_title);
+        notificationsTitleLayout = topBar.findViewById(R.id.layout_notifications_title);
+
+        // Nút chuông thông báo
+        topBar.findViewById(R.id.btnNotifications).setOnClickListener(v -> {
+            // Tải NotificationsFragment và đổi giao diện Top Bar
+            // loadFragment(new NotificationsFragment()); // Sẽ bỏ comment khi bạn tạo file này
+            switchToNotificationsView();
+        });
+
+        // Nút quay lại (Back)
+        topBar.findViewById(R.id.btnBack).setOnClickListener(v -> {
+            // KHÔNG TẢI FRAGMENT NỮA, CHỈ HIỂN THỊ LẠI NỘI DUNG HOME
+            showHomeContent();
+            switchToHomeView();
+        });
+    }
+    private void setupTopBarActions() {
+        if (topBar == null) return;
+
+            // Nút chuông thông báo
+        topBar.findViewById(R.id.btnNotifications).setOnClickListener(v -> {
+            loadFragment(new NotificationsFragment());
+            switchToNotificationsView();
+        });
+
+            // Nút quay lại (Back)
+        topBar.findViewById(R.id.btnBack).setOnClickListener(v -> {
+            showHomeContent();
+        });
     }
     private void setupBottomNav() {
         View bottomNavView = findViewById(R.id.bottomNav);
@@ -110,13 +156,20 @@ public class HomepageActivity extends AppCompatActivity{
             loadFragment(new PersonFragment());
         });
 
-        tabUpload.setOnClickListener(v -> {
-            startActivity(new Intent(this, UploadActivity.class));
+//        tabUpload.setOnClickListener(v -> {
+//            startActivity(new Intent(this, UploadActivity.class));
+//        });
+//
+//        // Mặc định chọn Home
+//        updateTabSelection(ivHome);
+//        showHomeContent();
+        tabHome.setOnClickListener(v -> {
+            updateTabSelection(ivHome);
+            showHomeContent();
         });
-
         // Mặc định chọn Home
         updateTabSelection(ivHome);
-        showHomeContent();
+
     }
 
     // Hàm xử lý hiệu ứng filled
@@ -161,6 +214,7 @@ public class HomepageActivity extends AppCompatActivity{
     private void showHomeContent() {
         homeContentContainer.setVisibility(View.VISIBLE);
         fragmentContainer.setVisibility(View.GONE);
+        switchToHomeView();
     }
 
     // Hàm tải một Fragment
@@ -170,6 +224,20 @@ public class HomepageActivity extends AppCompatActivity{
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit();
+    }
+    // Hàm để chuyển Top Bar sang giao diện "Home"
+    private void switchToHomeView() {
+        if (homeTitleLayout != null && notificationsTitleLayout != null) {
+            homeTitleLayout.setVisibility(View.VISIBLE);
+            notificationsTitleLayout.setVisibility(View.GONE);
+        }
+    }
+    // Hàm để chuyển Top Bar sang giao diện "Notifications"
+    private void switchToNotificationsView() {
+        if (homeTitleLayout != null && notificationsTitleLayout != null) {
+            homeTitleLayout.setVisibility(View.GONE);
+            notificationsTitleLayout.setVisibility(View.VISIBLE);
+        }
     }
     private List<String> createDummyTopics() {
         List<String> dummyTopics = new ArrayList<>();
