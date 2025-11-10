@@ -3,11 +3,15 @@ package com.example.metube.ui.search;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.ImageView;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -20,18 +24,21 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class SearchActivity extends AppCompatActivity implements SearchHistoryAdapter.OnHistoryItemClickListener {
 
     private EditText etSearchInput;
+    private ImageView ivClearText;
     private RecyclerView rvSearchHistory, rvSearchResults;
     private SearchHistoryAdapter historyAdapter;
     private VideoAdapter resultsAdapter;
-    private List<String> searchHistory;
+    private List<String> searchHistoryList;
     private SharedPreferences sharedPreferences;
 
     // Tên file để lưu trữ lịch sử
@@ -44,22 +51,45 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
         setContentView(R.layout.activity_search);
 
         sharedPreferences = getSharedPreferences(HISTORY_PREFS, Context.MODE_PRIVATE);
+
+        // --- ÁNH XẠ VIEW ---
         etSearchInput = findViewById(R.id.et_search_input);
         rvSearchHistory = findViewById(R.id.rv_search_history);
         rvSearchResults = findViewById(R.id.rv_search_results);
+        ivClearText = findViewById(R.id.iv_clear_text);
 
-        Toolbar toolbar = findViewById(R.id.toolbar_search);
-        toolbar.setNavigationOnClickListener(v -> finish());
-
+        // --- GỌI CÁC HÀM SETUP ---
         setupHistoryView();
         setupResultsView();
-
         setupSearchListener();
         loadSearchHistory();
 
     }
-
     private void setupSearchListener() {
+        // Nút quay lại
+        findViewById(R.id.iv_back).setOnClickListener(v -> finish());
+
+        // Nút Xóa
+        ivClearText.setOnClickListener(v -> etSearchInput.setText(""));
+
+        // Lắng nghe text thay đổi
+        etSearchInput.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void afterTextChanged(Editable s) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                ivClearText.setVisibility(s.length() > 0 ? View.VISIBLE : View.GONE);
+
+                // QUAN TRỌNG: Nếu người dùng xóa hết chữ, hãy hiện lại lịch sử
+                if (s.length() == 0) {
+                    rvSearchResults.setVisibility(View.GONE);
+                    rvSearchHistory.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
+        // Lắng nghe nút Search trên bàn phím
         etSearchInput.setOnEditorActionListener((v, actionId, event) -> {
             // Kiểm tra xem hành động có phải là "Search" không
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
@@ -67,7 +97,6 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
                 String query = etSearchInput.getText().toString().trim();
                 if (!query.isEmpty()) {
                     // Thực hiện tìm kiếm
-                    saveSearchQuery(query);
                     performSearch(query);
                     hideKeyboard();
                 }
@@ -84,14 +113,25 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
         rvSearchHistory.setVisibility(View.GONE);
         rvSearchResults.setVisibility(View.VISIBLE);
 
-        // In ra log để kiểm tra
         Log.d("SearchActivity", "Searching for: " + query);
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+        // Chuyển toàn bộ query về chữ thường
         String lowercaseQuery = query.toLowerCase();
 
+        // Tách chuỗi query thành một danh sách các từ khóa riêng lẻ
+        String[] words = lowercaseQuery.split("\\s+");
+        List<String> queryKeywords = Arrays.stream(words)
+                .filter(word -> !word.isEmpty())
+                .collect(Collectors.toList());
+
+        // Nếu không có từ khóa hợp lệ, không cần tìm kiếm
+        if (queryKeywords.isEmpty()) {
+            resultsAdapter.setVideos(new ArrayList<>()); // Xóa kết quả cũ
+            return;
+        }
         db.collection("videos")
-                .whereArrayContains("searchKeywords", lowercaseQuery) // SỬ DỤNG TRUY VẤN NÀY
+                .whereArrayContainsAny("searchKeywords", queryKeywords)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     Log.d("SearchActivity", "Firestore query successful! Found " + queryDocumentSnapshots.size() + " results.");
@@ -99,7 +139,11 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         results.add(document.toObject(Video.class));
                     }
+
                     resultsAdapter.setVideos(results);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("SearchActivity", "Firestore query failed", e);
                 });
     }
 
@@ -113,8 +157,8 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
     }
 
     private void setupHistoryView() {
-        searchHistory = new ArrayList<>();
-        historyAdapter = new SearchHistoryAdapter(searchHistory, this);
+        searchHistoryList = new ArrayList<>();
+        historyAdapter = new SearchHistoryAdapter(searchHistoryList, this);
         rvSearchHistory.setLayoutManager(new LinearLayoutManager(this));
         rvSearchHistory.setAdapter(historyAdapter);
     }
@@ -125,9 +169,9 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
     }
     private void loadSearchHistory() {
         Set<String> historySet = sharedPreferences.getStringSet(HISTORY_KEY, new HashSet<>());
-        searchHistory.clear();
-        searchHistory.addAll(historySet);
-        Collections.reverse(searchHistory); // Đảo ngược để từ mới nhất hiện lên trên
+        searchHistoryList.clear();
+        searchHistoryList.addAll(historySet);
+        Collections.reverse(searchHistoryList); // Đảo ngược để từ mới nhất hiện lên trên
         historyAdapter.notifyDataSetChanged();
     }
     private void saveSearchQuery(String query) {
@@ -139,8 +183,6 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
 
         // Lưu lại vào SharedPreferences
         sharedPreferences.edit().putStringSet(HISTORY_KEY, historySet).apply();
-
-        loadSearchHistory();
     }
 
     @Override
