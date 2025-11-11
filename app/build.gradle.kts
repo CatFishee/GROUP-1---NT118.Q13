@@ -68,7 +68,7 @@ dependencies {
     implementation(libs.googleid)
 
     // Cloudinary
-    implementation("com.cloudinary:cloudinary-android:2.4.0")
+    implementation("com.cloudinary:cloudinary-android:3.1.2")
 
 
     // --- Supabase ---
@@ -79,7 +79,9 @@ dependencies {
     implementation(libs.okhttp)
     // --- Kotlinx Serialization ---
     implementation(libs.kotlinx.serialization.json)
-
+// ExoPlayer (core + UI)
+    implementation("com.google.android.exoplayer:exoplayer:2.19.1")
+    implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")
     // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)

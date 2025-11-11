@@ -65,5 +65,7 @@
         <activity android:name=".ui.home.HomepageActivity" android:exported="true" />
         <activity android:name=".ui.upload.UploadActivity" android:exported="true" />
         <activity android:name=".ui.search.SearchActivity" android:exported="true" />
+        <!-- Video playback activity -->
+        <activity android:name=".ui.video.VideoActivity" android:exported="true" />
     </application>
 </manifest>
