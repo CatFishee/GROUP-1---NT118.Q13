@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 import android.widget.Button;
@@ -39,9 +40,17 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import android.view.inputmethod.EditorInfo;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+
+import java.util.stream.Collectors;
 
 public class UploadActivity extends AppCompatActivity {
 
@@ -58,11 +67,13 @@ public class UploadActivity extends AppCompatActivity {
     // URIs
     private Uri thumbnailUri;
     private Uri videoUri;
+    private ChipGroup chipGroupTopics;
+    private AutoCompleteTextView acAddTopic;
 
     // Firebase
     private FirebaseAuth mAuth;
     private FirebaseFirestore firestore;
-    private DatabaseReference realtimeDbRef; // ✅ Realtime DB reference
+    private DatabaseReference realtimeDbRef;
 
     // Activity result launchers
     private final ActivityResultLauncher<Intent> thumbnailPickerLauncher = registerForActivityResult(
@@ -99,11 +110,19 @@ public class UploadActivity extends AppCompatActivity {
         etVideoTitle = findViewById(R.id.et_video_title);
         etVideoDescription = findViewById(R.id.et_video_description);
         progressBar = findViewById(R.id.progress_bar_upload);
+        chipGroupTopics = findViewById(R.id.chip_group_topics);
+        acAddTopic = findViewById(R.id.actv_add_topic);
+        setupTopicInput();
+        ImageView ivClose = findViewById(R.id.iv_close_upload);
+        ivClose.setOnClickListener(v -> {
+            // Khi nhấn nút "X", kết thúc (đóng) Activity này và quay về màn hình trước đó
+            finish();
+        });
 
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
-        realtimeDbRef = FirebaseDatabase.getInstance().getReference("videoStats"); // ✅ added
+        realtimeDbRef = FirebaseDatabase.getInstance().getReference("videoStats");
 
         btnSelectThumbnail.setOnClickListener(v -> openPicker("image/*", thumbnailPickerLauncher));
         btnSelectVideo.setOnClickListener(v -> openPicker("video/*", videoPickerLauncher));
@@ -198,13 +217,53 @@ public class UploadActivity extends AppCompatActivity {
                 .callback(callback)
                 .dispatch();
     }
+    private void setupTopicInput() {
+        String[] suggestedTopics = new String[]{"Gaming", "Music", "VLOG", "Education", "Sports"};
 
-    // ✅ UPDATED: now also creates a Realtime DB stat object
+        // Tạo adapter cho AutoCompleteTextView
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_dropdown_item_1line, suggestedTopics);
+        acAddTopic.setAdapter(adapter);
+
+        // Xử lý khi người dùng nhấn Enter hoặc nút Done
+        acAddTopic.setOnEditorActionListener((v, actionId, event) -> {
+            boolean handled = false;
+            if (actionId == EditorInfo.IME_ACTION_DONE ||
+                    (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
+
+                String topic = acAddTopic.getText().toString().trim();
+
+                String sanitizedTopic = topic.replaceAll("[^a-zA-Z0-9 ]", "");
+
+                if (!sanitizedTopic.isEmpty()) {
+                    addTopicChip(sanitizedTopic);
+                    acAddTopic.setText("");
+                }
+                handled = true;
+            }
+            return handled;
+        });
+    }
+
+    private void addTopicChip(String topicText) {
+        Chip chip = new Chip(this);
+        chip.setText(topicText);
+        chip.setCloseIconVisible(true); // Hiển thị nút 'x' để xóa
+        chip.setOnCloseIconClickListener(v -> chipGroupTopics.removeView(chip));
+        chipGroupTopics.addView(chip);
+    }
     private void saveVideoInfoToFirestore(String title, String description, String thumbnailUrl, String videoUrl) {
         String uploaderId = mAuth.getCurrentUser().getUid();
         String videoId = firestore.collection("videos").document().getId();
 
-        // Tạo danh sách từ khóa tìm kiếm (giữ nguyên)
+        List<String> topics = new ArrayList<>();
+        for (int i = 0; i < chipGroupTopics.getChildCount(); i++) {
+            Chip chip = (Chip) chipGroupTopics.getChildAt(i);
+            topics.add(chip.getText().toString());
+        }
+
+        // Tạo danh sách từ khóa tìm kiếm
+        String topicString = String.join(" ", topics);
         String searchableContent = title.toLowerCase() + " " + description.toLowerCase();
         HashSet<String> keywords = new HashSet<>(Arrays.asList(searchableContent.split("\\s+")));
 
@@ -213,7 +272,7 @@ public class UploadActivity extends AppCompatActivity {
         video.setUploaderID(uploaderId);
         video.setTitle(title);
         video.setDescription(description);
-        video.setTopics(new ArrayList<>());
+        video.setTopics(topics);
         video.setThumbnailURL(thumbnailUrl);
         video.setVideoURL(videoUrl);
         video.setSearchKeywords(new ArrayList<>(keywords));
@@ -221,7 +280,6 @@ public class UploadActivity extends AppCompatActivity {
 
         firestore.collection("videos").document(videoId).set(video)
                 .addOnSuccessListener(aVoid -> {
-                    // ✅ create matching video stat entry in Realtime Database
                     createVideoStatInRealtimeDB(videoId);
 
                     Toast.makeText(UploadActivity.this, "Upload successful!", Toast.LENGTH_SHORT).show();
@@ -230,7 +288,6 @@ public class UploadActivity extends AppCompatActivity {
                 .addOnFailureListener(this::showUploadError);
     }
 
-    // ✅ NEW helper: creates initial video stat in Realtime DB
     private void createVideoStatInRealtimeDB(String videoId) {
         DatabaseReference statRef = realtimeDbRef.child(videoId);
         statRef.child("viewCount").setValue(0);
@@ -312,4 +369,5 @@ public class UploadActivity extends AppCompatActivity {
         }
         return Uri.fromFile(cacheFile);
     }
+
 }
