@@ -3,6 +3,7 @@ package com.example.metube.ui.video;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +23,8 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import de.hdodenhof.circleimageview.CircleImageView;
+import com.google.android.material.card.MaterialCardView;
 
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
@@ -40,6 +43,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.exoplayer2.Player;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.Timestamp;
 
 import java.util.Arrays;
 import java.util.List;
@@ -62,6 +66,14 @@ public class VideoActivity extends AppCompatActivity {
     private DefaultTrackSelector trackSelector;
     private ScrollView scrollView;
 
+    private TextView tvVideoStats;
+    private CircleImageView ivChannelAvatar;
+    private Button btnSubscribe;
+    private MaterialCardView cardDescription;
+    private boolean isDescriptionExpanded = false;
+    private String currentUploaderName = "";
+    private String currentRelativeTime = "";
+
     private DatabaseReference videoStatRef;
     private ValueEventListener statListener;
     private FirebaseFirestore firestore;
@@ -79,9 +91,12 @@ public class VideoActivity extends AppCompatActivity {
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-
+        hasViewCountBeenIncremented = false;
+        videoStatRef = null;
+        statListener = null;
         // Get the video ID passed from HomepageActivity
         videoId = getIntent().getStringExtra("video_id");
+        Log.d("VIDEO_ID_CHECK", "Video ID nhận được là: " + videoId);
         if (videoId == null) {
             Toast.makeText(this, "Video not found.", Toast.LENGTH_SHORT).show();
             finish();
@@ -103,6 +118,7 @@ public class VideoActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, callback);
 
         initViews();
+        setupDescriptionToggle();
 //        setupPlayer();
 //        loadVideoDetails(videoId);
 //        fetchAndListenToVideoStats(videoId);
@@ -121,6 +137,10 @@ public class VideoActivity extends AppCompatActivity {
 //        tvQuality = findViewById(R.id.btn_quality);
 //        tvSpeed = findViewById(R.id.btn_speed);
 //        volumeSeekBar = findViewById(R.id.seekbar_volume);
+        tvVideoStats = findViewById(R.id.tv_video_stats);
+        ivChannelAvatar = findViewById(R.id.iv_channel_avatar);
+        btnSubscribe = findViewById(R.id.btn_subscribe);
+        cardDescription = findViewById(R.id.card_description);
 //
 //        btnPlayPause.setOnClickListener(v -> togglePlayPause());
 //        btnRewind.setOnClickListener(v -> rewindVideo());
@@ -136,6 +156,19 @@ public class VideoActivity extends AppCompatActivity {
 //            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
 //            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
 //        });
+    }
+    private void setupDescriptionToggle() {
+        cardDescription.setOnClickListener(v -> {
+            if (isDescriptionExpanded) {
+                // Thu gọn lại
+                tvDescription.setMaxLines(3);
+                isDescriptionExpanded = false;
+            } else {
+                // Mở rộng ra
+                tvDescription.setMaxLines(Integer.MAX_VALUE);
+                isDescriptionExpanded = true;
+            }
+        });
     }
 
 //    private void setupPlayer() {
@@ -213,6 +246,15 @@ public class VideoActivity extends AppCompatActivity {
 
             playerView.setPlayer(player);
             setupCustomPlayerControls();
+            player.addListener(new Player.Listener() {
+                @Override
+                public void onPlaybackStateChanged(int state) {
+                    if (state == Player.STATE_READY && player.getPlayWhenReady() && !hasViewCountBeenIncremented) {
+                        incrementViewCount();
+                        hasViewCountBeenIncremented = true;
+                    }
+                }
+            });
         }
 
         // Nếu đã có URL, bắt đầu phát video
@@ -223,7 +265,7 @@ public class VideoActivity extends AppCompatActivity {
 //            player.setPlayWhenReady(true);
 //        }
         loadVideoDetails(videoId);
-        fetchAndListenToVideoStats(videoId);
+//        fetchAndListenToVideoStats(videoId);
     }
     private void setupCustomPlayerControls() {
         // Rất quan trọng: Tìm các view bên trong playerView, không phải activity
@@ -347,6 +389,21 @@ public class VideoActivity extends AppCompatActivity {
             player = null;
         }
     }
+    private void updateStatsUI(Long viewCount) {
+        if (viewCount == null) viewCount = 0L;
+
+        // Kiểm tra điều kiện
+        if (currentUploaderName != null && !currentUploaderName.isEmpty()) {
+            String stats = String.format("%s • %s views • %s",
+                    currentUploaderName,
+                    formatViewCount(viewCount),
+                    currentRelativeTime);
+            tvVideoStats.setText(stats);
+            Log.d(TAG, "Stats updated: " + stats); // Debug log
+        } else {
+            Log.d(TAG, "updateStatsUI: uploaderName chưa sẵn sàng");
+        }
+    }
 
     private void loadVideoDetails(String videoId) {
         firestore.collection("videos").document(videoId).get()
@@ -364,18 +421,38 @@ public class VideoActivity extends AppCompatActivity {
                     }
 
                     tvTitle.setText(video.getTitle());
-                    tvDescription.setText(video.getDescription());
+                    if (video.getDescription() != null) {
+                        tvDescription.setText(video.getDescription());
+                    } else {
+                        tvDescription.setText(""); // Đặt text rỗng để tránh lỗi
+                    }
+                    if (video.getCreatedAt() != null) {
+                        currentRelativeTime = getRelativeTime(video.getCreatedAt());
+                    }
 
-                    // Load uploader name
                     firestore.collection("users").document(video.getUploaderID()).get()
                             .addOnSuccessListener(doc -> {
-                                String uploaderName = doc.exists()
-                                        ? doc.getString("channelName")
-                                        : "Unknown Channel";
+                                String uploaderName = doc.exists() ? doc.getString("name") : "Unknown Channel";
                                 tvUploader.setText(uploaderName);
-                            })
-                            .addOnFailureListener(e -> tvUploader.setText("Unknown Channel"));
 
+                                // THAY ĐỔI 2: Lưu tên người đăng vào biến tạm và cập nhật giao diện
+                                currentUploaderName = uploaderName;
+//                                tvVideoStats.setText(String.format("%s • %s", currentUploaderName, currentRelativeTime)); // Tạm thời chưa có view
+                                Log.d(TAG, "Uploader loaded: " + currentUploaderName + " (value assigned)");
+                                String avatarUrl = doc.getString("avatarUrl");
+                                if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                                    Glide.with(this).load(avatarUrl).into(ivChannelAvatar);
+                                }
+                                Log.d(TAG, "Calling fetchAndListenToVideoStats..."); // ✅ DEBUG LOG
+                                fetchAndListenToVideoStats(videoId);
+//                                updateStatsUI(0L);
+                            })
+                            .addOnFailureListener(e -> {
+                                tvUploader.setText("Unknown Channel");
+                                currentUploaderName = "Unknown Channel";
+                                // Vẫn gọi fetchAndListenToVideoStats ngay cả khi load uploader thất bại
+                                fetchAndListenToVideoStats(videoId);
+                            });
                     // Load video
 //                    if (video != null && video.getVideoURL() != null && !video.getVideoURL().isEmpty()) {
 ////                        MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()));
@@ -428,21 +505,34 @@ public class VideoActivity extends AppCompatActivity {
 //        videoStatRef.addValueEventListener(statListener);
 //    }
 private void fetchAndListenToVideoStats(String videoId) {
+    if (videoStatRef != null && statListener != null) {
+        Log.d(TAG, "Listener đã được đăng ký rồi, bỏ qua!");
+        return; // Đã đăng ký rồi thì không đăng ký nữa
+    }
     videoStatRef = FirebaseDatabase.getInstance().getReference("videostat").child(videoId);
 
     statListener = new ValueEventListener() {
         @Override
         public void onDataChange(@NonNull DataSnapshot snapshot) {
-            if (!snapshot.exists()) return;
+            if (!snapshot.exists()) {
+                btnLike.setText("0");
+                btnDislike.setText("0");
+                updateStatsUI(0L);
+                return;
+            }
 
             // Cập nhật lại số liệu
             long likeCount = snapshot.child("likes").getChildrenCount();
             long dislikeCount = snapshot.child("dislikes").getChildrenCount();
-            Long viewCount = snapshot.child("viewCount").getValue(Long.class);
-            if (viewCount == null) viewCount = 0L;
+//            Long viewCount = snapshot.child("viewCount").getValue(Long.class);
+//            if (viewCount == null) viewCount = 0L;
 
 //            tvStats.setText(String.format("%d views • %d likes", viewCount, likeCount));
             btnLike.setText(String.valueOf(likeCount));
+            btnDislike.setText(String.valueOf(dislikeCount));
+            Long viewCount = snapshot.child("viewCount").getValue(Long.class);
+            Log.d(TAG, "Calling updateStatsUI with viewCount: " + viewCount + ", uploaderName: " + currentUploaderName); // ✅ DEBUG LOG
+            updateStatsUI(viewCount);
 
             // KIỂM TRA TRẠNG THÁI VOTE CỦA NGƯỜI DÙNG HIỆN TẠI
             if (currentUser != null) {
@@ -500,12 +590,26 @@ private void fetchAndListenToVideoStats(String videoId) {
 //        btnDislike.setImageResource(
 //                currentUserVoteState == UserVoteState.DISLIKED ? R.drawable.ic_dislike_filled : R.drawable.ic_dislike
 //        );
-        btnLike.setIconResource(
-                currentUserVoteState == UserVoteState.LIKED ? R.drawable.ic_like_filled : R.drawable.ic_like
-        );
-        btnDislike.setIconResource(
-                currentUserVoteState == UserVoteState.DISLIKED ? R.drawable.ic_dislike_filled : R.drawable.ic_dislike
-        );
+//        btnLike.setIconResource(
+//                currentUserVoteState == UserVoteState.LIKED ? R.drawable.ic_like_filled : R.drawable.ic_like
+//        );
+//        btnDislike.setIconResource(
+//                currentUserVoteState == UserVoteState.DISLIKED ? R.drawable.ic_dislike_filled : R.drawable.ic_dislike
+//        );
+        if (currentUserVoteState == UserVoteState.LIKED) {
+            btnLike.setChecked(true); // Đặt trạng thái là "checked"
+            btnLike.setIconResource(R.drawable.ic_like_filled);
+        } else {
+            btnLike.setChecked(false); // Đặt trạng thái là "unchecked"
+            btnLike.setIconResource(R.drawable.ic_like);
+        }
+
+        // Cập nhật nút DISLIKE (tương tự)
+        if (currentUserVoteState == UserVoteState.DISLIKED) {
+            btnDislike.setIconResource(R.drawable.ic_dislike_filled);
+        } else {
+            btnDislike.setIconResource(R.drawable.ic_dislike);
+        }
     }
     private void updateCountTransaction(DatabaseReference ref, int amount) {
         ref.runTransaction(new Transaction.Handler() {
@@ -607,5 +711,24 @@ private void fetchAndListenToVideoStats(String videoId) {
         if (videoStatRef != null && statListener != null) {
             videoStatRef.removeEventListener(statListener);
         }
+    }
+    private String formatViewCount(long count) {
+        if (count < 1000) return String.valueOf(count);
+        if (count < 1000000) return String.format("%.1fK", count / 1000.0);
+        return String.format("%.1fM", count / 1000000.0);
+    }
+
+    private String getRelativeTime(Timestamp timestamp) {
+        if (timestamp == null) return "";
+
+        long timeInMillis = timestamp.toDate().getTime(); // Lấy thời gian dạng milliseconds
+        long now = System.currentTimeMillis();
+
+        // Dùng thư viện Android để tạo chuỗi kiểu "5 minutes ago"
+        return DateUtils.getRelativeTimeSpanString(
+                timeInMillis,
+                now,
+                DateUtils.MINUTE_IN_MILLIS
+        ).toString();
     }
 }

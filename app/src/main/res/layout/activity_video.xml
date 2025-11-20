@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/white"
     tools:context=".ui.video.VideoActivity">
 
     <!-- 1. TRÌNH PHÁT VIDEO -->
@@ -21,85 +22,186 @@
 
     <!-- 2. VÙNG NỘI DUNG CUỘN ĐƯỢC BÊN DƯỚI VIDEO -->
     <ScrollView
-        android:id="@+id/scroll_view_content"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@id/player_view"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
+    android:id="@+id/scroll_view_content"
+    android:layout_width="0dp"
+    android:layout_height="0dp"
+    app:layout_constraintTop_toBottomOf="@id/player_view"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintEnd_toEndOf="parent">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- Tên Video -->
+        <TextView
+            android:id="@+id/tv_video_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:text="Video Title Goes Here and Can Be Quite Long"/>
+
+        <!-- Thông tin: Tên người đăng, Lượt xem, Ngày đăng -->
+        <TextView
+            android:id="@+id/tv_video_stats"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="13sp"
+            tools:text="Giang Phương • 1.2M views • 2 days ago"/>
+
+        <!-- Vùng Kênh và Nút Subscribe -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_marginTop="16dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-            <!-- Tiêu đề Video -->
-            <TextView
-                android:id="@+id/tv_video_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/black"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                tools:text="Đây là Tiêu đề Video Rất Dài và Có Thể Xuống Dòng"/>
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/iv_channel_avatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@mipmap/ic_launcher" /> <!-- Ảnh placeholder -->
 
-            <!-- (CÁC NÚT ĐIỀU KHIỂN CŨ ĐÃ ĐƯỢC XÓA KHỎI ĐÂY) -->
-
-            <!-- Tên kênh -->
+            <!-- Tên Kênh (trước đây là tv_video_uploader) -->
             <TextView
                 android:id="@+id/tv_video_uploader"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="Channel Name"/>
+
+            <Button
+                android:id="@+id/btn_subscribe"
+                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textColor="@color/black"
-                android:textStyle="bold"
-                android:layout_marginTop="16dp"
-                tools:text="Tên Kênh"/>
+                android:text="Subscribe"
+                android:textColor="@color/app_main_color"
+                android:backgroundTint="@color/light_green_background"
+                app:cornerRadius="8dp"/>
+        </LinearLayout>
 
-            <!-- Vùng Like / Dislike -->
+        <!-- Vùng các nút hành động: Like, Dislike, Share... -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:scrollbars="none">
+
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
                 android:orientation="horizontal">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_like"
-                    style="?attr/materialButtonOutlinedStyle"
+                <!-- Nút Like/Dislike -->
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/toggle_group_like_dislike"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    app:icon="@drawable/ic_like"
-                    tools:text="1.2K"/>
+                    app:singleSelection="true">
 
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_like"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checkable="true"
+                        app:icon="@drawable/ic_like"
+                        app:iconTint="@null"
+                        android:textColor="@color/like_button_text_color_selector"
+                        app:backgroundTint="@color/like_button_background_selector"
+                        tools:text="1.2K"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_dislike"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:icon="@drawable/ic_dislike"
+                        app:iconTint="@null"
+                        android:textColor="@color/like_button_text_color_selector"
+                        app:backgroundTint="@color/like_button_background_selector"/>
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <!-- Nút Share -->
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_dislike"
+                    android:id="@+id/btn_share"
                     style="?attr/materialButtonOutlinedStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    app:icon="@drawable/ic_dislike" />
+                    android:text="Share"
+                    app:icon="@drawable/ic_share"
+                    android:textColor="@color/app_main_color"
+                    app:iconTint="@color/app_main_color"/>
+
+                <!-- Nút Download -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_download"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Download"
+                    app:icon="@drawable/ic_download"
+                    android:textColor="@color/app_main_color"
+                    app:iconTint="@color/app_main_color"/>
+
+                <!-- Bạn có thể thêm các nút khác ở đây -->
+
             </LinearLayout>
+        </HorizontalScrollView>
 
+        <!-- Vùng mô tả video có thể thu gọn -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            app:cardBackgroundColor="#F1F1F1"
+            app:cardCornerRadius="12dp"
+            android:clickable="true"
+            android:focusable="true">
 
-            <!-- Mô tả video -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="#F0F0F0"
-                app:cardCornerRadius="12dp">
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Video Description"
+                    android:textColor="@color/black"
+                    android:textStyle="bold" />
 
                 <TextView
                     android:id="@+id/tv_video_description"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="12dp"
+                    android:layout_marginTop="4dp"
                     android:lineSpacingExtra="4dp"
-                    tools:text="Đây là phần mô tả chi tiết của video..."/>
-            </com.google.android.material.card.MaterialCardView>
+                    android:ellipsize="end"
+                    android:maxLines="3"
+                    tools:text="Đây là phần mô tả chi tiết của video. Nó có thể rất dài và chứa nhiều thông tin hữu ích... Phần mô tả này sẽ bị ẩn bớt và chỉ hiện ra đầy đủ khi người dùng nhấn vào."
+                    android:textColor="@color/black"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        </LinearLayout>
-    </ScrollView>
+    </LinearLayout>
+</ScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
