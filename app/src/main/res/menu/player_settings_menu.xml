@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="Tốc độ phát">
+        <menu>
+            <item
+                android:id="@+id/menu_speed_0_5x"
+                android:title="0.5x" />
+            <item
+                android:id="@+id/menu_speed_1x"
+                android:title="Chuẩn" />
+            <item
+                android:id="@+id/menu_speed_1_5x"
+                android:title="1.5x" />
+            <!-- MỤC MỚI -->
+            <item
+                android:id="@+id/menu_speed_2x"
+                android:title="2.0x" />
+        </menu>
+    </item>
+
+    <!-- MENU CON MỚI CHO CHẤT LƯỢNG -->
+    <item android:title="Chất lượng">
+        <menu>
+            <item
+                android:id="@+id/menu_quality_auto"
+                android:title="Tự động" />
+            <item
+                android:id="@+id/menu_quality_1080p"
+                android:title="1080p" />
+            <item
+                android:id="@+id/menu_quality_720p"
+                android:title="720p" />
+            <item
+                android:id="@+id/menu_quality_480p"
+                android:title="480p" />
+        </menu>
+    </item>
+</menu>

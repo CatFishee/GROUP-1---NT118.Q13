@@ -3,20 +3,25 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    tools:context=".ui.video.VideoActivity">
 
     <!-- 1. TRÌNH PHÁT VIDEO -->
+    <!-- Thêm "app:controller_layout_id" để sử dụng layout tùy chỉnh -->
     <com.google.android.exoplayer2.ui.PlayerView
         android:id="@+id/player_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:controller_layout_id="@layout/custom_player_controls"
+        app:layout_constraintDimensionRatio="16:9"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintDimensionRatio="16:9" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:use_controller="true" />
 
-    <!-- 2. VÙNG NỘI DUNG CUỘN ĐƯỢC -->
+    <!-- 2. VÙNG NỘI DUNG CUỘN ĐƯỢC BÊN DƯỚI VIDEO -->
     <ScrollView
+        android:id="@+id/scroll_view_content"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/player_view"
@@ -30,60 +35,6 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="16dp">
-
-                <ImageButton
-                    android:id="@+id/btn_rewind"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_rewind"
-                    android:background="?attr/selectableItemBackgroundBorderless"/>
-
-                <ImageButton
-                    android:id="@+id/btn_play_pause"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:src="@drawable/ic_play"
-                    android:background="?attr/selectableItemBackgroundBorderless"/>
-
-                <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
-
-                <Button
-                    android:id="@+id/btn_speed"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="1x"/>
-
-                <Button
-                    android:id="@+id/btn_quality"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="720p"/>
-            </LinearLayout>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:layout_marginStart="4dp"
-                android:text="Volume"
-                android:textSize="12sp"
-                android:labelFor="@id/seekbar_volume"/>
-
-            <SeekBar
-                android:id="@+id/seekbar_volume"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:max="100"
-                android:progress="100"/>
-
-            <!-- ... (Tiêu đề, Tên kênh, Lượt xem...) ... -->
             <!-- Tiêu đề Video -->
             <TextView
                 android:id="@+id/tv_video_title"
@@ -92,102 +43,44 @@
                 android:textColor="@color/black"
                 android:textSize="20sp"
                 android:textStyle="bold"
-                tools:text="Video Title Goes Here and Can Wrap to Two Lines"/>
+                tools:text="Đây là Tiêu đề Video Rất Dài và Có Thể Xuống Dòng"/>
 
-            <!-- Tên Kênh và Lượt xem -->
+            <!-- (CÁC NÚT ĐIỀU KHIỂN CŨ ĐÃ ĐƯỢC XÓA KHỎI ĐÂY) -->
+
+            <!-- Tên kênh -->
+            <TextView
+                android:id="@+id/tv_video_uploader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"
+                tools:text="Tên Kênh"/>
+
+            <!-- Vùng Like / Dislike -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginTop="8dp">
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
 
-                <de.hdodenhof.circleimageview.CircleImageView
-                    android:id="@+id/iv_uploader_avatar"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:src="@drawable/logo_metube" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:layout_marginStart="12dp">
-
-                    <TextView
-                        android:id="@+id/tv_video_uploader"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/black"
-                        android:textStyle="bold"
-                        tools:text="Channel Name"/>
-
-                    <TextView
-                        android:id="@+id/tv_video_stats"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textSize="12sp"
-                        tools:text="1.2M views • 2 days ago • 500 likes"/>
-                </LinearLayout>
-
-                <Button
-                    android:id="@+id/btn_subscribe"
-                    style="@style/Widget.MaterialComponents.Button"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_like"
+                    style="?attr/materialButtonOutlinedStyle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Subscribe"/>
+                    app:icon="@drawable/ic_like"
+                    tools:text="1.2K"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_dislike"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    app:icon="@drawable/ic_dislike" />
             </LinearLayout>
 
-            <!-- THANH ĐIỀU KHIỂN LIKE/DISLIKE VÀ CÁC NÚT KHÁC -->
-            <HorizontalScrollView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:scrollbars="none">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <!-- Nút Like/Dislike -->
-                    <com.google.android.material.button.MaterialButtonToggleGroup
-                        android:id="@+id/toggle_group_like_dislike"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        app:singleSelection="true">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_like"
-                            style="?attr/materialButtonOutlinedStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="500"
-                            app:icon="@drawable/ic_like" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_dislike"
-                            style="?attr/materialButtonOutlinedStyle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            app:icon="@drawable/ic_dislike" />
-                    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-                    <!-- Các nút khác -->
-                    <Button
-                        android:id="@+id/btn_share"
-                        style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:text="Share"
-                        app:icon="@drawable/ic_share" />
-
-                    <!-- ... thêm các nút khác như Download, Remix... -->
-
-                </LinearLayout>
-            </HorizontalScrollView>
 
             <!-- Mô tả video -->
             <com.google.android.material.card.MaterialCardView
@@ -203,13 +96,10 @@
                     android:layout_height="wrap_content"
                     android:padding="12dp"
                     android:lineSpacingExtra="4dp"
-                    tools:text="Đây là phần mô tả chi tiết của video. Nó có thể rất dài và chứa nhiều thông tin hữu ích..."/>
+                    tools:text="Đây là phần mô tả chi tiết của video..."/>
             </com.google.android.material.card.MaterialCardView>
-
-            <!-- Vùng Bình luận sẽ được thêm vào đây -->
 
         </LinearLayout>
     </ScrollView>
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

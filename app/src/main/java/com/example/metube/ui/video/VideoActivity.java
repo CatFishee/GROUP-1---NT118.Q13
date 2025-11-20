@@ -1,23 +1,34 @@
 package com.example.metube.ui.video;
 
+import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageButton;
+import androidx.appcompat.widget.PopupMenu;
 import android.widget.Button;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.activity.OnBackPressedCallback;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable; // Import Nullable
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
 import com.example.metube.model.VideoStat;
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
 import com.google.firebase.database.*;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -40,13 +51,16 @@ public class VideoActivity extends AppCompatActivity {
     private PlayerView playerView;
     private ExoPlayer player;
     private TextView tvTitle, tvUploader, tvDescription, tvQuality, tvSpeed;
-    private ImageButton btnPlayPause, btnRewind;
+//    private ImageButton btnPlayPause, btnRewind;
     private MaterialButton btnLike, btnDislike;
-    private SeekBar volumeSeekBar;
+//    private SeekBar volumeSeekBar;
     private String videoId;
     private boolean hasViewCountBeenIncremented = false;
     private enum UserVoteState { NONE, LIKED, DISLIKED }
     private UserVoteState currentUserVoteState = UserVoteState.NONE;
+    private boolean isFullscreen = false;
+    private DefaultTrackSelector trackSelector;
+    private ScrollView scrollView;
 
     private DatabaseReference videoStatRef;
     private ValueEventListener statListener;
@@ -60,9 +74,11 @@ public class VideoActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video);
+        scrollView = findViewById(R.id.scroll_view_content);
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
 
         // Get the video ID passed from HomepageActivity
         videoId = getIntent().getStringExtra("video_id");
@@ -71,6 +87,20 @@ public class VideoActivity extends AppCompatActivity {
             finish();
             return;
         }
+        OnBackPressedCallback callback = new OnBackPressedCallback(true /* enabled by default */) {
+            @Override
+            public void handleOnBackPressed() {
+                if (isFullscreen) {
+                    exitFullscreen();
+                } else {
+                    // Nếu không ở chế độ toàn màn hình, hãy vô hiệu hóa callback này
+                    // và gọi lại hành động back mặc định.
+                    setEnabled(false);
+                    VideoActivity.super.onBackPressed();
+                }
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, callback);
 
         initViews();
 //        setupPlayer();
@@ -84,27 +114,28 @@ public class VideoActivity extends AppCompatActivity {
         tvUploader = findViewById(R.id.tv_video_uploader);
         tvDescription = findViewById(R.id.tv_video_description);
 //        tvStats = findViewById(R.id.tv_video_stats);
-        btnPlayPause = findViewById(R.id.btn_play_pause);
-        btnRewind = findViewById(R.id.btn_rewind);
+//        btnPlayPause = findViewById(R.id.btn_play_pause);
+//        btnRewind = findViewById(R.id.btn_rewind);
         btnLike = findViewById(R.id.btn_like);
         btnDislike = findViewById(R.id.btn_dislike);
-        tvQuality = findViewById(R.id.btn_quality);
-        tvSpeed = findViewById(R.id.btn_speed);
-        volumeSeekBar = findViewById(R.id.seekbar_volume);
+//        tvQuality = findViewById(R.id.btn_quality);
+//        tvSpeed = findViewById(R.id.btn_speed);
+//        volumeSeekBar = findViewById(R.id.seekbar_volume);
 //
-        btnPlayPause.setOnClickListener(v -> togglePlayPause());
-        btnRewind.setOnClickListener(v -> rewindVideo());
+//        btnPlayPause.setOnClickListener(v -> togglePlayPause());
+//        btnRewind.setOnClickListener(v -> rewindVideo());
         btnLike.setOnClickListener(v -> onLikeClicked());
         btnDislike.setOnClickListener(v -> onDislikeClicked());
-        tvQuality.setOnClickListener(v -> changeQuality());
-        tvSpeed.setOnClickListener(v -> changeSpeed());
-        volumeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (player != null) player.setVolume(progress / 100f);
-            }
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
+        scrollView = findViewById(R.id.scroll_view_content);
+//        tvQuality.setOnClickListener(v -> changeQuality());
+//        tvSpeed.setOnClickListener(v -> changeSpeed());
+//        volumeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+//            @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+//                if (player != null) player.setVolume(progress / 100f);
+//            }
+//            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
+//            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
+//        });
     }
 
 //    private void setupPlayer() {
@@ -160,21 +191,28 @@ public class VideoActivity extends AppCompatActivity {
     // --- HÀM KHỞI TẠO PLAYER MỚI ---
     private void initializePlayer() {
         if (player == null) {
-            player = new ExoPlayer.Builder(this).build();
+//            player = new ExoPlayer.Builder(this).build();
+//            playerView.setPlayer(player);
+//            player.addListener(new Player.Listener() {
+//                @Override
+//                public void onPlaybackStateChanged(int state) {
+//                    if (state == Player.STATE_READY && player.getPlayWhenReady() && !hasViewCountBeenIncremented) {
+//                        incrementViewCount();
+//                        hasViewCountBeenIncremented = true;
+//                    }
+//                }
+//                @Override
+//                public void onIsPlayingChanged(boolean isPlaying) {
+//                    btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
+//                }
+//            });
+            trackSelector = new DefaultTrackSelector(this);
+            player = new ExoPlayer.Builder(this)
+                    .setTrackSelector(trackSelector)
+                    .build();
+
             playerView.setPlayer(player);
-            player.addListener(new Player.Listener() {
-                @Override
-                public void onPlaybackStateChanged(int state) {
-                    if (state == Player.STATE_READY && player.getPlayWhenReady() && !hasViewCountBeenIncremented) {
-                        incrementViewCount();
-                        hasViewCountBeenIncremented = true;
-                    }
-                }
-                @Override
-                public void onIsPlayingChanged(boolean isPlaying) {
-                    btnPlayPause.setImageResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play);
-                }
-            });
+            setupCustomPlayerControls();
         }
 
         // Nếu đã có URL, bắt đầu phát video
@@ -187,6 +225,120 @@ public class VideoActivity extends AppCompatActivity {
         loadVideoDetails(videoId);
         fetchAndListenToVideoStats(videoId);
     }
+    private void setupCustomPlayerControls() {
+        // Rất quan trọng: Tìm các view bên trong playerView, không phải activity
+        ImageButton settingsButton = playerView.findViewById(R.id.exo_settings_button);
+        ImageButton volumeButton = playerView.findViewById(R.id.exo_volume_button);
+        ImageButton fullscreenButton = playerView.findViewById(R.id.exo_fullscreen_button);
+
+        // 1. Xử lý nút Cài đặt (Tốc độ, Chất lượng)
+        settingsButton.setOnClickListener(view -> {
+            PopupMenu popupMenu = new PopupMenu(this, view);
+            popupMenu.getMenuInflater().inflate(R.menu.player_settings_menu, popupMenu.getMenu());
+            popupMenu.setOnMenuItemClickListener(item -> {
+                int id = item.getItemId();
+                // --- LOGIC TỐC ĐỘ ---
+                if (id == R.id.menu_speed_0_5x) player.setPlaybackParameters(new PlaybackParameters(0.5f));
+                else if (id == R.id.menu_speed_1x) player.setPlaybackParameters(new PlaybackParameters(1.0f));
+                else if (id == R.id.menu_speed_1_5x) player.setPlaybackParameters(new PlaybackParameters(1.5f));
+                else if (id == R.id.menu_speed_2x) player.setPlaybackParameters(new PlaybackParameters(2.0f));
+
+                    // --- LOGIC CHẤT LƯỢNG ---
+                else if (id == R.id.menu_quality_auto) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().clearVideoSizeConstraints().build();
+                    trackSelector.setParameters(params);
+                } else if (id == R.id.menu_quality_1080p) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().setMaxVideoSize(1920, 1080).build();
+                    trackSelector.setParameters(params);
+                } else if (id == R.id.menu_quality_720p) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().setMaxVideoSize(1280, 720).build();
+                    trackSelector.setParameters(params);
+                } else if (id == R.id.menu_quality_480p) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().setMaxVideoSize(854, 480).build();
+                    trackSelector.setParameters(params);
+                }
+
+                return true;
+            });
+            popupMenu.show();
+        });
+
+        // Xử lý nút Toàn màn hình
+        fullscreenButton.setOnClickListener(view -> {
+            if (isFullscreen) {
+                exitFullscreen();
+            } else {
+                enterFullscreen();
+            }
+        });
+
+        // 2. Xử lý nút Âm lượng
+        volumeButton.setOnClickListener(view -> {
+            if (player.getVolume() > 0) {
+                player.setVolume(0f);
+                volumeButton.setImageResource(R.drawable.ic_volume_off);
+            } else {
+                player.setVolume(1f);
+                volumeButton.setImageResource(R.drawable.ic_volume_up);
+            }
+        });
+
+//        // 3. Xử lý nút Toàn màn hình
+//        fullscreenButton.setOnClickListener(view -> {
+//            // TODO: Triển khai logic vào/thoát chế độ toàn màn hình
+//            // Ví dụ: thay đổi orientation, ẩn status bar...
+//            Toast.makeText(this, "Chức năng toàn màn hình chưa được triển khai", Toast.LENGTH_SHORT).show();
+//        });
+    }
+    private void enterFullscreen() {
+        isFullscreen = true;
+        ImageButton fullscreenButton = playerView.findViewById(R.id.exo_fullscreen_button);
+        fullscreenButton.setImageResource(R.drawable.ic_fullscreen_exit); // Cần icon thoát fullscreen
+
+        // 1. Ẩn thanh trạng thái và thanh điều hướng
+        WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
+        windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+
+        // 2. Xoay màn hình sang ngang
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+
+        // 3. Ẩn các view khác và cho PlayerView chiếm toàn bộ màn hình
+        scrollView.setVisibility(View.GONE);
+        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) playerView.getLayoutParams();
+        params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+        params.height = ViewGroup.LayoutParams.MATCH_PARENT;
+        playerView.setLayoutParams(params);
+    }
+
+    private void exitFullscreen() {
+        isFullscreen = false;
+        ImageButton fullscreenButton = playerView.findViewById(R.id.exo_fullscreen_button);
+        fullscreenButton.setImageResource(R.drawable.ic_fullscreen_enter);
+
+        // 1. Hiện lại thanh trạng thái và thanh điều hướng
+        WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
+
+        // 2. Xoay màn hình về lại bình thường
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+
+        // 3. Hiện lại các view khác và trả PlayerView về kích thước cũ
+        scrollView.setVisibility(View.VISIBLE);
+        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) playerView.getLayoutParams();
+        params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+        params.height = 0; // Để constraint ratio hoạt động lại
+        params.dimensionRatio = "16:9";
+        playerView.setLayoutParams(params);
+    }
+//    @Override
+//    public void onBackPressed() {
+//        if (isFullscreen) {
+//            exitFullscreen();
+//        } else {
+//            super.onBackPressed();
+//        }
+//    }
 
     // --- HÀM GIẢI PHÓNG PLAYER MỚI ---
     private void releasePlayer() {
@@ -407,38 +559,38 @@ private void fetchAndListenToVideoStats(String videoId) {
                 .setValue(ServerValue.increment(1));
     }
 
-    private void togglePlayPause() {
-        if (player == null) return;
-//        if (player.isPlaying()) {
-//            player.pause();
-//            btnPlayPause.setImageResource(R.drawable.ic_pause);
-//        } else {
-//            player.play();
-//            btnPlayPause.setImageResource(R.drawable.ic_play);
+//    private void togglePlayPause() {
+//        if (player == null) return;
+////        if (player.isPlaying()) {
+////            player.pause();
+////            btnPlayPause.setImageResource(R.drawable.ic_pause);
+////        } else {
+////            player.play();
+////            btnPlayPause.setImageResource(R.drawable.ic_play);
+////        }
+//        player.setPlayWhenReady(!player.getPlayWhenReady());
+//    }
+
+//    private void rewindVideo() {
+//        if (player != null) {
+//            long newPosition = Math.max(player.getCurrentPosition() - 5000, 0);
+//            player.seekTo(newPosition);
 //        }
-        player.setPlayWhenReady(!player.getPlayWhenReady());
-    }
+//    }
 
-    private void rewindVideo() {
-        if (player != null) {
-            long newPosition = Math.max(player.getCurrentPosition() - 5000, 0);
-            player.seekTo(newPosition);
-        }
-    }
-
-    private void changeQuality() {
-        currentQualityIndex = (currentQualityIndex + 1) % qualities.size();
-        tvQuality.setText(qualities.get(currentQualityIndex));
-        Toast.makeText(this, "Switched to " + qualities.get(currentQualityIndex), Toast.LENGTH_SHORT).show();
-        // (optional) reload video with actual quality-specific URL if you support multiple sources
-    }
-
-    private void changeSpeed() {
-        currentSpeed = (currentSpeed == 1.0f) ? 1.5f : (currentSpeed == 1.5f) ? 2.0f : 1.0f;
-        player.setPlaybackParameters(new PlaybackParameters(currentSpeed));
-        tvSpeed.setText(currentSpeed + "x");
-        Toast.makeText(this, "Speed: " + currentSpeed + "x", Toast.LENGTH_SHORT).show();
-    }
+//    private void changeQuality() {
+//        currentQualityIndex = (currentQualityIndex + 1) % qualities.size();
+//        tvQuality.setText(qualities.get(currentQualityIndex));
+//        Toast.makeText(this, "Switched to " + qualities.get(currentQualityIndex), Toast.LENGTH_SHORT).show();
+//        // (optional) reload video with actual quality-specific URL if you support multiple sources
+//    }
+//
+//    private void changeSpeed() {
+//        currentSpeed = (currentSpeed == 1.0f) ? 1.5f : (currentSpeed == 1.5f) ? 2.0f : 1.0f;
+//        player.setPlaybackParameters(new PlaybackParameters(currentSpeed));
+//        tvSpeed.setText(currentSpeed + "x");
+//        Toast.makeText(this, "Speed: " + currentSpeed + "x", Toast.LENGTH_SHORT).show();
+//    }
 
     @Override
     protected void onStop() {

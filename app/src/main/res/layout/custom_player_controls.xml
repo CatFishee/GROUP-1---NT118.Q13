@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Lớp phủ nền mờ để các nút nổi bật hơn -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#80000000"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <!-- Vùng điều khiển trung tâm -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- NÚT TUA LUI (REWIND) - ID CHUẨN -->
+        <ImageButton
+            android:id="@id/exo_rew"
+            style="@style/ExoMediaButton.Rewind"
+            android:layout_marginEnd="16dp"/>
+
+        <!-- NÚT PLAY - ID CHUẨN -->
+        <ImageButton
+            android:id="@id/exo_play"
+            style="@style/ExoMediaButton.Play" />
+
+        <!-- NÚT PAUSE - ID CHUẨN -->
+        <ImageButton
+            android:id="@id/exo_pause"
+            style="@style/ExoMediaButton.Pause" />
+
+        <!-- NÚT TUA TỚI (FAST FORWARD) - ID CHUẨN -->
+        <ImageButton
+            android:id="@id/exo_ffwd"
+            style="@style/ExoMediaButton.FastForward"
+            android:layout_marginStart="16dp"/>
+
+    </LinearLayout>
+
+    <!-- Thanh điều khiển dưới cùng (Không thay đổi) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:padding="8dp">
+
+        <!-- Thanh tiến trình -->
+        <com.google.android.exoplayer2.ui.DefaultTimeBar
+            android:id="@id/exo_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+
+            <!-- Thời gian -->
+            <TextView
+                android:id="@id/exo_position"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                tools:text="0:26"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" / "
+                android:textColor="@android:color/white"/>
+            <TextView
+                android:id="@id/exo_duration"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                tools:text="3:00"/>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <!-- Các nút tùy chỉnh -->
+            <ImageButton
+                android:id="@+id/exo_volume_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_volume_up"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Âm lượng"/>
+
+            <ImageButton
+                android:id="@+id/exo_settings_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_settings"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_marginStart="16dp"
+                android:contentDescription="Cài đặt"/>
+
+            <ImageButton
+                android:id="@+id/exo_fullscreen_button"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_fullscreen_enter"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_marginStart="16dp"
+                android:contentDescription="Toàn màn hình"/>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>
