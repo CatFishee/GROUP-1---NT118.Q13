@@ -439,7 +439,7 @@ public class VideoActivity extends AppCompatActivity {
                                 currentUploaderName = uploaderName;
 //                                tvVideoStats.setText(String.format("%s • %s", currentUploaderName, currentRelativeTime)); // Tạm thời chưa có view
                                 Log.d(TAG, "Uploader loaded: " + currentUploaderName + " (value assigned)");
-                                String avatarUrl = doc.getString("avatarUrl");
+                                String avatarUrl = doc.getString("profileURL");
                                 if (avatarUrl != null && !avatarUrl.isEmpty()) {
                                     Glide.with(this).load(avatarUrl).into(ivChannelAvatar);
                                 }

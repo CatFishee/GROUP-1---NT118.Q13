@@ -156,7 +156,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                     .get()
                     .addOnSuccessListener(documentSnapshot -> {
                         if (documentSnapshot.exists()) {
-                            String avatarUrl = documentSnapshot.getString("avatarURL");
+                            String avatarUrl = documentSnapshot.getString("profileURL");
                             if (avatarUrl != null && !avatarUrl.isEmpty()) {
                                 Glide.with(context)
                                         .load(avatarUrl)
