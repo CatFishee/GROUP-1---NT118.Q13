@@ -73,6 +73,11 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         private DatabaseReference videoStatRef;
         private ValueEventListener viewListener;
 
+        // Cache data để build info text
+        private String channelName = "";
+        private long viewCount = 0;
+        private String timeAgo = "";
+
         public VideoViewHolder(@NonNull View itemView) {
             super(itemView);
             thumbnail = itemView.findViewById(R.id.video_thumbnail);
@@ -82,11 +87,22 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         }
 
         public void bind(final Video video, Context context, final OnVideoClickListener listener) {
+            // Reset cache
+            channelName = "";
+            viewCount = 0;
+            timeAgo = "";
+
             title.setText(video.getTitle());
             info.setText("Loading...");
 
             // Load uploader info from Firestore
-            loadChannelAndVideoInfo(video, info);
+            loadChannelInfo(video);
+
+            // Load view count from Realtime Database
+            listenToViewCount(video);
+
+            // Format time ago
+            timeAgo = formatTimeAgo(video.getCreatedAt());
 
             // Load thumbnail
             Glide.with(context)
@@ -95,34 +111,61 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                     .error(R.drawable.logo_metube)
                     .into(thumbnail);
 
+            // Load avatar
+            loadChannelAvatar(video.getUploaderID(), context);
+
             // Set click listener
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onVideoClick(video);
             });
-
-            // Load realtime view count
-            listenToViewCount(video);
         }
 
-        private void loadChannelAndVideoInfo(Video video, TextView infoTextView) {
+        private void loadChannelInfo(Video video) {
             String uploaderId = video.getUploaderID();
             if (uploaderId == null || uploaderId.isEmpty()) {
-                infoTextView.setText("Unknown Channel");
+                channelName = "Unknown Channel";
+                updateInfoText();
                 return;
             }
 
-            FirebaseFirestore.getInstance().collection("users").document(uploaderId).get()
+            FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(uploaderId)
+                    .get()
                     .addOnSuccessListener(documentSnapshot -> {
-                        String channelName = "Unknown Channel";
                         if (documentSnapshot.exists()) {
                             String name = documentSnapshot.getString("name");
-                            if (name != null && !name.isEmpty()) channelName = name;
+                            channelName = (name != null && !name.isEmpty()) ? name : "Unknown Channel";
+                        } else {
+                            channelName = "Unknown Channel";
                         }
-
-                        String timeAgo = formatTimeAgo(video.getCreatedAt());
-                        infoTextView.setText(channelName + " • " + timeAgo);
+                        updateInfoText();
                     })
-                    .addOnFailureListener(e -> infoTextView.setText("Unknown Channel"));
+                    .addOnFailureListener(e -> {
+                        channelName = "Unknown Channel";
+                        updateInfoText();
+                    });
+        }
+
+        private void loadChannelAvatar(String uploaderId, Context context) {
+            if (uploaderId == null || uploaderId.isEmpty()) return;
+
+            FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(uploaderId)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            String avatarUrl = documentSnapshot.getString("avatarURL");
+                            if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                                Glide.with(context)
+                                        .load(avatarUrl)
+                                        .placeholder(R.drawable.ic_person)
+                                        .error(R.drawable.ic_person)
+                                        .into(avatar);
+                            }
+                        }
+                    });
         }
 
         private String formatTimeAgo(Timestamp timestamp) {
@@ -130,7 +173,18 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             return android.text.format.DateUtils.getRelativeTimeSpanString(
                     timestamp.toDate().getTime(),
                     System.currentTimeMillis(),
-                    android.text.format.DateUtils.MINUTE_IN_MILLIS).toString();
+                    android.text.format.DateUtils.MINUTE_IN_MILLIS
+            ).toString();
+        }
+
+        private String formatViewCount(long views) {
+            if (views < 1000) {
+                return views + " views";
+            } else if (views < 1000000) {
+                return String.format("%.1fK views", views / 1000.0);
+            } else {
+                return String.format("%.1fM views", views / 1000000.0);
+            }
         }
 
         private void listenToViewCount(Video video) {
@@ -144,31 +198,65 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             videoStatRef = FirebaseDatabase.getInstance()
                     .getReference("videostat")
                     .child(video.getVideoID())
-                    .child("views");
+                    .child("viewCount");
 
             // Listen for realtime updates
             viewListener = new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    Long viewCount = snapshot.getValue(Long.class);
-                    if (viewCount == null) viewCount = 0L;
-
-                    // Append view count below uploader info
-                    String currentText = info.getText().toString();
-                    if (!currentText.contains("views")) {
-                        info.setText(currentText + " • " + viewCount + " views");
-                    } else {
-                        info.setText(currentText.replaceAll("\\d+ views", viewCount + " views"));
-                    }
+                    Long views = snapshot.getValue(Long.class);
+                    viewCount = (views != null) ? views : 0L;
+                    updateInfoText();
                 }
 
                 @Override
                 public void onCancelled(@NonNull DatabaseError error) {
-                    // ignored
+                    // If Realtime DB fails, try Firestore
+                    loadViewCountFromFirestore(video.getVideoID());
                 }
             };
 
             videoStatRef.addValueEventListener(viewListener);
+        }
+
+        private void loadViewCountFromFirestore(String videoId) {
+            FirebaseFirestore.getInstance()
+                    .collection("videostat")
+                    .document(videoId)
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        if (documentSnapshot.exists()) {
+                            Long views = documentSnapshot.getLong("viewCount");
+                            viewCount = (views != null) ? views : 0L;
+                            updateInfoText();
+                        }
+                    });
+        }
+
+        // ✅ Build info text với format: Channel • Views • Time
+        private void updateInfoText() {
+            StringBuilder infoBuilder = new StringBuilder();
+
+            // Add channel name
+            if (!channelName.isEmpty()) {
+                infoBuilder.append(channelName);
+            }
+
+            // Add view count
+            if (viewCount > 0 || !channelName.isEmpty()) {
+                if (infoBuilder.length() > 0) infoBuilder.append(" • ");
+                infoBuilder.append(formatViewCount(viewCount));
+            }
+
+            // Add time ago
+            if (!timeAgo.isEmpty()) {
+                if (infoBuilder.length() > 0) infoBuilder.append(" • ");
+                infoBuilder.append(timeAgo);
+            }
+
+            // Update TextView
+            String finalText = infoBuilder.length() > 0 ? infoBuilder.toString() : "Loading...";
+            info.setText(finalText);
         }
     }
 }

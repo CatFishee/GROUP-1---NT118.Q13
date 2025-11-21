@@ -17,6 +17,7 @@ public class Video {
     private List<String> searchKeywords;
     @ServerTimestamp
     private Timestamp createdAt;
+    private long viewCount; // Temporary field for sorting (not stored in Firestore)
 
     public Video() {}
 
@@ -63,4 +64,6 @@ public class Video {
 
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public long getViewCount() { return viewCount; }
+    public void setViewCount(long viewCount) { this.viewCount = viewCount; }
 }

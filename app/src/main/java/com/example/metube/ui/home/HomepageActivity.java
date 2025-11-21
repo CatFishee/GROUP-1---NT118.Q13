@@ -1,5 +1,6 @@
 package com.example.metube.ui.home;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -18,7 +19,10 @@ import android.content.Intent;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.example.metube.R;
 import com.example.metube.model.Video;
@@ -26,6 +30,11 @@ import com.example.metube.ui.upload.UploadActivity;
 import com.example.metube.ui.search.SearchActivity;
 import com.example.metube.ui.video.VideoActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -128,7 +137,9 @@ public class HomepageActivity extends AppCompatActivity {
                             allVideoList.add(video);
                         }
                         // ✅ Áp dụng filter sau khi load data
-                        filterVideosByTopic(currentSelectedTopic);
+//                        filterVideosByTopic(currentSelectedTopic);
+//                        Log.d(TAG, "Data updated. Total videos: " + allVideoList.size());
+                        fetchViewCountsAndSort();
                         Log.d(TAG, "Data updated. Total videos: " + allVideoList.size());
                     }
                 });
@@ -144,10 +155,70 @@ public class HomepageActivity extends AppCompatActivity {
                         Video video = document.toObject(Video.class);
                         allVideoList.add(video);
                     }
-                    filterVideosByTopic(currentSelectedTopic);
+//                    filterVideosByTopic(currentSelectedTopic);
+                    fetchViewCountsAndSort();
                 })
                 .addOnFailureListener(e -> Log.w(TAG, "Error getting documents.", e));
     }
+    private void fetchViewCountsAndSort() {
+        if (allVideoList.isEmpty()) {
+            filterVideosByTopic(currentSelectedTopic);
+            return;
+        }
+
+        DatabaseReference videoStatRef = FirebaseDatabase.getInstance().getReference("videostat");
+        AtomicInteger pendingRequests = new AtomicInteger(allVideoList.size());
+
+        for (Video video : allVideoList) {
+            if (video.getVideoID() == null) {
+                if (pendingRequests.decrementAndGet() == 0) {
+                    sortAndFilterVideos();
+                }
+                continue;
+            }
+
+            videoStatRef.child(video.getVideoID()).child("viewCount")
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            Long views = snapshot.getValue(Long.class);
+                            video.setViewCount(views != null ? views : 0L);
+                            Log.d(TAG, "Fetched viewCount for '" + video.getTitle() + "': " + video.getViewCount());
+
+                            if (pendingRequests.decrementAndGet() == 0) {
+                                sortAndFilterVideos();
+                            }
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            Log.e(TAG, "Failed to fetch viewCount for " + video.getVideoID(), error.toException());
+                            video.setViewCount(0L);
+
+                            if (pendingRequests.decrementAndGet() == 0) {
+                                sortAndFilterVideos();
+                            }
+                        }
+                    });
+        }
+    }
+    private void sortAndFilterVideos() {
+        // Sort theo viewCount từ cao xuống thấp
+        Collections.sort(allVideoList, new Comparator<Video>() {
+            @Override
+            public int compare(Video v1, Video v2) {
+                return Long.compare(v2.getViewCount(), v1.getViewCount());
+            }
+        });
+
+        Log.d(TAG, "Videos sorted by viewCount:");
+        for (int i = 0; i < Math.min(5, allVideoList.size()); i++) {
+            Video v = allVideoList.get(i);
+            Log.d(TAG, "  " + (i+1) + ". " + v.getTitle() + " - Views: " + v.getViewCount());
+        }
+        filterVideosByTopic(currentSelectedTopic);
+    }
+
     private void filterVideosByTopic(String topic) {
         currentSelectedTopic = topic;
         videoList.clear();
