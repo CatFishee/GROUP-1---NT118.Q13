@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:backgroundTint="@color/white"
+    android:background="@color/white"
     tools:context=".ui.upload.UploadActivity">
 
     <FrameLayout
@@ -102,6 +102,8 @@
                 android:id="@+id/chip_group_topics"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@color/white"
+                style="@style/Widget.App.ChipGroup"
                 app:chipSpacing="8dp"/>
 
             <AutoCompleteTextView
@@ -110,6 +112,7 @@
                 android:layout_height="50dp"
                 android:hint="Type or select a topic"
                 android:textColorHint="@color/app_main_color"
+                android:textColor="@color/app_main_color"
                 android:completionThreshold="1"
                 android:singleLine="true"
                 android:imeOptions="actionDone"/>
@@ -122,6 +125,7 @@
                 android:layout_marginBottom="15dp"
                 android:backgroundTint="@color/app_main_color"
                 android:text="Select Video"
+                android:textColor="@color/white"
                 android:textSize="20dp"/>
 
             <TextView
@@ -140,6 +144,7 @@
                 android:layout_marginTop="32dp"
                 android:backgroundTint="@color/app_main_color"
                 android:text="Upload Video"
+                android:textColor="@color/white"
                 android:textSize="20dp"/>
 
         </LinearLayout>
