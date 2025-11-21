@@ -39,6 +39,8 @@ public class HomepageActivity extends AppCompatActivity {
     private RecyclerView recyclerViewVideos;
     private VideoAdapter videoAdapter;
     private List<Video> videoList;
+    private List<Video> allVideoList; // ✅ Lưu toàn bộ video
+    private String currentSelectedTopic = "All"; // ✅ Lưu topic đang chọn
     private FirebaseFirestore db;
     private ListenerRegistration firestoreListener;
     private FrameLayout fragmentContainer;
@@ -85,7 +87,7 @@ public class HomepageActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         videoList = new ArrayList<>();
-        // ✅ Pass click listener here
+        allVideoList = new ArrayList<>();
         videoAdapter = new VideoAdapter(this, videoList, video -> {
             if (video != null && video.getVideoID() != null) {
                 Intent intent = new Intent(HomepageActivity.this, VideoActivity.class);
@@ -110,14 +112,24 @@ public class HomepageActivity extends AppCompatActivity {
                         return;
                     }
 
+//                    if (value != null) {
+//                        videoList.clear();
+//                        for (QueryDocumentSnapshot document : value) {
+//                            Video video = document.toObject(Video.class);
+//                            videoList.add(video);
+//                        }
+//                        videoAdapter.setVideos(videoList);
+//                        Log.d(TAG, "Data updated. Total videos: " + videoList.size());
+//                    }
                     if (value != null) {
-                        videoList.clear();
+                        allVideoList.clear();
                         for (QueryDocumentSnapshot document : value) {
                             Video video = document.toObject(Video.class);
-                            videoList.add(video);
+                            allVideoList.add(video);
                         }
-                        videoAdapter.setVideos(videoList);
-                        Log.d(TAG, "Data updated. Total videos: " + videoList.size());
+                        // ✅ Áp dụng filter sau khi load data
+                        filterVideosByTopic(currentSelectedTopic);
+                        Log.d(TAG, "Data updated. Total videos: " + allVideoList.size());
                     }
                 });
     }
@@ -127,14 +139,39 @@ public class HomepageActivity extends AppCompatActivity {
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    videoList.clear();
+                    allVideoList.clear();
                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         Video video = document.toObject(Video.class);
-                        videoList.add(video);
+                        allVideoList.add(video);
                     }
-                    videoAdapter.setVideos(videoList);
+                    filterVideosByTopic(currentSelectedTopic);
                 })
                 .addOnFailureListener(e -> Log.w(TAG, "Error getting documents.", e));
+    }
+    private void filterVideosByTopic(String topic) {
+        currentSelectedTopic = topic;
+        videoList.clear();
+
+        if (topic.equals("All")) {
+            // Hiển thị tất cả video
+            videoList.addAll(allVideoList);
+        } else {
+            // Lọc video theo topics (List<String>)
+            for (Video video : allVideoList) {
+                if (video.getTopics() != null && !video.getTopics().isEmpty()) {
+                    // Check xem topic có trong list topics không (không phân biệt hoa thường)
+                    for (String videoTopic : video.getTopics()) {
+                        if (videoTopic.equalsIgnoreCase(topic)) {
+                            videoList.add(video);
+                            break; // Tìm thấy rồi thì break, tránh add trùng
+                        }
+                    }
+                }
+            }
+        }
+        videoAdapter.setVideos(videoList);
+        videoAdapter.notifyDataSetChanged();
+        Log.d(TAG, "Filtered videos for topic '" + topic + "': " + videoList.size());
     }
 
     private void setupTopBarActions() {
@@ -304,6 +341,7 @@ public class HomepageActivity extends AppCompatActivity {
             }
             v.setSelected(true);
             currentlySelectedTopic = v;
+            filterVideosByTopic(text);
         });
         return button;
     }
