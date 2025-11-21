@@ -8,5 +8,6 @@
     <string name="supabase_bucket_thumbnails">Thumbnails</string>
     <string name="supabase_project_url">https://fhoohenjdvrmeywfoclg.supabase.co</string>
     <string name="supabase_anon_key">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZob29oZW5qZHZybWV5d2ZvY2xnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1MjY3NzEsImV4cCI6MjA3ODEwMjc3MX0.N36LxMSVmVpxbX-K7DhaYtsGTgRUJS4WYgw6U74asak</string>
+    <string name="video_thumbnail">Video thumbnail</string>
 </resources>
 

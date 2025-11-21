@@ -70,18 +70,22 @@ dependencies {
     // Cloudinary
     implementation("com.cloudinary:cloudinary-android:3.1.2")
 
-
     // --- Supabase ---
-    // implementation(libs.supabase.gotrue)
     implementation(libs.supabase.storage)
     implementation(libs.supabase.postgrest)
     implementation(libs.supabase.realtime)
     implementation(libs.okhttp)
+
     // --- Kotlinx Serialization ---
     implementation(libs.kotlinx.serialization.json)
-// ExoPlayer (core + UI)
+
+    // ExoPlayer (core + UI)
     implementation("com.google.android.exoplayer:exoplayer:2.19.1")
     implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")
+
+    // --- MPAndroidChart for graphs ---
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
     // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
