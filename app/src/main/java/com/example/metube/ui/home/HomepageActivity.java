@@ -48,8 +48,8 @@ public class HomepageActivity extends AppCompatActivity {
     private RecyclerView recyclerViewVideos;
     private VideoAdapter videoAdapter;
     private List<Video> videoList;
-    private List<Video> allVideoList; // ✅ Lưu toàn bộ video
-    private String currentSelectedTopic = "All"; // ✅ Lưu topic đang chọn
+    private List<Video> allVideoList;
+    private String currentSelectedTopic = "All";
     private FirebaseFirestore db;
     private ListenerRegistration firestoreListener;
     private FrameLayout fragmentContainer;

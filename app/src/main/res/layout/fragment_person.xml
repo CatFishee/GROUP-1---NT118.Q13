@@ -1,11 +1,251 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Person Fragment"
-        android:textSize="24sp"
-        android:layout_gravity="center" />
-</FrameLayout>
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/white"
+    tools:context=".ui.home.PersonFragment">
+
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp">
+
+            <!-- 3. KHU VỰC THÔNG TIN NGƯỜI DÙNG -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp">
+
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/iv_avatar"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:src="@tools:sample/avatars" />
+
+                <TextView
+                    android:id="@+id/tv_user_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:textColor="@color/app_main_color"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    app:layout_constraintStart_toEndOf="@id/iv_avatar"
+                    app:layout_constraintTop_toTopOf="@id/iv_avatar"
+                    tools:text="Gia Hânn" />
+
+                <TextView
+                    android:id="@+id/tv_channel_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="14sp"
+                    app:layout_constraintStart_toStartOf="@id/tv_user_name"
+                    app:layout_constraintTop_toBottomOf="@id/tv_user_name"
+                    tools:text="\@giahan" />
+
+                <TextView
+                    android:id="@+id/btn_view_channel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="View channel >"
+                    android:textColor="@color/app_main_color"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:layout_constraintBaseline_toBaselineOf="@id/tv_channel_name"
+                    app:layout_constraintStart_toEndOf="@id/tv_channel_name" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- 4. CÁC NÚT HÀNH ĐỘNG (Switch Account, Share Channel) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingHorizontal="12dp"
+                android:layout_marginTop="20dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_switch_account"
+                    style="@style/Widget.Material3.Button.OutlinedButton.Icon"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Switch account"
+                    android:textColor="@color/app_main_color"
+                    app:icon="@drawable/ic_switch_account"
+                    app:iconTint="@color/app_main_color"
+                    app:strokeColor="@android:color/darker_gray"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_share_channel"
+                    style="@style/Widget.Material3.Button.OutlinedButton.Icon"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="Share channel"
+                    android:textColor="@color/app_main_color"
+                    app:icon="@drawable/ic_share"
+                    app:iconTint="@color/app_main_color"
+                    app:strokeColor="@android:color/darker_gray"/>
+            </LinearLayout>
+
+            <!-- 5. LỊCH SỬ XEM (HISTORY) -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:paddingHorizontal="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="History"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_centerVertical="true"/>
+
+                <TextView
+                    android:id="@+id/btn_view_all_history"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="View all"
+                    android:textColor="@color/app_main_color"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:padding="8dp"/>
+            </RelativeLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_history"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="8dp"
+                android:clipToPadding="false"
+                tools:listitem="@layout/item_video_history"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>
+
+            <!-- 6. DANH SÁCH PHÁT (PLAYLISTS) -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:paddingHorizontal="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Playlists"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_centerVertical="true"/>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_alignParentEnd="true">
+
+                    <ImageButton
+                        android:id="@+id/btn_add_playlist"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:src="@drawable/ic_add"
+                        app:tint="@color/app_main_color"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:padding="8dp"/>
+
+                    <TextView
+                        android:id="@+id/btn_view_all_playlists"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="View all"
+                        android:textColor="@color/app_main_color"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:padding="8dp"/>
+                </LinearLayout>
+
+            </RelativeLayout>
+
+<!--            <androidx.recyclerview.widget.RecyclerView-->
+<!--                android:id="@+id/rv_playlists"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_marginTop="8dp"-->
+<!--                android:orientation="horizontal"-->
+<!--                android:paddingStart="16dp"-->
+<!--                android:paddingEnd="8dp"-->
+<!--                android:clipToPadding="false"-->
+<!--                tools:listitem="@layout/item_playlist"-->
+<!--                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"/>-->
+
+            <!-- 7. CÁC LỰA CHỌN CHÍNH -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginTop="24dp"
+                android:layout_marginHorizontal="16dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:layout_marginTop="16dp">
+
+                <TextView
+                    android:id="@+id/btn_your_videos"
+                    style="@style/PersonMenuItem"
+                    android:text="Your videos"
+                    app:drawableStartCompat="@drawable/ic_your_videos" />
+
+                <TextView
+                    android:id="@+id/btn_downloads"
+                    style="@style/PersonMenuItem"
+                    android:text="Downloads"
+                    app:drawableStartCompat="@drawable/ic_download" />
+
+                <TextView
+                    android:id="@+id/btn_statistics"
+                    style="@style/PersonMenuItem"
+                    android:text="Statistics"
+                    app:drawableStartCompat="@drawable/ic_statistics" />
+
+                <TextView
+                    android:id="@+id/btn_get_premium"
+                    style="@style/PersonMenuItem"
+                    android:text="Get MeTube Premium"
+                    app:drawableStartCompat="@drawable/ic_premium" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+
+</LinearLayout>

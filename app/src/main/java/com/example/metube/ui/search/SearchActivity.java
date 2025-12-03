@@ -1,6 +1,7 @@
 package com.example.metube.ui.search;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
@@ -20,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.metube.R;
 import com.example.metube.model.Video;
 import com.example.metube.ui.home.VideoAdapter;
+import com.example.metube.ui.video.VideoActivity;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -163,7 +165,16 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
         rvSearchHistory.setAdapter(historyAdapter);
     }
     private void setupResultsView() {
-        resultsAdapter = new VideoAdapter(this, new ArrayList<>(), null);
+//        resultsAdapter = new VideoAdapter(this, new ArrayList<>(), null);
+//        rvSearchResults.setLayoutManager(new LinearLayoutManager(this));
+//        rvSearchResults.setAdapter(resultsAdapter);
+        resultsAdapter = new VideoAdapter(this, new ArrayList<>(), video -> {
+            if (video != null && video.getVideoID() != null) {
+                Intent intent = new Intent(SearchActivity.this, VideoActivity.class);
+                intent.putExtra("video_id", video.getVideoID());
+                startActivity(intent);
+            }
+        });
         rvSearchResults.setLayoutManager(new LinearLayoutManager(this));
         rvSearchResults.setAdapter(resultsAdapter);
     }
