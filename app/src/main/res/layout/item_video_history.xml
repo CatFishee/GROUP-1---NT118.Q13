@@ -74,17 +74,28 @@
             android:ellipsize="end"
             android:maxLines="2"
             android:textColor="@color/black"
-            android:textSize="16sp"
-            tools:text="2025年秋季IJL レギュラーシーズン Day3" />
+            android:textSize="20sp"
+            tools:text="Video siêu dafiiiiiiiiiii để testttttttttt" />
 
         <TextView
-            android:id="@+id/tv_channel_and_views"
+            android:id="@+id/tv_channel_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="2dp"
             android:textColor="@android:color/darker_gray"
             android:textSize="13sp"
-            tools:text="IdentityV 第五人格 公式チャンネル • 296K views" />
+            android:maxLines="1"
+            android:ellipsize="end"
+            tools:text="Tên kênh nè" />
+
+        <!-- 3. Lượt xem (Dòng riêng) -->
+        <TextView
+            android:id="@+id/tv_view_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/darker_gray"
+            android:textSize="13sp"
+            tools:text="296K views" />
     </LinearLayout>
 
     <!-- Nút Tùy chọn (3 chấm) -->
@@ -96,7 +107,6 @@
         android:padding="8dp"
         android:src="@drawable/ic_more_vert"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/layout_info"
-        app:tint="@android:color/darker_gray" />
+        app:layout_constraintTop_toTopOf="@id/layout_info"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -13,7 +13,7 @@ import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.DateHeader;
 import com.example.metube.model.HistoryItem;
-import com.example.metube.model.User;
+import com.example.metube.utils.TimeUtil;
 import com.example.metube.model.Video;
 
 import java.util.List;
@@ -80,7 +80,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     // ViewHolder for Video Items
     static class VideoHistoryViewHolder extends RecyclerView.ViewHolder {
         ImageView ivThumbnail;
-        TextView tvDuration, tvVideoTitle, tvChannelAndViews;
+        TextView tvDuration, tvVideoTitle, tvChannelName, tvViewCount;
         ProgressBar pbVideoProgress;
 
         VideoHistoryViewHolder(@NonNull View itemView) {
@@ -88,14 +88,16 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             ivThumbnail = itemView.findViewById(R.id.iv_thumbnail);
             tvDuration = itemView.findViewById(R.id.tv_duration);
             tvVideoTitle = itemView.findViewById(R.id.tv_video_title);
-            tvChannelAndViews = itemView.findViewById(R.id.tv_channel_and_views);
+            tvChannelName = itemView.findViewById(R.id.tv_channel_name);
+            tvViewCount = itemView.findViewById(R.id.tv_view_count);
             pbVideoProgress = itemView.findViewById(R.id.pb_video_progress);
         }
 
         void bind(HistoryItem historyItem) {
             if (historyItem.getVideo() == null) {
                 tvVideoTitle.setText("Video not found");
-                tvChannelAndViews.setText("");
+                tvChannelName.setText(""); // Xóa text nếu không có video
+                tvViewCount.setText("");
                 return;
             }
 
@@ -127,11 +129,11 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 uploaderName = historyItem.getUploader().getName();
             } else if (video.getUploaderName() != null) {
             uploaderName = video.getUploaderName();
-        }
+            }
+            tvChannelName.setText(uploaderName);
 
             String viewCountFormatted = formatViewCount(video.getViewCount());
-            String info = uploaderName + " • " + viewCountFormatted;
-            tvChannelAndViews.setText(info);
+            tvViewCount.setText(viewCountFormatted);
         }
 
         private String formatDuration(long seconds) {
