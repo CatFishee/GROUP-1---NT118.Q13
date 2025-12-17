@@ -70,5 +70,8 @@
             android:name=".ui.video.VideoActivity"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:exported="true" />
+        <activity
+            android:name=".ui.history.HistoryActivity"
+            android:exported="false" />
     </application>
 </manifest>

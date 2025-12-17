@@ -33,8 +33,10 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -121,7 +123,8 @@ public class PersonFragment extends Fragment {
         btnViewAllHistory.setOnClickListener(v -> {
             // isAdded() kiểm tra để đảm bảo Fragment vẫn đang tồn tại trước khi chuyển Activity
             if (isAdded()) {
-                startActivity(new Intent(requireContext(), HistoryActivity.class));
+                Intent intent = new Intent(requireContext(), HistoryActivity.class);
+                startActivity(intent);
             }
         });
 
@@ -186,10 +189,10 @@ public class PersonFragment extends Fragment {
     private void loadHistoryPreview() {
         FirebaseUser firebaseUser = auth.getCurrentUser();
         if (firebaseUser == null) {
-            Log.d(TAG, "❌ User not logged in");
+            Log.d(TAG, "User not logged in");
             return;
         }
-        Log.d(TAG, "🔍 Querying history for userID: " + firebaseUser.getUid());
+        Log.d(TAG, "Querying history for userID: " + firebaseUser.getUid());
 
         // B1: Lấy 10 bản ghi lịch sử mới nhất
         firestore.collection("watchHistory")
@@ -198,68 +201,126 @@ public class PersonFragment extends Fragment {
                 .limit(10)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    Log.d(TAG, "✅ Query successful. Documents found: " + querySnapshot.size());
+                    Log.d(TAG, "Query successful. Documents found: " + querySnapshot.size());
                     if (querySnapshot.isEmpty()) {
-                        Log.d(TAG, "📭 No history items in database");
+                        Log.d(TAG, "No history items in database");
                         return;
                     }
 
                     // Lấy ra danh sách các videoId theo đúng thứ tự đã xem
                     List<String> videoIds = new ArrayList<>();
+                    Map<String, Long> progressMap = new HashMap<>();
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                        Log.d(TAG, "📄 Document ID: " + doc.getId());
-                        Log.d(TAG, "📄 Document data: " + doc.getData());
-
                         HistoryItem item = doc.toObject(HistoryItem.class);
-
-                        Log.d(TAG, "   - Parsed videoID: " + item.getVideoID());
-                        Log.d(TAG, "   - Parsed userID: " + item.getUserID());
-                        Log.d(TAG, "   - Parsed watchedAt: " + item.getWatchedAt());
-
-                        if (item.getVideoID() != null) {
-                            videoIds.add(item.getVideoID());
-                        }
-                        else {
-                            Log.w(TAG, "⚠️ videoID is NULL for document: " + doc.getId());
+                        if (item != null && item.getVideoID() != null) {
+                            if (!videoIds.contains(item.getVideoID())) {
+                                videoIds.add(item.getVideoID());
+                                Long pos = doc.getLong("resumePosition");
+                                if (pos != null) {
+                                    progressMap.put(item.getVideoID(), pos);
+                                }
+                            }
                         }
                     }
-                    Log.d(TAG, "🎬 Total videoIds to fetch: " + videoIds.size());
+
                     if (!videoIds.isEmpty()) {
-                        // B2: Dùng danh sách videoId để lấy thông tin chi tiết của các video đó
-                        fetchVideosByIdsForPreview(videoIds);
-                    } else {
-                        Log.w(TAG, "❌ No valid videoIds found");
+                        fetchVideosByIdsForPreview(videoIds, progressMap);
                     }
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Error fetching history preview", e));
+                .addOnFailureListener(e -> Log.e(TAG, "Error loading history IDs", e));
     }
 
     /**
      * Lấy thông tin chi tiết của một danh sách video dựa vào ID của chúng.
      */
-    private void fetchVideosByIdsForPreview(List<String> orderedVideoIds) {
-        firestore.collection("videos").whereIn(FieldPath.documentId(), orderedVideoIds)
+    private void fetchVideosByIdsForPreview(List<String> orderedVideoIds, Map<String, Long> progressMap) {
+        firestore.collection("videos")
+                .whereIn(FieldPath.documentId(), orderedVideoIds)
                 .get()
                 .addOnSuccessListener(videoSnapshots -> {
-                    if (isAdded()) {
-                        // Tạo một bản đồ để tra cứu video theo ID
-                        Map<String, Video> videoMap = new HashMap<>();
-                        for (Video video : videoSnapshots.toObjects(Video.class)) {
-                            videoMap.put(video.getVideoID(), video);
-                        }
+                    if (!isAdded()) return;
 
-                        // Sắp xếp lại danh sách video theo đúng thứ tự đã xem ban đầu
-                        historyVideoList.clear();
-                        for (String videoId : orderedVideoIds) {
-                            if (videoMap.containsKey(videoId)) {
-                                historyVideoList.add(videoMap.get(videoId));
+                    Map<String, Video> videoMap = new HashMap<>();
+                    List<String> uploaderIds = new ArrayList<>();
+                    Set<String> uniqueUploaderIds = new HashSet<>();
+
+                    // Parse Video và gom uploaderID
+                    for (DocumentSnapshot doc : videoSnapshots) {
+                        Video video = doc.toObject(Video.class);
+                        if (video != null) {
+                            video.setVideoID(doc.getId()); // Quan trọng: set ID cho object
+                            videoMap.put(doc.getId(), video);
+
+                            if (video.getUploaderID() != null && !uniqueUploaderIds.contains(video.getUploaderID())) {
+                                uniqueUploaderIds.add(video.getUploaderID());
+                                uploaderIds.add(video.getUploaderID());
                             }
                         }
+                    }
 
-                        // Báo cho adapter biết dữ liệu đã thay đổi để cập nhật RecyclerView
-                        historyPreviewAdapter.notifyDataSetChanged();
+                    // Sắp xếp lại danh sách video theo đúng thứ tự lịch sử
+                    List<Video> sortedVideos = new ArrayList<>();
+                    for (String vid : orderedVideoIds) {
+                        if (videoMap.containsKey(vid)) {
+                            // 1. Lấy object video ra và gán vào biến 'video'
+                            Video video = videoMap.get(vid);
+
+                            // 2. Kiểm tra và gán progress
+                            if (video != null) {
+                                if (progressMap.containsKey(vid)) {
+                                    video.setResumePosition(progressMap.get(vid));
+                                }
+                                // 3. Chỉ add vào list 1 lần duy nhất sau khi đã xử lý xong dữ liệu
+                                sortedVideos.add(video);
+                            }
+                        }
+                    }
+
+                    // BƯỚC 3: Thay vì hiển thị ngay, hãy đi lấy tên người đăng!
+                    if (!uploaderIds.isEmpty()) {
+                        fetchUploaderNames(sortedVideos, uploaderIds);
+                    } else {
+                        // Trường hợp hiếm: Video không có người đăng
+                        updateHistoryAdapter(sortedVideos);
                     }
                 })
-                .addOnFailureListener(e -> Log.e(TAG, "Error fetching videos by IDs", e));
+                .addOnFailureListener(e -> Log.e(TAG, "Error fetching video details", e));
     }
+    private void fetchUploaderNames(List<Video> videos, List<String> uploaderIds) {
+        firestore.collection("users")
+                .whereIn("userID", uploaderIds)
+                .get()
+                .addOnSuccessListener(userSnapshots -> {
+                    if (!isAdded()) return;
+
+                    Map<String, String> userMap = new HashMap<>();
+                    for (DocumentSnapshot doc : userSnapshots) {
+                        User user = doc.toObject(User.class);
+                        if (user != null) {
+                            // Lấy fullName làm tên hiển thị
+                            userMap.put(user.getUserID(), user.getName());
+                        }
+                    }
+
+                    // Gán tên vào từng video (vào trường @Exclude)
+                    for (Video video : videos) {
+                        String name = userMap.get(video.getUploaderID());
+                        if (name != null) {
+                            video.setUploaderName(name);
+                        } else {
+                            video.setUploaderName("Unknown User");
+                        }
+                    }
+
+                    // Cuối cùng: Cập nhật giao diện
+                    updateHistoryAdapter(videos);
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error fetching uploader names", e));
+    }
+    private void updateHistoryAdapter(List<Video> videos) {
+        historyVideoList.clear();
+        historyVideoList.addAll(videos);
+        historyPreviewAdapter.notifyDataSetChanged();
+    }
+
 }

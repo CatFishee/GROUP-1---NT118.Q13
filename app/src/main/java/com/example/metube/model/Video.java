@@ -1,6 +1,7 @@
 package com.example.metube.model;
 
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.ServerTimestamp;
 
 import java.util.List;
@@ -15,6 +16,10 @@ public class Video {
     private String videoURL;     // Supabase Videos bucket URL
     private long duration;
     private List<String> searchKeywords;
+    @Exclude
+    private String uploaderName;
+    @Exclude
+    private long resumePosition = 0;
     @ServerTimestamp
     private Timestamp createdAt;
     private long viewCount; // Temporary field for sorting (not stored in Firestore)
@@ -66,4 +71,18 @@ public class Video {
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public long getViewCount() { return viewCount; }
     public void setViewCount(long viewCount) { this.viewCount = viewCount; }
+    @Exclude
+    public String getUploaderName() {
+        return uploaderName;
+    }
+
+    @Exclude
+    public void setUploaderName(String uploaderName) {
+        this.uploaderName = uploaderName;
+    }
+    @Exclude
+    public long getResumePosition() { return resumePosition; }
+
+    @Exclude
+    public void setResumePosition(long resumePosition) { this.resumePosition = resumePosition; }
 }

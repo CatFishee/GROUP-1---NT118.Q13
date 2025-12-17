@@ -5,6 +5,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -52,9 +53,9 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
-        if (holder.getItemViewType() == VIEW_TYPE_HEADER) {
+        if (holder instanceof DateHeaderViewHolder) {
             ((DateHeaderViewHolder) holder).bind((DateHeader) items.get(position));
-        } else {
+        } else if (holder instanceof VideoHistoryViewHolder) {
             ((VideoHistoryViewHolder) holder).bind((HistoryItem) items.get(position));
         }
     }
@@ -80,6 +81,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     static class VideoHistoryViewHolder extends RecyclerView.ViewHolder {
         ImageView ivThumbnail;
         TextView tvDuration, tvVideoTitle, tvChannelAndViews;
+        ProgressBar pbVideoProgress;
 
         VideoHistoryViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -87,6 +89,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvDuration = itemView.findViewById(R.id.tv_duration);
             tvVideoTitle = itemView.findViewById(R.id.tv_video_title);
             tvChannelAndViews = itemView.findViewById(R.id.tv_channel_and_views);
+            pbVideoProgress = itemView.findViewById(R.id.pb_video_progress);
         }
 
         void bind(HistoryItem historyItem) {
@@ -99,6 +102,20 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             Video video = historyItem.getVideo();
             tvVideoTitle.setText(video.getTitle());
             tvDuration.setText(formatDuration(video.getDuration()));
+            long totalDuration = video.getDuration();
+            long currentPos = historyItem.getResumePosition();
+
+            if (totalDuration > 0 && currentPos > 0) {
+                int percentage = (int) ((currentPos * 100) / totalDuration);
+
+                // Nếu xem gần hết (>95%) thì hiện full 100%
+                if (percentage > 95) percentage = 100;
+
+                pbVideoProgress.setProgress(percentage);
+                pbVideoProgress.setVisibility(View.VISIBLE);
+            } else {
+                pbVideoProgress.setVisibility(View.GONE);
+            }
 
             Glide.with(itemView.getContext())
                     .load(video.getThumbnailURL())
@@ -108,7 +125,9 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             String uploaderName = "Unknown Channel";
             if (historyItem.getUploader() != null && historyItem.getUploader().getName() != null) {
                 uploaderName = historyItem.getUploader().getName();
-            }
+            } else if (video.getUploaderName() != null) {
+            uploaderName = video.getUploaderName();
+        }
 
             String viewCountFormatted = formatViewCount(video.getViewCount());
             String info = uploaderName + " • " + viewCountFormatted;

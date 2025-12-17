@@ -198,7 +198,17 @@ public class UploadActivity extends AppCompatActivity {
             public void onSuccess(String requestId, Map resultData) {
                 String videoUrl = resultData.get("secure_url").toString();
                 Log.d(TAG, "Video uploaded: " + videoUrl);
-                saveVideoInfoToFirestore(title, description, thumbnailUrl, videoUrl);
+                long durationMillis = 0;
+                if (resultData.containsKey("duration")) {
+                    Object durationObj = resultData.get("duration");
+                    if (durationObj instanceof Double) {
+                        // Đổi từ Giây sang Mili-giây để khớp với TimeUtil
+                        durationMillis = (long) ((Double) durationObj * 1000);
+                    } else if (durationObj instanceof Integer) {
+                        durationMillis = ((Integer) durationObj) * 1000L;
+                    }
+                }
+                saveVideoInfoToFirestore(title, description, thumbnailUrl, videoUrl, durationMillis);
             }
             @Override
             public void onError(String requestId, ErrorInfo error) {
@@ -252,7 +262,7 @@ public class UploadActivity extends AppCompatActivity {
         chip.setOnCloseIconClickListener(v -> chipGroupTopics.removeView(chip));
         chipGroupTopics.addView(chip);
     }
-    private void saveVideoInfoToFirestore(String title, String description, String thumbnailUrl, String videoUrl) {
+    private void saveVideoInfoToFirestore(String title, String description, String thumbnailUrl, String videoUrl, long duration) {
         String uploaderId = mAuth.getCurrentUser().getUid();
         String videoId = firestore.collection("videos").document().getId();
 
@@ -277,6 +287,16 @@ public class UploadActivity extends AppCompatActivity {
         video.setVideoURL(videoUrl);
         video.setSearchKeywords(new ArrayList<>(keywords));
         // createdAt sẽ được tự động thêm bởi @ServerTimestamp
+
+        video.setDuration(duration);
+
+        firestore.collection("videos").document(videoId).set(video)
+                .addOnSuccessListener(aVoid -> {
+                    createVideoStatInRealtimeDB(videoId);
+                    Toast.makeText(UploadActivity.this, "Upload successful!", Toast.LENGTH_SHORT).show();
+                    finish();
+                })
+                .addOnFailureListener(this::showUploadError);
 
         firestore.collection("videos").document(videoId).set(video)
                 .addOnSuccessListener(aVoid -> {

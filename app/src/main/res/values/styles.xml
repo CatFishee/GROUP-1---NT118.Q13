@@ -60,9 +60,28 @@
         <item name="android:focusable">true</item>
     </style>
 
+    <style name="ChipTextStyle" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">18sp</item>
+        <!-- Nếu bạn dùng font ngoài, khai báo ở đây: <item name="fontFamily">@font/...</item> -->
+    </style>
+
     <style name="Widget.App.FilterChip" parent="Widget.MaterialComponents.Chip.Filter">
         <item name="chipBackgroundColor">@color/chip_background_color_selector</item>
+<!--        <item name="android:textColor">@color/chip_text_color_selector</item>-->
+        <item name="android:textAppearance">@style/ChipTextStyle</item>
         <item name="android:textColor">@color/chip_text_color_selector</item>
+
+        <!-- Ẩn dấu tích V (checkmark) -->
+        <item name="chipIconVisible">false</item>
+        <item name="checkedIconVisible">false</item>
+
+        <!-- Bỏ viền (stroke) -->
+        <item name="chipStrokeWidth">0dp</item>
+
+        <!-- Chỉnh font chữ nếu cần -->
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
 </resources>

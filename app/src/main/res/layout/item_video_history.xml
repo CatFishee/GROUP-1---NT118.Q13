@@ -34,13 +34,25 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
                 android:layout_margin="4dp"
-                android:background="@drawable/background_duration_overlay"
+                android:background="@drawable/background_duration_badge"
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="2dp"
                 android:textColor="@android:color/white"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 tools:text="9:58:51" />
+            <ProgressBar
+                android:id="@+id/pb_video_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_gravity="bottom"
+                android:max="100"
+                android:progress="0"
+                android:visibility="gone"
+                android:progressDrawable="@drawable/progress_bar_video_status"
+                tools:progress="40"
+                tools:visibility="visible" />
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
 

@@ -34,6 +34,7 @@ import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
 import com.google.firebase.database.*;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
@@ -44,9 +45,12 @@ import com.google.android.exoplayer2.Player;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.SetOptions;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class VideoActivity extends AppCompatActivity {
 
@@ -214,12 +218,35 @@ public class VideoActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        // Dừng và giải phóng player khi Activity không còn được nhìn thấy
-        // Điều này rất quan trọng để trả lại tài nguyên âm thanh cho hệ thống
-//        releasePlayer();
+        long currentPosition = player.getCurrentPosition();
+        long duration = player.getDuration();
+
+        // 2. Chỉ lưu nếu đã xem được một chút và chưa hết video
+        if (currentPosition > 5000 && currentPosition < duration) {
+            saveWatchHistory(currentPosition);
+        }
         if (player != null) {
             player.pause(); // Chỉ pause ở đây
         }
+    }
+    private void saveWatchHistory(long position) {
+        if (currentUser == null) return;
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("userID", userId);
+        data.put("videoID", videoId);
+        data.put("watchedAt", FieldValue.serverTimestamp());
+
+        // --- QUAN TRỌNG: LƯU TRƯỜNG NÀY ĐỂ HIỆN THANH ĐỎ ---
+        data.put("resumePosition", position);
+
+        // Lưu vào Firestore (Dùng set với Merge để không mất dữ liệu cũ)
+        // Lưu ý: Logic ID document tùy thuộc vào cách bạn thiết kế (tự sinh hay theo userID_videoID)
+        FirebaseFirestore.getInstance()
+                .collection("watchHistory")
+                .document(userId + "_" + videoId) // Ví dụ ID document kết hợp
+                .set(data, SetOptions.merge());
     }
     // --- HÀM KHỞI TẠO PLAYER MỚI ---
     private void initializePlayer() {

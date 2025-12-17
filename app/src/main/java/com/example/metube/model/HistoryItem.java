@@ -12,6 +12,7 @@ public class HistoryItem {
 
     // Transient fields: These are not stored in Firestore, but populated at runtime
     private Video video;
+    private long resumePosition;
     private User uploader;
 
     public HistoryItem() {}
@@ -32,6 +33,9 @@ public class HistoryItem {
     // Getters and setters for transient fields
     public Video getVideo() { return video; }
     public void setVideo(Video video) { this.video = video; }
+
+    public long getResumePosition() { return resumePosition; }
+    public void setResumePosition(long resumePosition) { this.resumePosition = resumePosition; }
 
     public User getUploader() { return uploader; }
     public void setUploader(User uploader) { this.uploader = uploader; }

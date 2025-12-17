@@ -17,6 +17,8 @@ import com.example.metube.model.DateHeader;
 import com.example.metube.model.HistoryItem;
 import com.example.metube.model.User;
 import com.example.metube.model.Video;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -26,6 +28,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -43,6 +46,9 @@ public class HistoryActivity extends AppCompatActivity {
     private List<Object> uiList = new ArrayList<>();
     private FirebaseFirestore firestore;
     private String currentUserId;
+    private ChipGroup chipGroupFilters;
+    private List<Object> allHistoryItems = new ArrayList<>(); // Danh sách gốc chưa lọc
+    private String currentFilter = "All";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -55,8 +61,18 @@ public class HistoryActivity extends AppCompatActivity {
         firestore = FirebaseFirestore.getInstance();
         currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : null;
 
+        chipGroupFilters = findViewById(R.id.chip_group_filters);
+
         setupRecyclerView();
         loadHistoryData();
+        android.widget.ImageButton btnBack = findViewById(R.id.btn_back);
+        btnBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Đóng Activity hiện tại, quay về màn hình trước
+                finish();
+            }
+        });
     }
 
     private void setupRecyclerView() {
@@ -177,10 +193,22 @@ public class HistoryActivity extends AppCompatActivity {
     private void processAndDisplayHistory(List<HistoryItem> historyItems) {
         uiList.clear();
         String lastDateHeader = "";
+        Set<String> topicsSet = new HashSet<>(); // Dùng Set để tránh topic trùng lặp
 
         for (HistoryItem item : historyItems) {
             // Chỉ xử lý những item có đủ dữ liệu
             if (item.getWatchedAt() == null || item.getVideo() == null) continue;
+
+            allHistoryItems.add(item);
+
+            // Trích xuất topics từ mỗi video
+            if (item.getVideo().getTopics() != null) {
+                for (String topic : item.getVideo().getTopics()) {
+                    // Chuẩn hóa topic (viết hoa chữ cái đầu) để gom nhóm
+                    String capitalizedTopic = topic.substring(0, 1).toUpperCase() + topic.substring(1).toLowerCase();
+                    topicsSet.add(capitalizedTopic);
+                }
+            }
 
             String currentDateHeader = getFormattedDate(item.getWatchedAt().toDate().getTime());
             if (!currentDateHeader.equals(lastDateHeader)) {
@@ -189,10 +217,113 @@ public class HistoryActivity extends AppCompatActivity {
             }
             uiList.add(item);
         }
-
+        setupTopicFilters(new ArrayList<>(topicsSet));
+        filterHistoryByTopic(currentFilter);
         if (progressBar != null) progressBar.setVisibility(View.GONE);
         adapter.notifyDataSetChanged();
     }
+
+    private void setupTopicFilters(List<String> topicList) {
+        chipGroupFilters.removeAllViews();
+
+        // Luôn thêm chip "All"
+        Chip allChip = createTopicChip("All");
+//        allChip.setChecked(true);
+//        chipGroupFilters.addView(allChip);
+        allChip.setId(View.generateViewId());
+        chipGroupFilters.addView(allChip);
+
+        // Sắp xếp danh sách topic theo alphabet
+//        Collections.sort(topicList);
+//
+//        // Thêm các chip còn lại
+//        if (topicList != null && !topicList.isEmpty()) {
+//            for (String topic : topicList) {
+//                chipGroupFilters.addView(createTopicChip(topic));
+//            }
+//        }
+        Collections.sort(topicList);
+        if (topicList != null && !topicList.isEmpty()) {
+            for (String topic : topicList) {
+                Chip chip = createTopicChip(topic);
+                chip.setId(View.generateViewId()); // Tạo ID ngẫu nhiên
+                chipGroupFilters.addView(chip);
+            }
+        }
+
+        // 3. Đặt mặc định chọn "All" sau khi đã add vào Group
+        // (Sử dụng post để đảm bảo UI đã render xong)
+        chipGroupFilters.post(() -> {
+            chipGroupFilters.check(allChip.getId());
+        });
+    }
+
+    private Chip createTopicChip(String text) {
+        // ✅ SỬA Ở ĐÂY: Sử dụng constructor thứ ba của Chip để truyền style vào
+//        Chip chip = new Chip(this, null, R.id.item_chip_filter);
+        Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_chip_filter, chipGroupFilters, false);
+
+        // Đặt các thuộc tính cần thay đổi động
+        chip.setText(text);
+//        chip.setCheckable(true);
+
+        // Các thuộc tính trong style (màu sắc, font chữ...) sẽ được tự động áp dụng.
+        // Chúng ta không cần gọi setStyle() nữa.
+
+        // Gắn sự kiện click
+//        chip.setOnClickListener(v -> {
+//            // Đảm bảo chỉ chip được nhấn là được check
+//            chipGroupFilters.check(chip.getId());
+//            filterHistoryByTopic(text);
+//        });
+        chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                // Chỉ lọc khi chip được chọn (tránh trường hợp bỏ chọn chip cũ cũng kích hoạt filter)
+                filterHistoryByTopic(text);
+            }
+        });
+        return chip;
+    }
+    private void filterHistoryByTopic(String topic) {
+        currentFilter = topic;
+        uiList.clear();
+        String lastDateHeader = "";
+        List<Object> filteredList = new ArrayList<>();
+
+        if (topic.equals("All")) {
+            // Nếu là "All", lấy tất cả từ danh sách gốc
+            filteredList.addAll(allHistoryItems);
+        } else {
+            // Lọc theo topic
+            for (Object item : allHistoryItems) {
+                if (item instanceof HistoryItem) {
+                    Video video = ((HistoryItem) item).getVideo();
+                    if (video != null && video.getTopics() != null) {
+                        for (String videoTopic : video.getTopics()) {
+                            if (videoTopic.equalsIgnoreCase(topic)) {
+                                filteredList.add(item);
+                                break; // Đã tìm thấy, chuyển sang video tiếp theo
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Thêm lại các Date Header vào danh sách đã lọc
+        for (Object item : filteredList) {
+            if (item instanceof HistoryItem) {
+                String currentDateHeader = getFormattedDate(((HistoryItem) item).getWatchedAt().toDate().getTime());
+                if (!currentDateHeader.equals(lastDateHeader)) {
+                    uiList.add(new DateHeader(currentDateHeader));
+                    lastDateHeader = currentDateHeader;
+                }
+                uiList.add(item);
+            }
+        }
+        adapter.notifyDataSetChanged();
+        Log.d(TAG, "Filtered history for topic '" + topic + "'. Items found: " + uiList.size());
+    }
+
 
     private String getFormattedDate(long timeInMillis) {
         if (DateUtils.isToday(timeInMillis)) {
