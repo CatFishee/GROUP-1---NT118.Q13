@@ -8,5 +8,5 @@
     android:layout_marginLeft="10dp"
     android:text="Today"
     android:textColor="@color/app_main_color"
-    android:textSize="18sp"
+    android:textSize="24sp"
     android:textStyle="bold" />
