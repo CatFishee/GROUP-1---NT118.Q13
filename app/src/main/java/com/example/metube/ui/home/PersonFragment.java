@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -23,6 +24,7 @@ import com.example.metube.model.Video;
 import com.example.metube.ui.history.HistoryActivity; // Giả sử bạn đã tạo Activity này
 import com.example.metube.ui.history.HistoryAdapter;
 import com.example.metube.ui.history.HistoryPreviewAdapter;
+import com.example.metube.ui.playlist.CreatePlaylistBottomSheet;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -30,6 +32,7 @@ import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.example.metube.R;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,6 +51,7 @@ public class PersonFragment extends Fragment {
     // --- Khai báo các thành phần Giao diện ---
     private CircleImageView ivAvatar;
     private TextView tvUserName, tvChannelName, btnViewChannel;
+    private ImageView btnAddPlaylist;
     private View btnSwitchAccount, btnShareChannel;
     private TextView btnViewAllHistory;
     private RecyclerView rvHistory;
@@ -104,6 +108,7 @@ public class PersonFragment extends Fragment {
         btnShareChannel = view.findViewById(R.id.btn_share_channel);
         btnViewAllHistory = view.findViewById(R.id.btn_view_all_history);
         rvHistory = view.findViewById(R.id.rv_history);
+        btnAddPlaylist = view.findViewById(R.id.btn_add_playlist);
     }
 
     /**
@@ -126,6 +131,10 @@ public class PersonFragment extends Fragment {
                 Intent intent = new Intent(requireContext(), HistoryActivity.class);
                 startActivity(intent);
             }
+        });
+        btnAddPlaylist.setOnClickListener(v -> {
+            CreatePlaylistBottomSheet bottomSheet = new CreatePlaylistBottomSheet();
+            bottomSheet.show(getParentFragmentManager(), "CreatePlaylistBottomSheet");
         });
 
         // Gắn sự kiện tạm thời cho các nút chưa có chức năng

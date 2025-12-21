@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Khi đang nhập (Focus): Màu App Main Color -->
+    <item android:color="@color/app_main_color" android:state_focused="true"/>
+    <item android:color="@color/app_main_color" android:state_hovered="true"/>
+
+    <!-- Trạng thái bình thường: Màu Light Green -->
+    <item android:color="@color/light_green_background"/>
+</selector>

@@ -89,6 +89,18 @@ public class HistoryPreviewAdapter extends RecyclerView.Adapter<HistoryPreviewAd
                     .placeholder(R.color.light_green_background)
                     .centerCrop()
                     .into(ivThumbnail);
+            itemView.setOnClickListener(v -> {
+                android.content.Context context = itemView.getContext();
+                android.content.Intent intent = new android.content.Intent(context, com.example.metube.ui.video.VideoActivity.class);
+
+                // 1. Truyền ID Video
+                intent.putExtra("video_id", video.getVideoID());
+
+                // 2. Truyền vị trí đã xem (Lấy từ field @Exclude mà ta đã merge)
+                intent.putExtra("resume_position", video.getResumePosition());
+
+                context.startActivity(intent);
+            });
         }
     }
 }

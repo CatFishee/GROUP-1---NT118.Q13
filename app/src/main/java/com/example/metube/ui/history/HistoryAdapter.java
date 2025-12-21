@@ -134,6 +134,19 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             String viewCountFormatted = formatViewCount(video.getViewCount());
             tvViewCount.setText(viewCountFormatted);
+
+            itemView.setOnClickListener(v -> {
+                android.content.Context context = itemView.getContext();
+                android.content.Intent intent = new android.content.Intent(context, com.example.metube.ui.video.VideoActivity.class);
+
+                // 1. Truyền ID Video
+                intent.putExtra("video_id", video.getVideoID());
+
+                // 2. Truyền vị trí đã xem (Lấy từ HistoryItem)
+                intent.putExtra("resume_position", historyItem.getResumePosition());
+
+                context.startActivity(intent);
+            });
         }
 
         private String formatDuration(long seconds) {

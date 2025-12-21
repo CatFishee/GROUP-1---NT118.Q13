@@ -84,6 +84,7 @@ public class VideoActivity extends AppCompatActivity {
     private FirebaseUser currentUser;
     private float currentSpeed = 1.0f;
     private int currentQualityIndex = 0;
+    private long startPosition = 0;
     private List<String> qualities = Arrays.asList("480p", "720p", "1080p"); // you can extend with actual URLs
 
     @Override
@@ -100,6 +101,7 @@ public class VideoActivity extends AppCompatActivity {
         statListener = null;
         // Get the video ID passed from HomepageActivity
         videoId = getIntent().getStringExtra("video_id");
+        startPosition = getIntent().getLongExtra("resume_position", 0);
         Log.d("VIDEO_ID_CHECK", "Video ID nhận được là: " + videoId);
         if (videoId == null) {
             Toast.makeText(this, "Video not found.", Toast.LENGTH_SHORT).show();
@@ -496,6 +498,14 @@ public class VideoActivity extends AppCompatActivity {
 //                    }
                     MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()));
                     player.setMediaItem(mediaItem);
+                    // --- LOGIC TUA ĐẾN VỊ TRÍ ĐÃ XEM ---
+                    if (startPosition > 0) {
+                        // Tua đến vị trí đã lưu
+                        player.seekTo(startPosition);
+
+                        // Hiển thị thông báo nhỏ cho người dùng biết
+                        Toast.makeText(this, "Resuming from where you left off", Toast.LENGTH_SHORT).show();
+                    }
                     player.prepare();
                     player.play(); // Bắt đầu phát
                 })

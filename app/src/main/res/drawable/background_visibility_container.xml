@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 1. Đổi nền thành trong suốt (Transparent) -->
+    <solid android:color="@android:color/transparent" />
+
+    <!-- 2. Thêm viền (Stroke) màu Light Green -->
+    <!-- width: độ dày viền (2dp cho rõ) -->
+    <stroke
+        android:width="2dp"
+        android:color="@color/light_green_background" />
+
+    <!-- 3. Bo góc (Giữ nguyên) -->
+    <corners android:radius="12dp" />
+</shape>

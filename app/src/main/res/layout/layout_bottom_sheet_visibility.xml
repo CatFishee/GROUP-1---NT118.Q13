@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@drawable/background_bottom_sheet_white">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Set visibility"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="@color/app_main_color"
+        android:layout_marginBottom="16dp"/>
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="2dp"
+        android:background="@color/light_green_background"
+        android:layout_marginBottom="12dp"/>
+
+    <!-- Option: Public -->
+    <LinearLayout
+        android:id="@+id/option_public"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingVertical="12dp"
+        android:gravity="center_vertical"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_public"
+            android:contentDescription="Public"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Public"
+                android:textSize="16sp"
+                android:textColor="@color/black"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Anyone can search for and view"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Option: Unlisted -->
+    <LinearLayout
+        android:id="@+id/option_unlisted"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingVertical="12dp"
+        android:gravity="center_vertical"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_link"
+            android:contentDescription="Unlisted"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Unlisted"
+                android:textSize="16sp"
+                android:textColor="@color/black"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Anyone with the link can view"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"/>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Option: Private -->
+    <LinearLayout
+        android:id="@+id/option_private"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingVertical="12dp"
+        android:gravity="center_vertical"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_lock"
+            android:contentDescription="Private"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Private"
+                android:textSize="16sp"
+                android:textColor="@color/black"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Only you can view"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"/>
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
