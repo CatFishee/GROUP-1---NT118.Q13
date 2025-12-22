@@ -1,6 +1,7 @@
 [versions]
 agp = "8.13.1"
 googleGmsGoogleServices = "4.4.4"
+kotlinSerializationPlugin = "2.0.0" # Updated specifically for plugin
 
 # Firebase
 firebaseBom = "34.5.0"
@@ -28,6 +29,7 @@ googleid = "1.1.1"
 # Supabase SDK
 supabase = "3.2.6"
 okhttp = "5.3.0"
+
 # Kotlinx Serialization
 kotlinxSerialization = "1.9.0"
 
@@ -41,6 +43,11 @@ espressoCore = "3.7.0"
 # Glide
 glide = "5.0.5"
 
+# --- NEWLY ADDED / MOVED VERSIONS ---
+javamail = "1.6.7"
+exoplayer = "2.19.1"
+cloudinary = "3.1.2"
+mpandroidchart = "v3.1.0"
 
 [libraries]
 # --- AndroidX ---
@@ -72,6 +79,7 @@ supabase-storage = { group = "io.github.jan-tennert.supabase", name = "storage-k
 supabase-postgrest = { group = "io.github.jan-tennert.supabase", name = "postgrest-kt", version.ref = "supabase" }
 supabase-realtime = { group = "io.github.jan-tennert.supabase", name = "realtime-kt", version.ref = "supabase" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+
 # --- Kotlinx Serialization ---
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 
@@ -87,7 +95,17 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 
+# --- EMAIL (JavaMail) ---
+android-mail = { group = "com.sun.mail", name = "android-mail", version.ref = "javamail" }
+android-activation = { group = "com.sun.mail", name = "android-activation", version.ref = "javamail" }
+
+# --- Other Media/Cloud ---
+cloudinary-android = { group = "com.cloudinary", name = "cloudinary-android", version.ref = "cloudinary" }
+exoplayer-core = { group = "com.google.android.exoplayer", name = "exoplayer", version.ref = "exoplayer" }
+exoplayer-ui = { group = "com.google.android.exoplayer", name = "exoplayer-ui", version.ref = "exoplayer" }
+mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpandroidchart" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 google-gms-google-services = { id = "com.google.gms.google-services", version.ref = "googleGmsGoogleServices" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version = "2.2.21" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinSerializationPlugin" }

@@ -5,13 +5,16 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Bundle;
+import android.text.InputType;
 import android.util.Base64;
 import android.util.Log;
+import android.widget.EditText;
 import android.widget.Toast;
+
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.WindowCompat;
 
 import com.example.metube.R;
 import com.example.metube.model.User;
@@ -38,6 +41,15 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Properties;
+import java.util.Random;
+
+import javax.mail.Message;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -45,6 +57,15 @@ public class LoginActivity extends AppCompatActivity {
     private GoogleSignInClient googleSignInClient;
     private CallbackManager callbackManager;
     private static final String TAG = "LoginActivity";
+
+    // Variables for Verification
+    private int verificationCode;
+    private String pendingGoogleIdToken;
+
+    // TODO: REPLACE THESE WITH YOUR OWN CREDENTIALS
+    // Note: Use a Google App Password, not your real password.
+    private static final String SENDER_EMAIL = "giangcam2005@gmail.com";
+    private static final String SENDER_PASSWORD = "testingtesting";
 
     private final ActivityResultLauncher<Intent> googleSignInLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
@@ -54,8 +75,8 @@ public class LoginActivity extends AppCompatActivity {
                         GoogleSignInAccount account = task.getResult(ApiException.class);
                         if (account != null) {
                             Log.d(TAG, "Google account: " + account.getEmail());
-                            Log.d(TAG, "ID Token: " + account.getIdToken());
-                            firebaseAuthWithGoogle(account.getIdToken());
+                            // INTERCEPT: Check if user exists before logging in
+                            checkUserExistsAndVerify(account);
                         }
                     } catch (ApiException e) {
                         Log.w(TAG, "Google sign-in failed", e);
@@ -67,7 +88,6 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setContentView(R.layout.activity_login);
         printKeyHash();
 
@@ -94,10 +114,12 @@ public class LoginActivity extends AppCompatActivity {
             public void onSuccess(LoginResult loginResult) {
                 handleFacebookAccessToken(loginResult.getAccessToken());
             }
+
             @Override
             public void onCancel() {
                 Log.d(TAG, "Facebook sign-in canceled");
             }
+
             @Override
             public void onError(FacebookException error) {
                 Log.w(TAG, "Facebook sign-in failed", error);
@@ -110,13 +132,128 @@ public class LoginActivity extends AppCompatActivity {
         });
     }
 
+    /**
+     * Step 1: Check if the user already exists in Firestore.
+     * If Yes -> Login immediately.
+     * If No -> Send Verification Code.
+     */
+    private void checkUserExistsAndVerify(GoogleSignInAccount account) {
+        String email = account.getEmail();
+        if (email == null) {
+            Toast.makeText(this, "Error: Email not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+        // NOTE: This query assumes your Firestore rules allow unauthenticated reads to "users"
+        // or that you are okay with this check. Ideally, secure via Cloud Functions.
+        db.collection("users")
+                .whereEqualTo("email", email)
+                .get()
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful() && !task.getResult().isEmpty()) {
+                        // User exists, proceed to login directly
+                        Log.d(TAG, "User exists, skipping verification.");
+                        firebaseAuthWithGoogle(account.getIdToken());
+                    } else {
+                        // User is NEW, start verification
+                        Log.d(TAG, "New user detected, sending verification email.");
+                        pendingGoogleIdToken = account.getIdToken();
+                        startEmailVerification(email);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error checking user existence", e);
+                    Toast.makeText(this, "Network Error", Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    /**
+     * Step 2: Generate Code and Send Email
+     */
+    private void startEmailVerification(String email) {
+        Random random = new Random();
+        verificationCode = 100000 + random.nextInt(900000); // Generate 6-digit code
+
+        Toast.makeText(this, "Sending verification code...", Toast.LENGTH_LONG).show();
+
+        new Thread(() -> {
+            try {
+                sendJavaMail(email, verificationCode);
+                runOnUiThread(() -> showVerificationDialog(email));
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(LoginActivity.this, "Failed to send email. Check internet or credentials.", Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    /**
+     * Step 3: Send Email via SMTP (JavaMail)
+     */
+    private void sendJavaMail(String recipientEmail, int code) throws Exception {
+        Properties props = new Properties();
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.host", "smtp.gmail.com");
+        props.put("mail.smtp.port", "587");
+
+        Session session = Session.getInstance(props, new javax.mail.Authenticator() {
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication(SENDER_EMAIL, SENDER_PASSWORD);
+            }
+        });
+
+        Message message = new MimeMessage(session);
+        message.setFrom(new InternetAddress(SENDER_EMAIL));
+        message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail));
+        message.setSubject("MeTube Verification Code");
+        message.setText("Welcome to MeTube! \n\nYour verification code is: " + code + "\n\nPlease enter this code to complete your registration.");
+
+        Transport.send(message);
+    }
+
+    /**
+     * Step 4: Show Dialog for User to Enter Code
+     */
+    private void showVerificationDialog(String email) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Verify Email");
+        builder.setMessage("A 6-digit code was sent to " + email + ". Enter it below:");
+
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        builder.setView(input);
+
+        builder.setPositiveButton("Verify", (dialog, which) -> {
+            String enteredCode = input.getText().toString();
+            if (enteredCode.equals(String.valueOf(verificationCode))) {
+                Toast.makeText(LoginActivity.this, "Verified!", Toast.LENGTH_SHORT).show();
+                // Code matches -> Proceed to Firebase Auth
+                firebaseAuthWithGoogle(pendingGoogleIdToken);
+            } else {
+                Toast.makeText(LoginActivity.this, "Incorrect Code. Try logging in again.", Toast.LENGTH_SHORT).show();
+                // Optional: Sign out Google client to allow retrying from scratch
+                googleSignInClient.signOut();
+            }
+        });
+        builder.setNegativeButton("Cancel", (dialog, which) -> {
+            dialog.cancel();
+            googleSignInClient.signOut();
+        });
+
+        builder.show();
+    }
+
+    // ---- EXISTING AUTH LOGIC ----
+
     private void firebaseAuthWithGoogle(String idToken) {
         AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
         mAuth.signInWithCredential(credential)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
                         Log.d(TAG, "Google auth successful.");
-                        createUserIfNew(() -> startHomeActivity()); // callback sau khi tạo user
+                        createUserIfNew(() -> startHomeActivity());
                     } else {
                         Log.w(TAG, "Google auth failed", task.getException());
                         Toast.makeText(this, "Login failed!", Toast.LENGTH_SHORT).show();
@@ -129,7 +266,7 @@ public class LoginActivity extends AppCompatActivity {
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
             if (task.isSuccessful()) {
                 Log.d(TAG, "Facebook auth successful. Navigating to Home.");
-                createUserIfNew(() -> startHomeActivity()); // Chạy tác vụ nền để tạo user
+                createUserIfNew(() -> startHomeActivity());
             } else {
                 Log.w(TAG, "Facebook auth failed", task.getException());
             }
@@ -180,12 +317,12 @@ public class LoginActivity extends AppCompatActivity {
         finish();
     }
 
-    // Facebook SDK vẫn cần phương thức này để nhận kết quả
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         callbackManager.onActivityResult(requestCode, resultCode, data);
         super.onActivityResult(requestCode, resultCode, data);
     }
+
     private void printKeyHash() {
         try {
             PackageInfo info = getPackageManager().getPackageInfo(
@@ -202,5 +339,4 @@ public class LoginActivity extends AppCompatActivity {
             Log.e("KeyHash", "Exception(NoSuchAlgorithm):", e);
         }
     }
-
 }
