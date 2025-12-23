@@ -21,6 +21,15 @@ import java.util.Locale;
 
 public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
+    public interface OnItemMoreClickListener {
+        void onMoreClick(HistoryItem historyItem, int position);
+    }
+    private OnItemMoreClickListener moreClickListener;
+
+    public void setOnItemMoreClickListener(OnItemMoreClickListener listener) {
+        this.moreClickListener = listener;
+    }
+
     private static final int VIEW_TYPE_HEADER = 0;
     private static final int VIEW_TYPE_VIDEO = 1;
 
@@ -28,6 +37,13 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     public HistoryAdapter(List<Object> items) {
         this.items = items;
+    }
+    public void removeItem(int position) {
+        if (position >= 0 && position < items.size()) {
+            items.remove(position);
+            notifyItemRemoved(position);
+            // Có thể cần check xem ngày đó còn video nào không để xóa luôn DateHeader
+        }
     }
 
     @Override
@@ -56,7 +72,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         if (holder instanceof DateHeaderViewHolder) {
             ((DateHeaderViewHolder) holder).bind((DateHeader) items.get(position));
         } else if (holder instanceof VideoHistoryViewHolder) {
-            ((VideoHistoryViewHolder) holder).bind((HistoryItem) items.get(position));
+            ((VideoHistoryViewHolder) holder).bind((HistoryItem) items.get(position), moreClickListener);
         }
     }
 
@@ -79,7 +95,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     // ViewHolder for Video Items
     static class VideoHistoryViewHolder extends RecyclerView.ViewHolder {
-        ImageView ivThumbnail;
+        ImageView ivThumbnail, btnMore;
         TextView tvDuration, tvVideoTitle, tvChannelName, tvViewCount;
         ProgressBar pbVideoProgress;
 
@@ -91,9 +107,10 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             tvChannelName = itemView.findViewById(R.id.tv_channel_name);
             tvViewCount = itemView.findViewById(R.id.tv_view_count);
             pbVideoProgress = itemView.findViewById(R.id.pb_video_progress);
+            btnMore = itemView.findViewById(R.id.btn_more_options);
         }
 
-        void bind(HistoryItem historyItem) {
+        void bind(HistoryItem historyItem, OnItemMoreClickListener listener) {
             if (historyItem.getVideo() == null) {
                 tvVideoTitle.setText("Video not found");
                 tvChannelName.setText(""); // Xóa text nếu không có video
@@ -103,7 +120,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             Video video = historyItem.getVideo();
             tvVideoTitle.setText(video.getTitle());
-            tvDuration.setText(formatDuration(video.getDuration()));
+            tvDuration.setText(TimeUtil.formatDuration(video.getDuration()));
             long totalDuration = video.getDuration();
             long currentPos = historyItem.getResumePosition();
 
@@ -147,17 +164,11 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
                 context.startActivity(intent);
             });
-        }
-
-        private String formatDuration(long seconds) {
-            long hours = seconds / 3600;
-            long minutes = (seconds % 3600) / 60;
-            long secs = seconds % 60;
-            if (hours > 0) {
-                return String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, secs);
-            } else {
-                return String.format(Locale.getDefault(), "%d:%02d", minutes, secs);
-            }
+            btnMore.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onMoreClick(historyItem, getBindingAdapterPosition());
+                }
+            });
         }
 
         private String formatViewCount(long count) {
