@@ -36,6 +36,14 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    // Required for JavaMail to avoid duplicate file errors
+    packaging {
+        resources {
+            excludes += "META-INF/NOTICE.md"
+            excludes += "META-INF/LICENSE.md"
+        }
+    }
 }
 
 dependencies {
@@ -45,14 +53,14 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
 
-    // --- Firebase (only keep Auth + Firestore + Database)
+    // --- Firebase ---
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.database)
     implementation(libs.circleimageview)
 
-    // --- Glide for thumbnails ---
+    // --- Glide ---
     implementation(libs.glide)
     annotationProcessor(libs.glide.compiler)
 
@@ -67,8 +75,12 @@ dependencies {
     implementation(libs.credentials.play.services.auth)
     implementation(libs.googleid)
 
-    // Cloudinary
-    implementation("com.cloudinary:cloudinary-android:3.1.2")
+    // --- Email Verification (JavaMail) ---
+    implementation(libs.android.mail)
+    implementation(libs.android.activation)
+
+    // --- Cloudinary ---
+    implementation(libs.cloudinary.android)
 
     // --- Supabase ---
     implementation(libs.supabase.storage)
@@ -79,12 +91,12 @@ dependencies {
     // --- Kotlinx Serialization ---
     implementation(libs.kotlinx.serialization.json)
 
-    // ExoPlayer (core + UI)
-    implementation("com.google.android.exoplayer:exoplayer:2.19.1")
-    implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")
+    // --- ExoPlayer ---
+    implementation(libs.exoplayer.core)
+    implementation(libs.exoplayer.ui)
 
-    // --- MPAndroidChart for graphs ---
-    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    // --- MPAndroidChart ---
+    implementation(libs.mpandroidchart)
 
     // --- Testing ---
     testImplementation(libs.junit)
