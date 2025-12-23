@@ -380,11 +380,19 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
 
     @Override
     public void onDownload(Video video) {
-        Toast.makeText(this, "Downloading...", Toast.LENGTH_SHORT).show();
+        com.example.metube.utils.DownloadUtil.downloadVideo(
+                this,
+                video.getVideoURL(),
+                video.getTitle()
+        );
     }
 
     @Override
     public void onShare(Video video) {
-        Toast.makeText(this, "Sharing...", Toast.LENGTH_SHORT).show();
+        com.example.metube.utils.ShareUtil.shareVideo(
+                this,
+                video.getTitle(),
+                video.getVideoURL()
+        );
     }
 }
