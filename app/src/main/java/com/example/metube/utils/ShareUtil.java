@@ -5,23 +5,24 @@ import android.content.Intent;
 
 public class ShareUtil {
 
-    public static void shareVideo(Context context, String videoTitle, String videoUrl) {
-        // 1. Tạo nội dung muốn chia sẻ
-        // Ví dụ: "Xem video này hay lắm: [Title] - [Link]"
-        String shareBody = "Check out this video: " + videoTitle + "\n" + videoUrl;
-
-        // 2. Tạo Intent
+    // Hàm nội bộ để gọi bảng chia sẻ của hệ thống
+    private static void startShareIntent(Context context, String subject, String body) {
         Intent sharingIntent = new Intent(Intent.ACTION_SEND);
-
-        // 3. Quy định kiểu dữ liệu là văn bản (text)
         sharingIntent.setType("text/plain");
-
-        // 4. Đưa nội dung vào Intent
-        sharingIntent.putExtra(Intent.EXTRA_SUBJECT, "Shared Video from MeTube"); // Tiêu đề (cho Email)
-        sharingIntent.putExtra(Intent.EXTRA_TEXT, shareBody); // Nội dung chính
-
-        // 5. Mở bảng chia sẻ hệ thống (System Share Sheet)
-        // "Share via" là tiêu đề hiện lên nếu máy đời cũ, máy đời mới sẽ hiện như ảnh bạn gửi
+        sharingIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
+        sharingIntent.putExtra(Intent.EXTRA_TEXT, body);
         context.startActivity(Intent.createChooser(sharingIntent, "Share via"));
+    }
+
+    // 1. Chia sẻ Video (Dùng trong History/VideoDetail)
+    public static void shareVideo(Context context, String videoTitle, String videoUrl) {
+        String shareBody = "Check out this video: " + videoTitle + "\n" + videoUrl;
+        startShareIntent(context, "Shared Video from MeTube", shareBody);
+    }
+
+    // 2. Chia sẻ Channel (Dùng trong PersonFragment)
+    public static void shareChannel(Context context, String channelName, String channelUrl) {
+        String shareBody = "Check out this channel: " + channelName + "\n" + channelUrl;
+        startShareIntent(context, "Shared Channel from MeTube", shareBody);
     }
 }

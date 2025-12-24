@@ -19,6 +19,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.metube.R;
 import com.example.metube.model.User;
 import com.example.metube.ui.home.HomepageActivity;
+import com.example.metube.utils.AccountUtil;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
@@ -64,9 +65,8 @@ public class LoginActivity extends AppCompatActivity {
 
     // TODO: REPLACE THESE WITH YOUR OWN CREDENTIALS
     // Note: Use a Google App Password, not your real password.
-    private static final String SENDER_EMAIL = "giangcam2005@gmail.com";
-    private static final String SENDER_PASSWORD = "testingtesting";
-
+    private static final String SENDER_EMAIL = "thienphubui2803@gmail.com";
+    private static final String SENDER_PASSWORD = "juvh zcex sjqp aqsz";
     private final ActivityResultLauncher<Intent> googleSignInLauncher =
             registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
@@ -296,6 +296,7 @@ public class LoginActivity extends AppCompatActivity {
                 userDocRef.set(newUser)
                         .addOnSuccessListener(aVoid -> {
                             Log.d(TAG, "New user created.");
+                            AccountUtil.saveUserToHistory(LoginActivity.this, newUser);
                             onComplete.run();
                         })
                         .addOnFailureListener(e -> {
@@ -304,6 +305,13 @@ public class LoginActivity extends AppCompatActivity {
                         });
             } else {
                 Log.d(TAG, "User exists or failed check.");
+                // Nếu user đã có trên Firestore, ta cũng phải convert sang Object User để lưu vào máy
+                if (task.isSuccessful() && task.getResult() != null) {
+                    User existingUser = task.getResult().toObject(User.class);
+                    if (existingUser != null) {
+                        AccountUtil.saveUserToHistory(LoginActivity.this, existingUser);
+                    }
+                }
                 onComplete.run();
             }
         });

@@ -7,17 +7,17 @@
 
     <!-- === 1. HIỆU ỨNG XẾP CHỒNG (STACK EFFECT) === -->
 
-    <!-- Lớp sau cùng (Nhỏ nhất - 90dp) -->
-    <View
-        android:id="@+id/view_stack_2"
-        android:layout_width="90dp"
-        android:layout_height="8dp"
-        android:background="@drawable/background_playlist_stack"
-        android:alpha="0.5"
-        app:layout_constraintBottom_toTopOf="@id/view_stack_1"
-        app:layout_constraintStart_toStartOf="@id/card_thumb"
-        app:layout_constraintEnd_toEndOf="@id/card_thumb"
-        android:layout_marginBottom="-3dp" />
+<!--    &lt;!&ndash; Lớp sau cùng (Nhỏ nhất - 90dp) &ndash;&gt;-->
+<!--    <View-->
+<!--        android:id="@+id/view_stack_2"-->
+<!--        android:layout_width="90dp"-->
+<!--        android:layout_height="8dp"-->
+<!--        android:background="@drawable/background_playlist_stack"-->
+<!--        android:alpha="0.5"-->
+<!--        app:layout_constraintBottom_toTopOf="@id/view_stack_1"-->
+<!--        app:layout_constraintStart_toStartOf="@id/card_thumb"-->
+<!--        app:layout_constraintEnd_toEndOf="@id/card_thumb"-->
+<!--        android:layout_marginBottom="-3dp" />-->
 
     <!-- Lớp giữa (Vừa vừa - 105dp) -->
     <View

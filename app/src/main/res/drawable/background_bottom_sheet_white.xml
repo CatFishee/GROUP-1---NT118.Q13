@@ -6,5 +6,6 @@
     <!-- Bo 2 góc trên cho đẹp -->
     <corners
         android:topLeftRadius="24dp"
-        android:topRightRadius="24dp" />
+        android:topRightRadius="24dp"
+        android:radius="24dp"/>
 </shape>

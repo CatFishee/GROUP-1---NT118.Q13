@@ -25,9 +25,12 @@ import com.example.metube.model.Video;
 import com.example.metube.ui.history.HistoryActivity; // Giả sử bạn đã tạo Activity này
 import com.example.metube.ui.history.HistoryAdapter;
 import com.example.metube.ui.history.HistoryPreviewAdapter;
+import com.example.metube.ui.login.SwitchAccountDialog;
 import com.example.metube.ui.playlist.CreatePlaylistBottomSheet;
 import com.example.metube.ui.playlist.PlaylistsActivity;
 import com.example.metube.ui.playlist.PlaylistPreviewAdapter;
+import com.example.metube.utils.AccountUtil;
+import com.example.metube.utils.ShareUtil;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -58,7 +61,7 @@ public class PersonFragment extends Fragment {
     private View btnSwitchAccount, btnShareChannel;
     private TextView btnViewAllHistory;
     private RecyclerView rvHistory;
-    // TODO: Khai báo RecyclerView cho Playlists khi bạn làm đến phần đó
+    private User mUser;
 
     // --- Khai báo Adapter ---
     private HistoryPreviewAdapter historyPreviewAdapter;
@@ -154,13 +157,28 @@ public class PersonFragment extends Fragment {
             Intent intent = new Intent(getActivity(), PlaylistsActivity.class);
             startActivity(intent);
         });
+        btnShareChannel.setOnClickListener(v -> {
+            if (mUser != null) {
+                // Tạo link giả lập (hoặc link thật nếu bạn có web)
+                String channelLink = "https://metube.app/channel/" + mUser.getUserID();
+
+                // Gọi hàm tiện ích
+                ShareUtil.shareChannel(requireContext(), mUser.getName(), channelLink);
+            } else {
+                Toast.makeText(getContext(), "Loading profile...", Toast.LENGTH_SHORT).show();
+            }
+        });
+        btnSwitchAccount.setOnClickListener(v -> {
+            if (mUser != null) {
+                SwitchAccountDialog dialog = new SwitchAccountDialog(mUser);
+                dialog.show(getParentFragmentManager(), "SwitchAccountDialog");
+            }
+        });
 
         // Gắn sự kiện tạm thời cho các nút chưa có chức năng
         View.OnClickListener notImplementedListener = v ->
                 Toast.makeText(getContext(), "Feature not implemented yet", Toast.LENGTH_SHORT).show();
         btnViewChannel.setOnClickListener(notImplementedListener);
-        btnSwitchAccount.setOnClickListener(notImplementedListener);
-        btnShareChannel.setOnClickListener(notImplementedListener);
     }
 
     /**
@@ -202,17 +220,20 @@ public class PersonFragment extends Fragment {
         firestore.collection("users").document(firebaseUser.getUid()).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (isAdded() && documentSnapshot.exists()) {
-                        User user = documentSnapshot.toObject(User.class);
-                        if (user != null) {
+                        mUser = documentSnapshot.toObject(User.class);
+                        if (mUser != null) {
+                            AccountUtil.saveUserToHistory(requireContext(), mUser);
+                        }
+                        if (mUser != null) {
                             // 1. Hiển thị tên
-                            tvUserName.setText(user.getName());
+                            tvUserName.setText(mUser.getName());
 
                             // 2. Tạo và hiển thị tên kênh (@username)
-                            String channelHandle = "@" + user.getName().replaceAll("\\s+", "").toLowerCase();
+                            String channelHandle = "@" + mUser.getName().replaceAll("\\s+", "").toLowerCase();
                             tvChannelName.setText(channelHandle);
 
                             // 3. Hiển thị ảnh đại diện
-                            String avatarUrl = user.getProfileURL();
+                            String avatarUrl = mUser.getProfileURL();
                             if (avatarUrl != null && !avatarUrl.isEmpty()) {
                                 Glide.with(this)
                                         .load(avatarUrl)
