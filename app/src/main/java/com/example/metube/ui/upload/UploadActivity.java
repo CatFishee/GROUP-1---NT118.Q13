@@ -73,7 +73,6 @@ public class UploadActivity extends AppCompatActivity {
     // Firebase
     private FirebaseAuth mAuth;
     private FirebaseFirestore firestore;
-    private DatabaseReference realtimeDbRef;
 
     // Activity result launchers
     private final ActivityResultLauncher<Intent> thumbnailPickerLauncher = registerForActivityResult(
@@ -115,14 +114,12 @@ public class UploadActivity extends AppCompatActivity {
         setupTopicInput();
         ImageView ivClose = findViewById(R.id.iv_close_upload);
         ivClose.setOnClickListener(v -> {
-            // Khi nhấn nút "X", kết thúc (đóng) Activity này và quay về màn hình trước đó
             finish();
         });
 
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
-        realtimeDbRef = FirebaseDatabase.getInstance().getReference("videoStats");
 
         btnSelectThumbnail.setOnClickListener(v -> openPicker("image/*", thumbnailPickerLauncher));
         btnSelectVideo.setOnClickListener(v -> openPicker("video/*", videoPickerLauncher));
@@ -290,34 +287,45 @@ public class UploadActivity extends AppCompatActivity {
 
         video.setDuration(duration);
 
+        Log.d(TAG, "=== SAVING VIDEO TO FIRESTORE ===");
+        Log.d(TAG, "Video ID: " + videoId);
+        Log.d(TAG, "Uploader ID: " + uploaderId);
+        Log.d(TAG, "Title: " + title);
+
         firestore.collection("videos").document(videoId).set(video)
                 .addOnSuccessListener(aVoid -> {
+                    Log.d(TAG, "✅ Video saved to Firestore successfully");
                     createVideoStatInRealtimeDB(videoId);
                     Toast.makeText(UploadActivity.this, "Upload successful!", Toast.LENGTH_SHORT).show();
                     finish();
                 })
-                .addOnFailureListener(this::showUploadError);
-
-        firestore.collection("videos").document(videoId).set(video)
-                .addOnSuccessListener(aVoid -> {
-                    createVideoStatInRealtimeDB(videoId);
-
-                    Toast.makeText(UploadActivity.this, "Upload successful!", Toast.LENGTH_SHORT).show();
-                    finish();
-                })
-                .addOnFailureListener(this::showUploadError);
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to save video to Firestore", e);
+                    showUploadError(e);
+                });
     }
 
     private void createVideoStatInRealtimeDB(String videoId) {
-        DatabaseReference statRef = realtimeDbRef.child(videoId);
+        Log.d(TAG, "=== CREATING VIDEO STAT IN REALTIME DB ===");
+        Log.d(TAG, "Video ID: " + videoId);
+
+        // ✅ FIXED: Added "videostat" parent node
+        DatabaseReference statRef = FirebaseDatabase.getInstance()
+                .getReference("videostat")
+                .child(videoId);
+
+        Log.d(TAG, "Path: videostat/" + videoId);
+
         statRef.child("viewCount").setValue(0);
         statRef.child("likeCount").setValue(0);
         statRef.child("dislikeCount").setValue(0);
         statRef.child("createdAt").setValue(System.currentTimeMillis())
-                .addOnSuccessListener(unused ->
-                        Log.d(TAG, "RealtimeDB VideoStat created for " + videoId))
-                .addOnFailureListener(e ->
-                        Log.e(TAG, "Failed to create VideoStat in RealtimeDB for " + videoId, e));
+                .addOnSuccessListener(unused -> {
+                    Log.d(TAG, "✅ RealtimeDB VideoStat created successfully for " + videoId);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to create VideoStat in RealtimeDB for " + videoId, e);
+                });
     }
 
     private void setUploadingState(boolean isUploading) {

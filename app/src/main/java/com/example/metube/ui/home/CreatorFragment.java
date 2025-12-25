@@ -33,7 +33,6 @@ import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
-import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -43,6 +42,7 @@ import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -64,7 +64,7 @@ public class CreatorFragment extends Fragment {
     private TextView tvTopVideoTitle, tvTopVideoStats;
     private ImageView ivTopVideoThumbnail;
     private LineChart lineChart;
-    private MaterialButtonToggleGroup toggleTimePeriod;
+    private com.google.android.material.button.MaterialButtonToggleGroup toggleTimePeriod;
     private RecyclerView rvRecentVideos;
     private CreatorVideoAdapter videoAdapter;
 
@@ -134,6 +134,9 @@ public class CreatorFragment extends Fragment {
         realtimeDb = FirebaseDatabase.getInstance().getReference();
         subscriptionManager = SubscriptionManager.getInstance();
         currentUserId = auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+
+        Log.d(TAG, "=== FIREBASE INITIALIZED ===");
+        Log.d(TAG, "Current User ID: " + currentUserId);
     }
 
     private void setupListeners() {
@@ -154,6 +157,7 @@ public class CreatorFragment extends Fragment {
                 } else if (checkedId == R.id.btn_90_days) {
                     selectedTimePeriod = 90;
                 }
+                Log.d(TAG, "Time period changed to: " + selectedTimePeriod + " days");
                 loadSubscriberGrowthData();
             }
         });
@@ -161,11 +165,14 @@ public class CreatorFragment extends Fragment {
 
     private void loadData() {
         if (currentUserId == null) {
+            Log.e(TAG, "❌ Current user is null!");
             swipeRefresh.setRefreshing(false);
             return;
         }
 
+        Log.d(TAG, "=== LOADING DATA FOR USER: " + currentUserId + " ===");
         swipeRefresh.setRefreshing(true);
+
         // Check if user has videos
         firestore.collection("videos")
                 .whereEqualTo("uploaderID", currentUserId)
@@ -173,18 +180,19 @@ public class CreatorFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (querySnapshot.isEmpty()) {
+                        Log.d(TAG, "No videos found - showing empty state");
                         showEmptyState();
                     } else {
+                        Log.d(TAG, "Videos found - showing content state");
                         showContentState();
-                        // Load data in phases for better perceived performance
-                        loadPhase1Data(); // Overview cards
-                        loadPhase2Data(); // Graph
-                        loadPhase3Data(); // Engagement & Videos
+                        loadPhase1Data();
+                        loadPhase2Data();
+                        loadPhase3Data();
                     }
                     swipeRefresh.setRefreshing(false);
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error checking for videos", e);
+                    Log.e(TAG, "❌ Error checking for videos", e);
                     swipeRefresh.setRefreshing(false);
                 });
     }
@@ -201,55 +209,97 @@ public class CreatorFragment extends Fragment {
 
     // PHASE 1: Overview Cards (Subscribers, Video Count)
     private void loadPhase1Data() {
+        Log.d(TAG, "=== PHASE 1: Loading Overview Cards ===");
+
+        // Load subscriber count
+        Log.d(TAG, "Querying subscriptions where uploaderID = " + currentUserId);
         subscriptionManager.getSubscriberCount(currentUserId, count -> {
+            Log.d(TAG, "✅ Subscriber count received: " + count);
             animateValue(tvTotalSubscribers, 0, count, 800);
         });
 
+        // Load video count
+        Log.d(TAG, "Querying videos where uploaderID = " + currentUserId);
         firestore.collection("videos")
                 .whereEqualTo("uploaderID", currentUserId)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     int videoCount = querySnapshot.size();
+                    Log.d(TAG, "✅ Video count: " + videoCount);
                     animateValue(tvTotalVideos, 0, videoCount, 800);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "❌ Failed to load video count", e);
                 });
     }
 
     // PHASE 2: Graph Data
     private void loadPhase2Data() {
+        Log.d(TAG, "=== PHASE 2: Loading Graph Data ===");
         loadSubscriberGrowthData();
     }
 
     // PHASE 3: Detailed Stats & Recent Videos
     private void loadPhase3Data() {
+        Log.d(TAG, "=== PHASE 3: Loading Detailed Stats ===");
         loadVideosAndCalculateStats();
     }
 
     private void loadSubscriberGrowthData() {
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DAY_OF_YEAR, -selectedTimePeriod);
-        Date startDate = cal.getTime();
+        Log.d(TAG, "Loading subscriber growth for period: " + selectedTimePeriod + " days");
 
-        firestore.collection("contentCreatorStats")
-                .whereEqualTo("userID", currentUserId)
-                .whereGreaterThanOrEqualTo("createdAt", new com.google.firebase.Timestamp(startDate))
-                .orderBy("createdAt", Query.Direction.ASCENDING)
-                .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    List<Entry> entries = new ArrayList<>();
-                    long initialSubscriberCount = 0; // You might need a way to fetch this for a more accurate graph start point
-                    long cumulativeChange = 0;
-                    int index = 0;
-                    for (QueryDocumentSnapshot doc : querySnapshot) {
-                        ContentCreatorStat stat = doc.toObject(ContentCreatorStat.class);
-                        cumulativeChange += (stat.getSubGained() - stat.getSubLost());
-                        entries.add(new Entry(index++, initialSubscriberCount + cumulativeChange));
-                    }
-                    updateChart(entries);
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Error loading subscriber stats", e));
+        // First, get current total subscribers
+        subscriptionManager.getSubscriberCount(currentUserId, currentTotal -> {
+            Log.d(TAG, "Current total subscribers: " + currentTotal);
+
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_YEAR, -selectedTimePeriod);
+            Date startDate = cal.getTime();
+
+            Log.d(TAG, "Querying contentCreatorStats from: " + startDate);
+
+            firestore.collection("contentCreatorStats")
+                    .whereEqualTo("userID", currentUserId)
+                    .whereGreaterThanOrEqualTo("createdAt", new Timestamp(startDate))
+                    .orderBy("createdAt", Query.Direction.ASCENDING)
+                    .get()
+                    .addOnSuccessListener(querySnapshot -> {
+                        Log.d(TAG, "✅ Found " + querySnapshot.size() + " stat documents");
+
+                        List<Entry> entries = new ArrayList<>();
+
+                        // Calculate initial count by subtracting all changes from current total
+                        long totalChange = 0;
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            ContentCreatorStat stat = doc.toObject(ContentCreatorStat.class);
+                            totalChange += (stat.getSubGained() - stat.getSubLost());
+                            Log.d(TAG, "Stat: +" + stat.getSubGained() + " -" + stat.getSubLost());
+                        }
+
+                        long initialCount = currentTotal - totalChange;
+                        long cumulativeCount = initialCount;
+                        int index = 0;
+
+                        Log.d(TAG, "Initial count: " + initialCount + " (Current: " + currentTotal + " - Changes: " + totalChange + ")");
+
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            ContentCreatorStat stat = doc.toObject(ContentCreatorStat.class);
+                            cumulativeCount += (stat.getSubGained() - stat.getSubLost());
+                            entries.add(new Entry(index++, cumulativeCount));
+                            Log.d(TAG, "Entry " + index + ": " + cumulativeCount);
+                        }
+
+                        updateChart(entries);
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "❌ Failed to load subscriber stats", e);
+                    });
+        });
     }
 
     private void loadVideosAndCalculateStats() {
+        Log.d(TAG, "Loading videos for stats calculation");
+
         firestore.collection("videos")
                 .whereEqualTo("uploaderID", currentUserId)
                 .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -257,26 +307,31 @@ public class CreatorFragment extends Fragment {
                 .addOnSuccessListener(querySnapshot -> {
                     videoList.clear();
                     if (querySnapshot.isEmpty()) {
-                        // Handle case where user had videos but deleted all of them
+                        Log.d(TAG, "No videos found for stats");
                         swipeRefresh.setRefreshing(false);
                         return;
                     }
 
+                    Log.d(TAG, "✅ Found " + querySnapshot.size() + " videos");
+
                     for (QueryDocumentSnapshot doc : querySnapshot) {
                         Video video = doc.toObject(Video.class);
-                        video.setVideoID(doc.getId()); // Ensure video ID is set
+                        video.setVideoID(doc.getId());
                         videoList.add(video);
+                        Log.d(TAG, "Video: " + video.getTitle() + " (ID: " + video.getVideoID() + ")");
                     }
                     videoAdapter.notifyDataSetChanged();
                     fetchDetailedVideoStats();
                 })
                 .addOnFailureListener(e -> {
-                    Log.e(TAG, "Error loading videos", e);
+                    Log.e(TAG, "❌ Error loading videos", e);
                     swipeRefresh.setRefreshing(false);
                 });
     }
 
     private void fetchDetailedVideoStats() {
+        Log.d(TAG, "Fetching detailed stats from Realtime DB for " + videoList.size() + " videos");
+
         AtomicInteger pendingRequests = new AtomicInteger(videoList.size());
         long[] totalViews = {0};
         long[] totalLikes = {0};
@@ -285,6 +340,8 @@ public class CreatorFragment extends Fragment {
         long[] maxViews = {-1};
 
         for (Video video : videoList) {
+            Log.d(TAG, "Querying videostat/" + video.getVideoID());
+
             realtimeDb.child("videostat").child(video.getVideoID())
                     .addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
@@ -292,6 +349,8 @@ public class CreatorFragment extends Fragment {
                             long views = snapshot.child("viewCount").exists() ? snapshot.child("viewCount").getValue(Long.class) : 0;
                             long likes = snapshot.child("likes").getChildrenCount();
                             long dislikes = snapshot.child("dislikes").getChildrenCount();
+
+                            Log.d(TAG, "Stats for " + video.getTitle() + ": " + views + " views, " + likes + " likes");
 
                             totalViews[0] += views;
                             totalLikes[0] += likes;
@@ -303,13 +362,17 @@ public class CreatorFragment extends Fragment {
                             }
 
                             if (pendingRequests.decrementAndGet() == 0) {
+                                Log.d(TAG, "=== ALL STATS LOADED ===");
+                                Log.d(TAG, "Total views: " + totalViews[0]);
+                                Log.d(TAG, "Total likes: " + totalLikes[0]);
+                                Log.d(TAG, "Total dislikes: " + totalDislikes[0]);
                                 updateEngagementUI(totalViews[0], totalLikes[0], totalDislikes[0], topVideo[0], maxViews[0]);
                             }
                         }
 
                         @Override
                         public void onCancelled(@NonNull DatabaseError error) {
-                            Log.e(TAG, "Error fetching video stat for " + video.getVideoID(), error.toException());
+                            Log.e(TAG, "❌ Error fetching video stat for " + video.getVideoID(), error.toException());
                             if (pendingRequests.decrementAndGet() == 0) {
                                 updateEngagementUI(totalViews[0], totalLikes[0], totalDislikes[0], topVideo[0], maxViews[0]);
                             }
@@ -319,6 +382,8 @@ public class CreatorFragment extends Fragment {
     }
 
     private void updateEngagementUI(long totalViews, long totalLikes, long totalDislikes, Video topVideo, long topVideoViews) {
+        Log.d(TAG, "Updating engagement UI");
+
         animateValue(tvTotalViews, 0, (int) totalViews, 800);
 
         int avgViews = videoList.isEmpty() ? 0 : (int) (totalViews / videoList.size());
@@ -328,13 +393,13 @@ public class CreatorFragment extends Fragment {
         int likeRatio = totalReactions == 0 ? 0 : (int) ((totalLikes * 100.0) / totalReactions);
         tvLikeRatio.setText(String.format(Locale.getDefault(), "%d%%", likeRatio));
 
-        // Engagement Rate = (Total Likes + Total Dislikes) / Total Views
         int engagementRate = totalViews == 0 ? 0 : (int) ((totalReactions * 100.0) / totalViews);
         tvEngagementRate.setText(String.format(Locale.getDefault(), "%d%%", engagementRate));
 
         if (topVideo != null && isAdded()) {
+            Log.d(TAG, "Top video: " + topVideo.getTitle() + " with " + topVideoViews + " views");
             tvTopVideoTitle.setText(topVideo.getTitle());
-            // Fetch stats specifically for the top video to ensure likes are correct
+
             realtimeDb.child("videostat").child(topVideo.getVideoID()).addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -372,7 +437,7 @@ public class CreatorFragment extends Fragment {
         if (isAdded()) {
             leftAxis.setTextColor(ContextCompat.getColor(requireContext(), R.color.app_main_color));
         }
-        leftAxis.setAxisMinimum(0f); // Ensure Y-axis starts at 0
+        leftAxis.setAxisMinimum(0f);
 
         lineChart.getAxisRight().setEnabled(false);
         lineChart.getLegend().setEnabled(false);
@@ -380,10 +445,13 @@ public class CreatorFragment extends Fragment {
 
     private void updateChart(List<Entry> entries) {
         if (!isAdded() || entries.isEmpty()) {
+            Log.d(TAG, "Cannot update chart - fragment not added or no entries");
             lineChart.clear();
             lineChart.invalidate();
             return;
         }
+
+        Log.d(TAG, "Updating chart with " + entries.size() + " entries");
 
         LineDataSet dataSet = new LineDataSet(entries, "Subscribers");
         dataSet.setColor(ContextCompat.getColor(requireContext(), R.color.app_main_color));
@@ -392,7 +460,7 @@ public class CreatorFragment extends Fragment {
         dataSet.setLineWidth(2.5f);
         dataSet.setCircleRadius(4f);
         dataSet.setDrawCircleHole(false);
-        dataSet.setValueTextSize(0f); // Hide values on points
+        dataSet.setValueTextSize(0f);
         dataSet.setDrawFilled(true);
         dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
 
@@ -438,7 +506,6 @@ public class CreatorFragment extends Fragment {
         @NonNull
         @Override
         public VideoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            // Ensure you have a layout file named 'item_creator_video.xml'
             View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_creator_video, parent, false);
             return new VideoViewHolder(view);
         }
@@ -451,7 +518,7 @@ public class CreatorFragment extends Fragment {
 
         @Override
         public int getItemCount() {
-            return Math.min(videos.size(), 5); // Show at most 5 recent videos
+            return Math.min(videos.size(), 5);
         }
 
         static class VideoViewHolder extends RecyclerView.ViewHolder {
@@ -472,7 +539,6 @@ public class CreatorFragment extends Fragment {
                         .placeholder(R.color.light_green_background)
                         .into(thumbnail);
 
-                // Fetch stats for this specific video item
                 FirebaseDatabase.getInstance().getReference("videostat").child(video.getVideoID())
                         .addListenerForSingleValueEvent(new ValueEventListener() {
                             @Override
