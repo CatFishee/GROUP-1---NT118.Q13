@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:paddingVertical="12dp"
+    android:background="@drawable/background_bottom_sheet_white">
+
+    <!-- 1. Remove from watch history -->
+    <LinearLayout
+        android:id="@+id/option_remove_history"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_delete" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Remove from watch history"
+            android:textSize="16sp"
+            android:textColor="@color/app_main_color"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- 2. Save to playlist -->
+    <LinearLayout
+        android:id="@+id/option_save_playlist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_playlist_play"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Save to playlist"
+            android:textSize="16sp"
+            android:textColor="@color/app_main_color"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- 3. Download video -->
+    <LinearLayout
+        android:id="@+id/option_download"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_download"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Download video"
+            android:textSize="16sp"
+            android:textColor="@color/app_main_color"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- 4. Share -->
+    <LinearLayout
+        android:id="@+id/option_share"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_share"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Share"
+            android:textSize="16sp"
+            android:textColor="@color/app_main_color"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+</LinearLayout>

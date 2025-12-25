@@ -17,6 +17,7 @@ import com.example.metube.model.DateHeader;
 import com.example.metube.model.HistoryItem;
 import com.example.metube.model.User;
 import com.example.metube.model.Video;
+import com.example.metube.ui.playlist.AddToPlaylistBottomSheet;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
@@ -36,7 +37,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-public class HistoryActivity extends AppCompatActivity {
+public class HistoryActivity extends AppCompatActivity implements HistoryMenuBottomSheet.HistoryMenuListener{
 
     private static final String TAG = "HistoryActivity";
 
@@ -62,17 +63,22 @@ public class HistoryActivity extends AppCompatActivity {
         currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : null;
 
         chipGroupFilters = findViewById(R.id.chip_group_filters);
-
         setupRecyclerView();
+        if (adapter != null) {
+            adapter.setOnItemMoreClickListener((historyItem, position) -> {
+                HistoryMenuBottomSheet bottomSheet = new HistoryMenuBottomSheet(
+                        historyItem.getVideo(),
+                        historyItem.getDocumentId(),
+                        position,
+                        this
+                );
+                bottomSheet.show(getSupportFragmentManager(), "HistoryMenu");
+            });
+        }
         loadHistoryData();
         android.widget.ImageButton btnBack = findViewById(R.id.btn_back);
-        btnBack.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Đóng Activity hiện tại, quay về màn hình trước
-                finish();
-            }
-        });
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
+
     }
 
     private void setupRecyclerView() {
@@ -103,7 +109,10 @@ public class HistoryActivity extends AppCompatActivity {
 
                     List<HistoryItem> historyItems = new ArrayList<>();
                     for (QueryDocumentSnapshot doc : querySnapshot) {
-                        historyItems.add(doc.toObject(HistoryItem.class));
+                        HistoryItem item = doc.toObject(HistoryItem.class);
+                        item.setDocumentId(doc.getId());
+
+                        historyItems.add(item);
                     }
                     // Bắt đầu chuỗi truy vấn lồng nhau
                     fetchVideoDetails(historyItems);
@@ -343,5 +352,47 @@ public class HistoryActivity extends AppCompatActivity {
         now.add(Calendar.DATE,-1);
         return (now.get(Calendar.YEAR) == checkedDate.get(Calendar.YEAR)
                 && now.get(Calendar.DAY_OF_YEAR) == checkedDate.get(Calendar.DAY_OF_YEAR));
+    }
+    @Override
+    public void onRemoveFromHistory(String docId, int position) {
+        if (docId == null) return;
+
+        // Xóa trên Firestore
+        firestore.collection("watchHistory").document(docId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Removed from watch history", Toast.LENGTH_SHORT).show();
+
+                    // Xóa trên giao diện ngay lập tức
+                    if (adapter != null) {
+                        adapter.removeItem(position);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to remove", Toast.LENGTH_SHORT).show();
+                });
+    }
+    @Override
+    public void onSaveToPlaylist(Video video) {
+        AddToPlaylistBottomSheet bottomSheet = new AddToPlaylistBottomSheet(video);
+        bottomSheet.show(getSupportFragmentManager(), "AddToPlaylistBottomSheet");
+    }
+
+    @Override
+    public void onDownload(Video video) {
+        com.example.metube.utils.DownloadUtil.downloadVideo(
+                this,
+                video.getVideoURL(),
+                video.getTitle()
+        );
+    }
+
+    @Override
+    public void onShare(Video video) {
+        com.example.metube.utils.ShareUtil.shareVideo(
+                this,
+                video.getTitle(),
+                video.getVideoURL()
+        );
     }
 }

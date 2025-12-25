@@ -2,6 +2,7 @@ package com.example.metube.model;
 
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentId;
+import com.google.firebase.firestore.Exclude;
 
 public class HistoryItem {
     @DocumentId
@@ -14,6 +15,8 @@ public class HistoryItem {
     private Video video;
     private long resumePosition;
     private User uploader;
+    @Exclude
+    private String documentId;
 
     public HistoryItem() {}
 
@@ -39,4 +42,9 @@ public class HistoryItem {
 
     public User getUploader() { return uploader; }
     public void setUploader(User uploader) { this.uploader = uploader; }
+
+    @Exclude
+    public String getDocumentId() { return documentId; }
+    @Exclude
+    public void setDocumentId(String documentId) { this.documentId = documentId; }
 }

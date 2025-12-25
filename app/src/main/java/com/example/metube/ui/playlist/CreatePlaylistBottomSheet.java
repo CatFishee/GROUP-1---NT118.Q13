@@ -24,10 +24,15 @@ import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 public class CreatePlaylistBottomSheet extends DialogFragment {
+    public interface OnPlaylistCreatedListener {
+        void onPlaylistCreated();
+    }
+    private OnPlaylistCreatedListener listener;
     private TextInputEditText etTitle;
     private TextView tvVisibility;
     private Button btnCreate, btnCancel;
@@ -35,6 +40,10 @@ public class CreatePlaylistBottomSheet extends DialogFragment {
 
     // Mặc định là Private
     private String currentVisibility = "Private";
+
+    public void setOnPlaylistCreatedListener(OnPlaylistCreatedListener listener) {
+        this.listener = listener;
+    }
 
     @Nullable
     @Override
@@ -93,20 +102,18 @@ public class CreatePlaylistBottomSheet extends DialogFragment {
         visibilityDialog.setContentView(sheetView);
 
         // Xử lý sự kiện chọn từng dòng
-        sheetView.findViewById(R.id.option_public).setOnClickListener(v -> {
-            updateVisibility("Public");
+        // Xử lý click chọn option
+        View.OnClickListener clickListener = v -> {
+            int id = v.getId();
+            if (id == R.id.option_public) updateVisibility("Public");
+            else if (id == R.id.option_unlisted) updateVisibility("Unlisted");
+            else updateVisibility("Private");
             visibilityDialog.dismiss();
-        });
+        };
 
-        sheetView.findViewById(R.id.option_unlisted).setOnClickListener(v -> {
-            updateVisibility("Unlisted");
-            visibilityDialog.dismiss();
-        });
-
-        sheetView.findViewById(R.id.option_private).setOnClickListener(v -> {
-            updateVisibility("Private");
-            visibilityDialog.dismiss();
-        });
+        sheetView.findViewById(R.id.option_public).setOnClickListener(clickListener);
+        sheetView.findViewById(R.id.option_unlisted).setOnClickListener(clickListener);
+        sheetView.findViewById(R.id.option_private).setOnClickListener(clickListener);
 
         visibilityDialog.show();
     }
@@ -120,30 +127,44 @@ public class CreatePlaylistBottomSheet extends DialogFragment {
         String title = etTitle.getText().toString().trim();
         if (title.isEmpty()) return;
 
+        // Disable nút để tránh bấm nhiều lần
+        btnCreate.setEnabled(false);
+        btnCreate.setText("Creating...");
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(getContext(), "User not logged in", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         FirebaseFirestore db = FirebaseFirestore.getInstance();
-        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         // Tạo ID mới
         String playlistId = db.collection("playlists").document().getId();
 
         // Tạo Object Playlist
-        Playlist newPlaylist = new Playlist(
-                playlistId,
-                userId,
-                title,
-                currentVisibility.toUpperCase(), // Lưu dạng PUBLIC, PRIVATE...
-                new ArrayList<>() // List video rỗng ban đầu
-        );
+        Playlist newPlaylist = new Playlist();
+        newPlaylist.setPlaylistId(playlistId);
+        newPlaylist.setOwnerId(user.getUid());
+        newPlaylist.setTitle(title);
+        newPlaylist.setVisibility(currentVisibility);
+        newPlaylist.setVideoIds(new ArrayList<>());
 
         // Lưu vào Firestore
         db.collection("playlists").document(playlistId).set(newPlaylist)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(getContext(), "Playlist created", Toast.LENGTH_SHORT).show();
-                    dismiss(); // Đóng dialog
-                    // TODO: Refresh danh sách playlist ở PersonFragment nếu cần
+                    // GỌI CALLBACK ĐỂ ACTIVITY BIẾT MÀ REFRESH
+                    if (listener != null) {
+                        listener.onPlaylistCreated();
+                    }
+
+                    dismiss();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Error creating playlist", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    btnCreate.setEnabled(true);
+                    btnCreate.setText("Create");
                 });
     }
 

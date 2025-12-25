@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/background_bottom_sheet_white"
+    android:paddingTop="16dp"
+    android:paddingBottom="8dp"
+    android:minWidth="300dp"> <!-- Chiều rộng tối thiểu -->
+
+    <!-- Header -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="16dp">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Accounts"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/app_main_color"/>
+        <ImageView
+            android:id="@+id/btn_close"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:layout_alignParentEnd="true"/>
+    </RelativeLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0"/>
+
+    <!-- 1. CURRENT ACCOUNT (Tài khoản đang dùng) -->
+    <LinearLayout
+        android:id="@+id/layout_current_account"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <de.hdodenhof.circleimageview.CircleImageView
+                android:id="@+id/iv_current_avatar"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@android:color/darker_gray" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="16dp">
+                <TextView
+                    android:id="@+id/tv_current_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Current Name"
+                    android:textColor="@color/black"
+                    android:textStyle="bold"
+                    android:textSize="14sp"/>
+                <TextView
+                    android:id="@+id/tv_current_email"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="email@example.com"
+                    android:textColor="@color/black"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+            <!-- Dấu tích xanh -->
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_check"
+                app:tint="@color/app_main_color"/>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_edit_channel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Edit channel"
+            android:textColor="@color/app_main_color"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:paddingTop="8dp"
+            android:layout_marginStart="56dp"/>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0"/>
+
+    <!-- 2. OTHER ACCOUNTS LIST -->
+    <TextView
+        android:id="@+id/tv_label_other"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Other accounts"
+        android:textStyle="bold"
+        android:textColor="@color/app_main_color"
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:visibility="gone"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_accounts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false"
+        android:visibility="gone"/>
+
+    <!-- 3. FOOTER ACTIONS -->
+    <LinearLayout
+        android:id="@+id/btn_add_account"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_add" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add account"
+            android:textColor="@color/app_main_color"
+            android:textSize="14sp"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_sign_out"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground">
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_exit_to_app" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sign out"
+            android:textColor="@color/app_main_color"
+            android:textSize="14sp"
+            android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+</LinearLayout>
