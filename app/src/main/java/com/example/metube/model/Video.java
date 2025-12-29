@@ -22,6 +22,8 @@ public class Video {
     private long resumePosition = 0;
     @ServerTimestamp
     private Timestamp createdAt;
+    @Exclude
+    private String historyDocId; // ID để xóa lịch sử
     private long viewCount; // Temporary field for sorting (not stored in Firestore)
 
     public Video() {}
@@ -85,4 +87,9 @@ public class Video {
 
     @Exclude
     public void setResumePosition(long resumePosition) { this.resumePosition = resumePosition; }
+
+    @Exclude
+    public String getHistoryDocId() { return historyDocId; }
+    @Exclude
+    public void setHistoryDocId(String historyDocId) { this.historyDocId = historyDocId; }
 }

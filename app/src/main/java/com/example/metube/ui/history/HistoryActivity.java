@@ -4,6 +4,9 @@ import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.ProgressBar;
 import android.widget.Toast;
 
@@ -21,6 +24,7 @@ import com.example.metube.ui.playlist.AddToPlaylistBottomSheet;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
@@ -50,6 +54,10 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
     private ChipGroup chipGroupFilters;
     private List<Object> allHistoryItems = new ArrayList<>(); // Danh sách gốc chưa lọc
     private String currentFilter = "All";
+    private View layoutPausedBanner;
+    private Button btnTurnOn;
+    private com.google.firebase.firestore.ListenerRegistration historyStatusListener;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -61,6 +69,17 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
 
         firestore = FirebaseFirestore.getInstance();
         currentUserId = FirebaseAuth.getInstance().getCurrentUser() != null ? FirebaseAuth.getInstance().getCurrentUser().getUid() : null;
+
+        ImageView btnOptions = findViewById(R.id.btn_history_options);
+        btnOptions.setOnClickListener(this::showHistoryOptionsMenu);
+
+        layoutPausedBanner = findViewById(R.id.layout_paused_banner);
+        btnTurnOn = findViewById(R.id.btn_turn_on_history);
+
+        btnTurnOn.setOnClickListener(v -> {
+            // Bật lại lịch sử (isPaused = false)
+            updateHistoryPauseState(false);
+        });
 
         chipGroupFilters = findViewById(R.id.chip_group_filters);
         setupRecyclerView();
@@ -79,6 +98,44 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
         android.widget.ImageButton btnBack = findViewById(R.id.btn_back);
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
+    }
+    private void startListeningToHistoryStatus() {
+        if (currentUserId == null) return;
+
+        // Dùng addSnapshotListener thay vì get()
+        historyStatusListener = firestore.collection("users").document(currentUserId)
+                .addSnapshotListener((documentSnapshot, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Listen failed.", e);
+                        return;
+                    }
+
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        User user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            // Tự động hiện/ẩn banner khi dữ liệu thay đổi
+                            if (user.isHistoryPaused()) {
+                                layoutPausedBanner.setVisibility(View.VISIBLE);
+                            } else {
+                                layoutPausedBanner.setVisibility(View.GONE);
+                            }
+                        }
+                    }
+                });
+    }
+    @Override
+    protected void onStart() {
+        super.onStart();
+        startListeningToHistoryStatus();
+    }
+
+    // Hủy đăng ký khi thoát màn hình để không tốn pin
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (historyStatusListener != null) {
+            historyStatusListener.remove();
+        }
     }
 
     private void setupRecyclerView() {
@@ -101,9 +158,11 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
                 .limit(100) // Giới hạn để tránh quá tải
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
+                    uiList.clear();
+                    allHistoryItems.clear();
                     if (querySnapshot.isEmpty()) {
                         if (progressBar != null) progressBar.setVisibility(View.GONE);
-                        // TODO: Hiển thị trạng thái trống
+                        adapter.notifyDataSetChanged(); // Cập nhật để xóa trắng màn hình nếu rỗng
                         return;
                     }
 
@@ -120,6 +179,144 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Error getting watch history", e);
                     if (progressBar != null) progressBar.setVisibility(View.GONE);
+                });
+    }
+
+    private void showHistoryOptionsMenu(View view) {
+        PopupMenu popup = new PopupMenu(this, view);
+        // Tự tạo menu bằng code java cho nhanh, đỡ phải tạo file xml menu
+        popup.getMenu().add(0, 1, 0, "Pause watch history");
+        popup.getMenu().add(0, 2, 0, "Clear all watch history");
+        popup.getMenu().add(0, 3, 0, "Manage all history");
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1:
+                    showPauseConfirmDialog();
+                    return true;
+                case 2:
+                    showClearHistoryDialog();
+                    return true;
+                case 3:
+                    // Mở màn hình Manage (làm sau)
+                    Toast.makeText(this, "Opening Manage History...", Toast.LENGTH_SHORT).show();
+                    return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+    private void showClearHistoryDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Clear watch history?")
+                .setMessage("Your Metube watch history will be cleared from all Metube apps on all devices.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Clear watch history", (dialog, which) -> {
+                    clearAllHistory();
+                })
+                .show();
+    }
+
+    private void clearAllHistory() {
+        if (currentUserId == null) return;
+
+        // Hiện loading để người dùng biết đang xử lý
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+
+        // 1. Lấy toàn bộ lịch sử (Không giới hạn limit để xóa sạch)
+        firestore.collection("watchHistory")
+                .whereEqualTo("userID", currentUserId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        Toast.makeText(this, "History is already empty", Toast.LENGTH_SHORT).show();
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        return;
+                    }
+
+                    // 2. Chuẩn bị Batch
+                    com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+                    List<DocumentSnapshot> documents = querySnapshot.getDocuments();
+
+                    // Firestore giới hạn batch 500 items. Ta chỉ xóa 500 cái đầu tiên.
+                    // Nếu nhiều hơn 500, ta sẽ gọi hàm đệ quy để xóa tiếp.
+                    int batchSize = 0;
+                    for (DocumentSnapshot doc : documents) {
+                        batch.delete(doc.getReference());
+                        batchSize++;
+
+                        // Nếu đủ 490 cái (trừa hao) thì dừng gom, đem đi xóa
+                        if (batchSize >= 490) break;
+                    }
+
+                    final int deletedCount = batchSize;
+                    final int totalCount = documents.size();
+
+                    // 3. Thực thi Xóa
+                    batch.commit().addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Deleted batch of " + deletedCount + " items.");
+
+                        // Nếu tổng số item lớn hơn số vừa xóa -> Vẫn còn -> Gọi lại hàm để xóa tiếp
+                        if (totalCount > deletedCount) {
+                            clearAllHistory(); // Đệ quy: Xóa tiếp đợt sau
+                        } else {
+                            // Đã xóa hết sạch sành sanh
+                            Toast.makeText(this, "All history cleared!", Toast.LENGTH_SHORT).show();
+
+                            // --- CẬP NHẬT GIAO DIỆN ---
+                            uiList.clear();           // Xóa list hiển thị
+                            allHistoryItems.clear();  // QUAN TRỌNG: Xóa cả list gốc (để filter không bị lỗi)
+
+                            if (adapter != null) {
+                                adapter.notifyDataSetChanged();
+                            }
+                            setupTopicFilters(new ArrayList<>());
+
+                            if (progressBar != null) progressBar.setVisibility(View.GONE);
+                        }
+                    }).addOnFailureListener(e -> {
+                        Log.e(TAG, "Clear history failed: ", e);
+                        Toast.makeText(this, "Failed to clear history", Toast.LENGTH_SHORT).show();
+                        if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    });
+
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Error fetching history for delete: ", e);
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                });
+    }
+    private void showPauseConfirmDialog() {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Pause watch history?")
+                .setMessage("Pausing Metube watch history can make it harder to find videos you watched.") // Copy text dài dòng kia nếu muốn
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Pause", (dialog, which) -> {
+                    // Update lên Firestore
+                    updateHistoryPauseState(true);
+                })
+                .show();
+    }
+    private void updateHistoryPauseState(boolean isPaused) {
+        if (currentUserId == null) return;
+
+        firestore.collection("users").document(currentUserId)
+                .update("isHistoryPaused", isPaused)
+                .addOnSuccessListener(aVoid -> {
+                    String msg = isPaused ? "Watch history paused" : "Watch history turned on";
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+
+                    // Cập nhật giao diện Banner ngay lập tức
+                    if (isPaused) {
+                        layoutPausedBanner.setVisibility(View.VISIBLE);
+                    } else {
+                        layoutPausedBanner.setVisibility(View.GONE);
+                        // Khi bật lại, có thể load lại data mới nhất nếu muốn
+                        loadHistoryData();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to update settings", Toast.LENGTH_SHORT).show();
                 });
     }
 

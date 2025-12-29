@@ -1,25 +1,36 @@
 package com.example.metube.ui.playlist;
 
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.palette.graphics.Palette;
 import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
 import com.example.metube.R;
 import com.example.metube.model.Playlist;
+import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.ArrayList;
 import java.util.List;
 
 public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.ViewHolder> {
 
-    private List<Playlist> playlists;
+    private List<Playlist> playlists = new ArrayList<>();
 
     public PlaylistsAdapter(List<Playlist> playlists) {
-        this.playlists = playlists;
+        if (playlists != null) this.playlists = playlists;
     }
 
-    @NonNull
-    @Override
+    @NonNull @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_playlist_vertical, parent, false);
         return new ViewHolder(view);
@@ -28,39 +39,79 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Playlist playlist = playlists.get(position);
-        holder.bind(playlist);
+
+        // 1. Set Text Info
+        holder.tvTitle.setText(playlist.getTitle());
+        String visibility = playlist.getVisibility() != null ? playlist.getVisibility() : "Private";
+        String prettyVisibility = visibility.substring(0, 1).toUpperCase() + visibility.substring(1).toLowerCase();
+        holder.tvInfo.setText(prettyVisibility + " • Playlist");
+        int count = (playlist.getVideoIds() != null) ? playlist.getVideoIds().size() : 0;
+        holder.tvCount.setText(String.valueOf(count));
+
+        // 2. Reset Thumbnail & Color
+        holder.ivThumb.setImageResource(android.R.color.black);
+        resetStackColors(holder);
+
+        // 3. Load Thumbnail Video Đầu Tiên & Trích xuất màu
+        if (playlist.getVideoIds() != null && !playlist.getVideoIds().isEmpty()) {
+            String firstVideoId = playlist.getVideoIds().get(0);
+
+            FirebaseFirestore.getInstance().collection("videos").document(firstVideoId).get()
+                    .addOnSuccessListener(snapshot -> {
+                        String url = snapshot.getString("thumbnailURL");
+                        if (url != null) {
+                            Glide.with(holder.itemView.getContext())
+                                    .asBitmap().load(url).centerCrop()
+                                    .into(new CustomTarget<Bitmap>() {
+                                        @Override
+                                        public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                                            holder.ivThumb.setImageBitmap(resource);
+                                            // Palette API
+                                            Palette.from(resource).generate(palette -> {
+                                                if (palette != null) {
+                                                    int defColor = ContextCompat.getColor(holder.itemView.getContext(), android.R.color.darker_gray);
+                                                    int color = palette.getDominantColor(defColor);
+                                                    applyColorToStack(holder.viewStack, color);
+                                                }
+                                            });
+                                        }
+                                        @Override public void onLoadCleared(@Nullable android.graphics.drawable.Drawable placeholder) {}
+                                    });
+                        }
+                    });
+        }
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(holder.itemView.getContext(), PlaylistDetailActivity.class);
+            intent.putExtra("playlist_id", playlist.getPlaylistId()); // Truyền ID sang
+            holder.itemView.getContext().startActivity(intent);
+        });
     }
 
-    @Override
-    public int getItemCount() {
-        return playlists.size();
+    private void applyColorToStack(View view, int color) {
+        if (view.getBackground() instanceof GradientDrawable) {
+            ((GradientDrawable) view.getBackground().mutate()).setColor(color);
+        }
     }
+
+    private void resetStackColors(ViewHolder holder) {
+        int defColor = ContextCompat.getColor(holder.itemView.getContext(), android.R.color.darker_gray);
+        applyColorToStack(holder.viewStack, defColor);
+    }
+
+    @Override public int getItemCount() { return playlists.size(); }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvInfo, tvCount;
-        // ImageView ivThumb; // Để sau load ảnh
+        ImageView ivThumb;
+        View viewStack; // Ánh xạ view stack
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvTitle = itemView.findViewById(R.id.tv_playlist_title);
             tvInfo = itemView.findViewById(R.id.tv_playlist_info);
             tvCount = itemView.findViewById(R.id.tv_video_count);
-        }
-
-        void bind(Playlist playlist) {
-            tvTitle.setText(playlist.getTitle());
-
-            // Info: "Private • Playlist"
-            String visibility = playlist.getVisibility() != null ? playlist.getVisibility() : "Private";
-            // Viết hoa chữ cái đầu cho đẹp (Private)
-            String prettyVisibility = visibility.substring(0, 1).toUpperCase() + visibility.substring(1).toLowerCase();
-            tvInfo.setText(prettyVisibility + " • Playlist");
-
-            // Số lượng video
-            int count = (playlist.getVideoIds() != null) ? playlist.getVideoIds().size() : 0;
-            tvCount.setText(String.valueOf(count));
-
-            // TODO: Load thumbnail nếu playlist có video (lấy video đầu tiên)
+            ivThumb = itemView.findViewById(R.id.iv_playlist_thumb);
+            viewStack = itemView.findViewById(R.id.view_stack_1);
         }
     }
 }

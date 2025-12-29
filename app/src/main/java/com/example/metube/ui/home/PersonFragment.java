@@ -24,6 +24,7 @@ import com.example.metube.model.User;
 import com.example.metube.model.Video;
 import com.example.metube.ui.history.HistoryActivity; // Giả sử bạn đã tạo Activity này
 import com.example.metube.ui.history.HistoryAdapter;
+import com.example.metube.ui.history.HistoryMenuBottomSheet;
 import com.example.metube.ui.history.HistoryPreviewAdapter;
 import com.example.metube.ui.login.SwitchAccountDialog;
 import com.example.metube.ui.playlist.CreatePlaylistBottomSheet;
@@ -50,7 +51,7 @@ import java.util.stream.Collectors;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
-public class PersonFragment extends Fragment {
+public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.HistoryMenuListener {
 
     private static final String TAG = "PersonFragment";
 
@@ -94,7 +95,8 @@ public class PersonFragment extends Fragment {
         setupClickListeners();
 
         // Bắt đầu quá trình tải dữ liệu
-        loadData();
+//        loadData();
+        loadUserInfo();
     }
 
     /**
@@ -128,6 +130,15 @@ public class PersonFragment extends Fragment {
     private void setupRecyclerViews() {
         // RecyclerView cho Lịch sử xem (bản preview)
         historyPreviewAdapter = new HistoryPreviewAdapter(historyVideoList);
+        historyPreviewAdapter.setOnItemMoreClickListener((video, position) -> {
+            HistoryMenuBottomSheet bottomSheet = new HistoryMenuBottomSheet(
+                    video,
+                    video.getHistoryDocId(),
+                    position,
+                    this // Fragment này sẽ xử lý sự kiện
+            );
+            bottomSheet.show(getParentFragmentManager(), "HistoryMenu");
+        });
         rvHistory.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
         rvHistory.setAdapter(historyPreviewAdapter);
         playlistPreviewAdapter = new PlaylistPreviewAdapter(playlistPreviews);
@@ -266,28 +277,39 @@ public class PersonFragment extends Fragment {
                 .addOnSuccessListener(querySnapshot -> {
                     Log.d(TAG, "Query successful. Documents found: " + querySnapshot.size());
                     if (querySnapshot.isEmpty()) {
-                        Log.d(TAG, "No history items in database");
+                        historyVideoList.clear();
+                        historyPreviewAdapter.notifyDataSetChanged();
+                        Log.d(TAG, "History is empty, list cleared.");
                         return;
                     }
 
                     // Lấy ra danh sách các videoId theo đúng thứ tự đã xem
                     List<String> videoIds = new ArrayList<>();
+                    Set<String> uniqueIds = new HashSet<>();
                     Map<String, Long> progressMap = new HashMap<>();
+                    Map<String, String> historyIdMap = new HashMap<>();
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
                         HistoryItem item = doc.toObject(HistoryItem.class);
                         if (item != null && item.getVideoID() != null) {
-                            if (!videoIds.contains(item.getVideoID())) {
+                            if (!uniqueIds.contains(item.getVideoID())) {
+                                uniqueIds.add(item.getVideoID());
                                 videoIds.add(item.getVideoID());
+
+                                // Lưu resume position
                                 Long pos = doc.getLong("resumePosition");
-                                if (pos != null) {
-                                    progressMap.put(item.getVideoID(), pos);
-                                }
+                                if (pos != null) progressMap.put(item.getVideoID(), pos);
+
+                                // LƯU HISTORY DOC ID
+                                historyIdMap.put(item.getVideoID(), doc.getId());
                             }
                         }
                     }
-
                     if (!videoIds.isEmpty()) {
-                        fetchVideosByIdsForPreview(videoIds, progressMap);
+                        fetchVideosByIdsForPreview(videoIds, progressMap, historyIdMap);
+                    } else {
+                        // Trường hợp hiếm: Có docs nhưng không lọc được ID nào -> Cũng xóa list
+                        historyVideoList.clear();
+                        historyPreviewAdapter.notifyDataSetChanged();
                     }
                 })
                 .addOnFailureListener(e -> Log.e(TAG, "Error loading history IDs", e));
@@ -296,7 +318,7 @@ public class PersonFragment extends Fragment {
     /**
      * Lấy thông tin chi tiết của một danh sách video dựa vào ID của chúng.
      */
-    private void fetchVideosByIdsForPreview(List<String> orderedVideoIds, Map<String, Long> progressMap) {
+    private void fetchVideosByIdsForPreview(List<String> orderedVideoIds, Map<String, Long> progressMap, Map<String, String> historyIdMap) {
         firestore.collection("videos")
                 .whereIn(FieldPath.documentId(), orderedVideoIds)
                 .get()
@@ -333,6 +355,7 @@ public class PersonFragment extends Fragment {
                                 if (progressMap.containsKey(vid)) {
                                     video.setResumePosition(progressMap.get(vid));
                                 }
+                                if (historyIdMap.containsKey(vid)) video.setHistoryDocId(historyIdMap.get(vid));
                                 // 3. Chỉ add vào list 1 lần duy nhất sau khi đã xử lý xong dữ liệu
                                 sortedVideos.add(video);
                             }
@@ -384,6 +407,46 @@ public class PersonFragment extends Fragment {
         historyVideoList.clear();
         historyVideoList.addAll(videos);
         historyPreviewAdapter.notifyDataSetChanged();
+    }
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Gọi hàm load history tại đây
+        // Để mỗi khi quay lại màn hình này, nó sẽ tự tải lại dữ liệu mới nhất
+        loadHistoryPreview();
+        loadPlaylistsPreview();
+    }
+
+    @Override
+    public void onRemoveFromHistory(String docId, int position) {
+        if (docId == null) return;
+        firestore.collection("watchHistory").document(docId).delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(getContext(), "Removed from history", Toast.LENGTH_SHORT).show();
+                    // Xóa khỏi list hiển thị để UI mượt mà
+                    if (position >= 0 && position < historyVideoList.size()) {
+                        historyVideoList.remove(position);
+                        historyPreviewAdapter.notifyItemRemoved(position);
+                    }
+                });
+    }
+
+    @Override
+    public void onSaveToPlaylist(Video video) {
+        // Mở bảng chọn playlist
+        com.example.metube.ui.playlist.AddToPlaylistBottomSheet sheet =
+                new com.example.metube.ui.playlist.AddToPlaylistBottomSheet(video);
+        sheet.show(getParentFragmentManager(), "AddToPlaylist");
+    }
+
+    @Override
+    public void onDownload(Video video) {
+        com.example.metube.utils.DownloadUtil.downloadVideo(getContext(), video.getVideoURL(), video.getTitle());
+    }
+
+    @Override
+    public void onShare(Video video) {
+        com.example.metube.utils.ShareUtil.shareVideo(getContext(), video.getTitle(), video.getVideoURL());
     }
 
 }

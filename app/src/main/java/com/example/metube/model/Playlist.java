@@ -10,6 +10,8 @@ public class Playlist {
     private String title;
     private String visibility; // "PUBLIC", "UNLISTED", "PRIVATE"
     private List<String> videoIds; // Danh sách ID các video trong playlist
+    private List<String> containedTopics;
+
 
     @ServerTimestamp
     private Timestamp createdAt;
@@ -42,4 +44,6 @@ public class Playlist {
 
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public List<String> getContainedTopics() { return containedTopics; }
+    public void setContainedTopics(List<String> containedTopics) { this.containedTopics = containedTopics; }
 }

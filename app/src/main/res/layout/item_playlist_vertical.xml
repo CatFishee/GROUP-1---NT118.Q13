@@ -5,39 +5,61 @@
     android:layout_height="wrap_content"
     android:paddingHorizontal="16dp"
     android:paddingVertical="8dp"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:background="?attr/selectableItemBackground">
 
-    <!-- 1. THUMBNAIL CONTAINER -->
+    <!-- 1. VIEW STACK (LỚP TRANG TRÍ PHÍA SAU) -->
+    <View
+        android:id="@+id/view_stack_1"
+        android:layout_width="140dp"
+        android:layout_height="12dp"
+        android:background="@drawable/background_playlist_stack"
+        android:alpha="0.6"
+        app:layout_constraintBottom_toTopOf="@id/card_thumb"
+        app:layout_constraintStart_toStartOf="@id/card_thumb"
+        app:layout_constraintEnd_toEndOf="@id/card_thumb"
+        android:layout_marginBottom="-6dp" />
+
+    <!-- 2. THUMBNAIL CONTAINER -->
     <androidx.cardview.widget.CardView
         android:id="@+id/card_thumb"
         android:layout_width="160dp"
         android:layout_height="90dp"
         app:cardCornerRadius="8dp"
         app:cardElevation="0dp"
+        android:layout_marginTop="6dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
-        <RelativeLayout
+        <!-- Dùng ConstraintLayout bên trong để căn chỉnh tuyệt đối -->
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <!-- Ảnh đại diện Playlist -->
+            <!-- Ảnh Thumbnail -->
             <ImageView
                 android:id="@+id/iv_playlist_thumb"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
                 android:scaleType="centerCrop"
-                android:src="@color/black" /> <!-- Placeholder màu đen -->
+                android:src="@color/black"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
-            <!-- Overlay đen mờ bên phải để hiện số lượng -->
+            <!-- 3. OVERLAY SỐ LƯỢNG (ĐÃ THU NHỎ) -->
+            <!-- layout_width="40dp": Rất thon gọn -->
             <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_alignParentEnd="true"
-                android:background="#CC000000"
+                android:layout_width="40dp"
+                android:layout_height="0dp"
+                android:background="#D9000000"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:paddingHorizontal="12dp">
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent">
 
                 <TextView
                     android:id="@+id/tv_video_count"
@@ -49,16 +71,17 @@
                     android:textStyle="bold" />
 
                 <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:layout_marginTop="4dp"
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginTop="2dp"
                     android:src="@drawable/ic_playlist_play"
                     app:tint="@color/white"/>
             </LinearLayout>
-        </RelativeLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
 
-    <!-- 2. THÔNG TIN PLAYLIST -->
+    <!-- 4. THÔNG TIN PLAYLIST -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -91,7 +114,7 @@
 
     </LinearLayout>
 
-    <!-- 3. NÚT MORE (3 CHẤM) -->
+    <!-- 5. NÚT MORE -->
     <ImageView
         android:id="@+id/btn_more"
         android:layout_width="24dp"

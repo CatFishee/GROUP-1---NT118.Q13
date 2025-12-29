@@ -24,6 +24,8 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import de.hdodenhof.circleimageview.CircleImageView;
+
+import com.example.metube.model.User;
 import com.google.android.material.card.MaterialCardView;
 
 import com.bumptech.glide.Glide;
@@ -85,6 +87,8 @@ public class VideoActivity extends AppCompatActivity {
     private float currentSpeed = 1.0f;
     private int currentQualityIndex = 0;
     private long startPosition = 0;
+    private boolean isHistoryRecordingEnabled = true; // Mặc định cho lưu
+    private com.google.firebase.firestore.ListenerRegistration userSettingsListener;
     private List<String> qualities = Arrays.asList("480p", "720p", "1080p"); // you can extend with actual URLs
 
     @Override
@@ -125,9 +129,22 @@ public class VideoActivity extends AppCompatActivity {
 
         initViews();
         setupDescriptionToggle();
+        checkUserHistorySetting();
+
 //        setupPlayer();
 //        loadVideoDetails(videoId);
 //        fetchAndListenToVideoStats(videoId);
+    }
+    private void checkUserHistorySetting() {
+        if (currentUser == null) return;
+        firestore.collection("users").document(currentUser.getUid())
+                .get().addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists()) {
+                        User user = snapshot.toObject(User.class);
+                        // Nếu isHistoryPaused = true -> Enabled = false
+                        isHistoryRecordingEnabled = !user.isHistoryPaused();
+                    }
+                });
     }
 
     private void initViews() {
@@ -206,6 +223,7 @@ public class VideoActivity extends AppCompatActivity {
         super.onStart();
         // Khởi tạo player khi Activity bắt đầu được hiển thị
         initializePlayer();
+        startListeningToUserStatus();
     }
 
     @Override
@@ -224,8 +242,17 @@ public class VideoActivity extends AppCompatActivity {
         long duration = player.getDuration();
 
         // 2. Chỉ lưu nếu đã xem được một chút và chưa hết video
-        if (currentPosition > 5000 && currentPosition < duration) {
-            saveWatchHistory(currentPosition);
+        if (currentPosition > 1000 && duration > 0) {
+
+            // 2. Kiểm tra xem đã hết video chưa (còn cách cuối khoảng 1s)
+            if ((duration - currentPosition) < 1000) {
+                // Nếu đã xem hết: Lưu vào lịch sử nhưng reset vị trí về 0
+                // (để lần sau mở lên xem lại từ đầu)
+                saveWatchHistory(0);
+            } else {
+                // Nếu đang xem dở: Lưu vị trí hiện tại
+                saveWatchHistory(currentPosition);
+            }
         }
         if (player != null) {
             player.pause(); // Chỉ pause ở đây
@@ -234,6 +261,12 @@ public class VideoActivity extends AppCompatActivity {
     private void saveWatchHistory(long position) {
         if (currentUser == null) return;
         String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        // NẾU ĐANG PAUSE THÌ KHÔNG LƯU GÌ CẢ -> RETURN LUÔN
+        if (!isHistoryRecordingEnabled) {
+            Log.d(TAG, "History recording is PAUSED by user.");
+            return;
+        }
 
         Map<String, Object> data = new HashMap<>();
         data.put("userID", userId);
@@ -250,6 +283,28 @@ public class VideoActivity extends AppCompatActivity {
                 .document(userId + "_" + videoId) // Ví dụ ID document kết hợp
                 .set(data, SetOptions.merge());
     }
+    private void startListeningToUserStatus() {
+        if (currentUser == null) return;
+
+        userSettingsListener = firestore.collection("users").document(currentUser.getUid())
+                .addSnapshotListener((documentSnapshot, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Listen failed.", e);
+                        return;
+                    }
+
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        User user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            // Cập nhật biến cờ: Nếu Paused = true thì Enabled = false
+                            isHistoryRecordingEnabled = !user.isHistoryPaused();
+
+                            Log.d(TAG, "History Status Updated: " + isHistoryRecordingEnabled);
+                        }
+                    }
+                });
+    }
+
     // --- HÀM KHỞI TẠO PLAYER MỚI ---
     private void initializePlayer() {
         if (player == null) {
@@ -737,6 +792,9 @@ private void fetchAndListenToVideoStats(String videoId) {
     protected void onStop() {
         super.onStop();
         releasePlayer();
+        if (userSettingsListener != null) {
+            userSettingsListener.remove();
+        }
     }
 
     @Override
