@@ -239,11 +239,11 @@
 
                 </GridLayout>
 
-                <!-- Section 2: Subscriber Growth Graph -->
+                <!-- Section 2: Growth Over Time -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Subscriber Growth"
+                    android:text="Growth Over Time"
                     android:textColor="@color/app_main_color"
                     android:textSize="20sp"
                     android:textStyle="bold"
@@ -263,42 +263,76 @@
                     <Button
                         android:id="@+id/btn_7_days"
                         style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:text="7 Days"
+                        android:layout_width="wrap_content"
+                        android:layout_height="60dp"
                         android:textColor="@color/app_main_color"/>
 
                     <Button
                         android:id="@+id/btn_30_days"
                         style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:text="30 Days"
+                        android:layout_width="wrap_content"
+                        android:layout_height="60dp"
                         android:textColor="@color/app_main_color"/>
 
                     <Button
                         android:id="@+id/btn_90_days"
                         style="?attr/materialButtonOutlinedStyle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
                         android:text="90 Days"
+                        android:layout_width="wrap_content"
+                        android:layout_height="60dp"
                         android:textColor="@color/app_main_color"/>
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
-                <!-- Graph Card -->
+                <!-- Views Growth -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Total Views"
+                    android:textColor="@color/app_main_color"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
-                    android:layout_height="250dp"
+                    android:layout_height="220dp"
                     app:cardBackgroundColor="@color/white"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="4dp">
 
                     <com.github.mikephil.charting.charts.LineChart
-                        android:id="@+id/line_chart"
+                        android:id="@+id/line_chart_views"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"/>
-
                 </com.google.android.material.card.MaterialCardView>
+
+                <!-- Videos Growth -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Total Videos"
+                    android:textColor="@color/app_main_color"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="8dp"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="220dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="4dp">
+
+                    <com.github.mikephil.charting.charts.LineChart
+                        android:id="@+id/line_chart_videos"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"/>
+                </com.google.android.material.card.MaterialCardView>
+
+
 
                 <!-- Section 3: Engagement Metrics -->
                 <TextView
