@@ -150,8 +150,6 @@ public class SubscriptionManager {
                         DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
                         ContentCreatorStat stat = doc.toObject(ContentCreatorStat.class);
                         if (stat != null) {
-                            stat.setSubGained(stat.getSubGained() + subGained);
-                            stat.setSubLost(stat.getSubLost() + subLost);
                             doc.getReference().set(stat)
                                     .addOnSuccessListener(aVoid -> Log.d(TAG, "Updated today's stat"))
                                     .addOnFailureListener(e -> Log.e(TAG, "Failed to update stat", e));
@@ -160,11 +158,6 @@ public class SubscriptionManager {
                         // Create new stat for today
                         String statId = db.collection("contentCreatorStats").document().getId();
                         ContentCreatorStat newStat = new ContentCreatorStat(
-                                statId,
-                                userId,
-                                subGained,
-                                subLost,
-                                todayTimestamp
                         );
                         db.collection("contentCreatorStats").document(statId).set(newStat)
                                 .addOnSuccessListener(aVoid -> Log.d(TAG, "Created today's stat"))
