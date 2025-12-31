@@ -73,32 +73,38 @@ public class AddToPlaylistAdapter extends RecyclerView.Adapter<AddToPlaylistAdap
             Toast.makeText(view.getContext(), "Error: Playlist ID is null", Toast.LENGTH_SHORT).show();
             return;
         }
+        String videoTopic = (currentVideo.getTopics() != null && !currentVideo.getTopics().isEmpty())
+                ? currentVideo.getTopics().get(0) : "Other";
 
         if (isAdding) {
-            // Thêm videoID vào mảng videoIds trên Firestore
+            // 1. Thêm Video ID
             db.collection("playlists").document(playlistId)
-                    .update("videoIds", FieldValue.arrayUnion(videoId))
+                    .update("videoIds", FieldValue.arrayUnion(videoId));
+
+            // 2. --- QUAN TRỌNG: Thêm Topic vào mảng containedTopics ---
+            db.collection("playlists").document(playlistId)
+                    .update("containedTopics", FieldValue.arrayUnion(videoTopic))
                     .addOnSuccessListener(aVoid -> {
-                        // --- CẬP NHẬT DỮ LIỆU CỤC BỘ (LOCAL) ---
-                        // Để khi cuộn lên xuống checkbox vẫn sáng
+                        // Cập nhật Local Data
                         if (playlist.getVideoIds() == null) playlist.setVideoIds(new ArrayList<>());
                         playlist.getVideoIds().add(videoId);
 
-                        Toast.makeText(view.getContext(), "Added to " + playlist.getTitle(), Toast.LENGTH_SHORT).show();
-                        if (onDismissListener != null) {
-                            onDismissListener.run();
+                        // Cập nhật Local Topic
+                        if (playlist.getContainedTopics() == null) playlist.setContainedTopics(new ArrayList<>());
+                        if (!playlist.getContainedTopics().contains(videoTopic)) {
+                            playlist.getContainedTopics().add(videoTopic);
                         }
+
+                        Toast.makeText(view.getContext(), "Added to " + playlist.getTitle(), Toast.LENGTH_SHORT).show();
+                        if (onDismissListener != null) onDismissListener.run();
                     });
+
         } else {
-            // Xóa videoID khỏi mảng
+            // Logic xóa (Chỉ xóa videoId, không cần xóa topic vì playlist có thể còn video khác cùng topic)
             db.collection("playlists").document(playlistId)
                     .update("videoIds", FieldValue.arrayRemove(videoId))
                     .addOnSuccessListener(aVoid -> {
-                        // --- CẬP NHẬT DỮ LIỆU CỤC BỘ ---
-                        if (playlist.getVideoIds() != null) {
-                            playlist.getVideoIds().remove(videoId);
-                        }
-
+                        if (playlist.getVideoIds() != null) playlist.getVideoIds().remove(videoId);
                         Toast.makeText(view.getContext(), "Removed from " + playlist.getTitle(), Toast.LENGTH_SHORT).show();
                     });
         }

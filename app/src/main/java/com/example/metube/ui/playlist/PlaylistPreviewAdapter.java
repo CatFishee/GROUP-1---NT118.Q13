@@ -1,5 +1,6 @@
 package com.example.metube.ui.playlist;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
@@ -103,6 +104,11 @@ public class PlaylistPreviewAdapter extends RecyclerView.Adapter<PlaylistPreview
                         }
                     });
         }
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(holder.itemView.getContext(), PlaylistDetailActivity.class);
+            intent.putExtra("playlist_id", p.getPlaylistId());
+            holder.itemView.getContext().startActivity(intent);
+        });
     }
     // Hàm tô màu cho View (giữ nguyên bo góc)
     private void applyColorToStack(View view, int color) {

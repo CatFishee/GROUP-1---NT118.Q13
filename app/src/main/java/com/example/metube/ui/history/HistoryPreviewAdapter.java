@@ -31,10 +31,20 @@ public class HistoryPreviewAdapter extends RecyclerView.Adapter<HistoryPreviewAd
         return new ViewHolder(view);
     }
 
+    // 1. Thêm Interface
+    public interface OnItemMoreClickListener {
+        void onMoreClick(Video video, int position);
+    }
+    private OnItemMoreClickListener moreClickListener;
+
+    public void setOnItemMoreClickListener(OnItemMoreClickListener listener) {
+        this.moreClickListener = listener;
+    }
+
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Video video = videoList.get(position);
-        holder.bind(video);
+        holder.bind(video, moreClickListener);
     }
 
     @Override
@@ -43,7 +53,7 @@ public class HistoryPreviewAdapter extends RecyclerView.Adapter<HistoryPreviewAd
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView ivThumbnail;
+        ImageView ivThumbnail, btnMore;
         TextView tvTitle, tvChannelName, tvDuration;
         android.widget.ProgressBar pbVideoProgress;
 
@@ -54,9 +64,10 @@ public class HistoryPreviewAdapter extends RecyclerView.Adapter<HistoryPreviewAd
             tvChannelName = itemView.findViewById(R.id.tv_channel_name);
             tvDuration = itemView.findViewById(R.id.tv_duration);
             pbVideoProgress = itemView.findViewById(R.id.pb_video_progress);
+            btnMore = itemView.findViewById(R.id.btn_more_options);
         }
 
-        void bind(Video video) {
+        void bind(Video video, OnItemMoreClickListener listener) {
             if (video == null) return;
 
             tvTitle.setText(video.getTitle());
@@ -100,6 +111,11 @@ public class HistoryPreviewAdapter extends RecyclerView.Adapter<HistoryPreviewAd
                 intent.putExtra("resume_position", video.getResumePosition());
 
                 context.startActivity(intent);
+            });
+            btnMore.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onMoreClick(video, getBindingAdapterPosition());
+                }
             });
         }
     }

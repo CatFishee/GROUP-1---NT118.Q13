@@ -1,5 +1,7 @@
 package com.example.metube.model;
 
+import com.google.firebase.firestore.PropertyName;
+
 public class User {
     private String userID;
     private String name;
@@ -7,6 +9,7 @@ public class User {
     private boolean isAdmin;
     private boolean isPremium;
     private String profileURL;
+    private boolean isHistoryPaused = false;
 
     public User() {
         // Needed for Firebase deserialization
@@ -38,4 +41,12 @@ public class User {
 
     public String getProfileURL() { return profileURL; }
     public void setProfileURL(String profileURL) { this.profileURL = profileURL; }
+    @PropertyName("isHistoryPaused") // Ép tên trường trong DB là "isHistoryPaused"
+    public boolean isHistoryPaused() {
+        return isHistoryPaused;
+    }
+    @PropertyName("isHistoryPaused")
+    public void setHistoryPaused(boolean historyPaused) {
+        isHistoryPaused = historyPaused;
+    }
 }

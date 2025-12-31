@@ -75,5 +75,8 @@
             android:name=".ui.history.HistoryActivity"
             android:exported="false" />
         <activity android:name=".ui.playlist.PlaylistsActivity" />
+        <activity
+            android:name=".ui.playlist.PlaylistDetailActivity"
+            android:exported="false" />
     </application>
 </manifest>
