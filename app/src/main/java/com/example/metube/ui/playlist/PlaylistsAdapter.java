@@ -2,6 +2,7 @@ package com.example.metube.ui.playlist;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -53,30 +54,17 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
         resetStackColors(holder);
 
         // 3. Load Thumbnail Video Đầu Tiên & Trích xuất màu
-        if (playlist.getVideoIds() != null && !playlist.getVideoIds().isEmpty()) {
+        if (playlist.getThumbnailURL() != null && !playlist.getThumbnailURL().isEmpty()) {
+            loadThumbnailAndColor(holder, playlist.getThumbnailURL());
+        }
+        // B. Nếu không có, kiểm tra xem playlist có video không?
+        else if (playlist.getVideoIds() != null && !playlist.getVideoIds().isEmpty()) {
             String firstVideoId = playlist.getVideoIds().get(0);
-
             FirebaseFirestore.getInstance().collection("videos").document(firstVideoId).get()
                     .addOnSuccessListener(snapshot -> {
                         String url = snapshot.getString("thumbnailURL");
-                        if (url != null) {
-                            Glide.with(holder.itemView.getContext())
-                                    .asBitmap().load(url).centerCrop()
-                                    .into(new CustomTarget<Bitmap>() {
-                                        @Override
-                                        public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                                            holder.ivThumb.setImageBitmap(resource);
-                                            // Palette API
-                                            Palette.from(resource).generate(palette -> {
-                                                if (palette != null) {
-                                                    int defColor = ContextCompat.getColor(holder.itemView.getContext(), android.R.color.darker_gray);
-                                                    int color = palette.getDominantColor(defColor);
-                                                    applyColorToStack(holder.viewStack, color);
-                                                }
-                                            });
-                                        }
-                                        @Override public void onLoadCleared(@Nullable android.graphics.drawable.Drawable placeholder) {}
-                                    });
+                        if (url != null && !url.isEmpty()) {
+                            loadThumbnailAndColor(holder, url);
                         }
                     });
         }
@@ -85,6 +73,34 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
             intent.putExtra("playlist_id", playlist.getPlaylistId()); // Truyền ID sang
             holder.itemView.getContext().startActivity(intent);
         });
+    }
+    private void loadThumbnailAndColor(ViewHolder holder, String url) {
+        Glide.with(holder.itemView.getContext())
+                .asBitmap()
+                .load(url)
+                .centerCrop()
+                .into(new CustomTarget<Bitmap>() {
+                    @Override
+                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                        // Set ảnh
+                        holder.ivThumb.setImageBitmap(resource);
+
+                        // Palette lấy màu
+                        Palette.from(resource).generate(palette -> {
+                            if (palette != null) {
+                                int defColor = ContextCompat.getColor(holder.itemView.getContext(), android.R.color.darker_gray);
+                                int color = palette.getDominantColor(defColor);
+                                applyColorToStack(holder.viewStack, color);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onLoadCleared(@Nullable Drawable placeholder) {
+                        holder.ivThumb.setImageDrawable(placeholder);
+                        resetStackColors(holder);
+                    }
+                });
     }
 
     private void applyColorToStack(View view, int color) {

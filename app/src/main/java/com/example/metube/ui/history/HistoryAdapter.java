@@ -15,6 +15,11 @@ import com.example.metube.model.DateHeader;
 import com.example.metube.model.HistoryItem;
 import com.example.metube.utils.TimeUtil;
 import com.example.metube.model.Video;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
 import java.util.Locale;
@@ -141,16 +146,39 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                     .placeholder(R.color.light_green_background) // Thêm màu này vào colors.xml
                     .into(ivThumbnail);
 
-            String uploaderName = "Unknown Channel";
-            if (historyItem.getUploader() != null && historyItem.getUploader().getName() != null) {
-                uploaderName = historyItem.getUploader().getName();
-            } else if (video.getUploaderName() != null) {
-            uploaderName = video.getUploaderName();
-            }
-            tvChannelName.setText(uploaderName);
+            FirebaseFirestore.getInstance().collection("users")
+                    .document(video.getUploaderID())
+                    .get()
+                    .addOnSuccessListener(documentSnapshot -> {
+                        String name = "Unknown Channel";
+                        if (documentSnapshot.exists()) {
+                            name = documentSnapshot.getString("name");
+                        }
+                        tvChannelName.setText(name);
+                    })
+                    .addOnFailureListener(e -> tvChannelName.setText("Unknown Channel"));
 
-            String viewCountFormatted = formatViewCount(video.getViewCount());
-            tvViewCount.setText(viewCountFormatted);
+            FirebaseDatabase.getInstance().getReference("videostat")
+                    .child(video.getVideoID())
+                    .child("viewCount")
+                    .addListenerForSingleValueEvent(new ValueEventListener() {
+                        @Override
+                        public void onDataChange(@NonNull DataSnapshot snapshot) {
+                            long views = 0;
+                            if (snapshot.exists()) {
+                                Object val = snapshot.getValue();
+                                if (val instanceof Long) views = (Long) val;
+                                else if (val instanceof Integer) views = ((Integer) val).longValue();
+                            }
+                            // CHỈ HIỂN THỊ SỐ VIEW
+                            tvViewCount.setText(formatViewCount(views));
+                        }
+
+                        @Override
+                        public void onCancelled(@NonNull DatabaseError error) {
+                            tvViewCount.setText("0 views");
+                        }
+                    });
 
             itemView.setOnClickListener(v -> {
                 android.content.Context context = itemView.getContext();

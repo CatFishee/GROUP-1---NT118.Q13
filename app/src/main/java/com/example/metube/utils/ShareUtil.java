@@ -25,4 +25,8 @@ public class ShareUtil {
         String shareBody = "Check out this channel: " + channelName + "\n" + channelUrl;
         startShareIntent(context, "Shared Channel from MeTube", shareBody);
     }
+    public static void sharePlaylist(Context context, String playlistTitle, String playlistUrl) {
+        String shareBody = "Check out this playlist: " + playlistTitle + "\n" + playlistUrl;
+        startShareIntent(context, "Shared Playlist from MeTube", shareBody);
+    }
 }

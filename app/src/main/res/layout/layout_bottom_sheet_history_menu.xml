@@ -45,15 +45,14 @@
         <ImageView
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_queue_play_next"
-            app:tint="@color/black"/>
+            android:src="@drawable/ic_queue_play_next"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Play next in queue"
             android:textSize="16sp"
-            android:textColor="@color/black"
+            android:textColor="@color/app_main_color"
             android:layout_marginStart="16dp"/>
     </LinearLayout>
 

@@ -1,5 +1,6 @@
 package com.example.metube.ui.playlist;
 
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,7 +12,14 @@ import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
 import com.example.metube.utils.TimeUtil;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+
 import java.util.List;
+import java.util.Locale;
 
 public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdapter.ViewHolder> {
 
@@ -44,6 +52,61 @@ public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdap
                 .placeholder(R.color.light_green_background)
                 .centerCrop()
                 .into(holder.ivThumbnail);
+        // A. Lấy ngày đăng (Relative Time: "2 days ago")
+        String timeAgo = "Just now";
+        if (video.getCreatedAt() != null) {
+            timeAgo = DateUtils.getRelativeTimeSpanString(
+                    video.getCreatedAt().toDate().getTime(),
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS).toString();
+        }
+        // B. Lấy tên người đăng (Từ Firestore)
+        String finalTimeAgo = timeAgo; // Biến final để dùng trong inner class
+
+        FirebaseFirestore.getInstance().collection("users")
+                .document(video.getUploaderID())
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    String uploaderName = "Unknown";
+                    if (documentSnapshot.exists()) {
+                        uploaderName = documentSnapshot.getString("name");
+                    }
+
+                    String finalUploaderName = uploaderName;
+
+                    // C. Lấy số View thực tế (Từ Realtime Database)
+                    FirebaseDatabase.getInstance().getReference("videostat")
+                            .child(video.getVideoID())
+                            .child("viewCount")
+                            .addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                                    long views = 0;
+                                    if (snapshot.exists()) {
+                                        // Kiểm tra kiểu dữ liệu để tránh lỗi cast
+                                        Object val = snapshot.getValue();
+                                        if (val instanceof Long) views = (Long) val;
+                                        else if (val instanceof Integer) views = ((Integer) val).longValue();
+                                    }
+
+                                    // D. GHÉP CHUỖI HOÀN CHỈNH
+                                    // Format: "Giang Phương • 1.2K views • 2 days ago"
+                                    String info = finalUploaderName + "\n" + formatViewCount(views) + " • " + finalTimeAgo;
+                                    holder.tvUploader.setText(info);
+                                }
+
+                                @Override
+                                public void onCancelled(@NonNull DatabaseError error) {
+                                    // Fallback nếu lỗi mạng
+                                    String info = finalUploaderName + " • 0 views • " + finalTimeAgo;
+                                    holder.tvUploader.setText(info);
+                                }
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    holder.tvUploader.setText("Unknown • 0 views • " + finalTimeAgo);
+                });
+
 
         // Click mở video
         holder.itemView.setOnClickListener(v -> {
@@ -52,6 +115,13 @@ public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdap
             holder.itemView.getContext().startActivity(intent);
         });
     }
+    // Hàm format số view (1000 -> 1K)
+    private String formatViewCount(long count) {
+        if (count < 1000) return count + " views";
+        if (count < 1000000) return String.format(Locale.US, "%.1fK views", count / 1000.0);
+        return String.format(Locale.US, "%.1fM views", count / 1000000.0);
+    }
+
 
     @Override public int getItemCount() { return videos != null ? videos.size() : 0; }
 

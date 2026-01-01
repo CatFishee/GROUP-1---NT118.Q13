@@ -13,6 +13,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -44,6 +46,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+
+
 public class PlaylistDetailActivity extends AppCompatActivity {
 
     private String playlistId;
@@ -59,8 +64,17 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     private PlaylistVideoAdapter adapter;
     private List<Video> videoList = new ArrayList<>();
     private Button btnPlayAll, btnShuffle;
-    private ImageView btnDownload;
+    private ImageView btnDownload, btnEdit, btnShare, btnAddVideo;
     private List<Video> originalVideoList = new ArrayList<>();
+    private CircleImageView ivOwnerAvatar;
+    private final ActivityResultLauncher<Intent> editPlaylistLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    loadPlaylistInfo(); // Reload lại thông tin mới
+                }
+            }
+    );
 
 
     @Override
@@ -98,34 +112,37 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         btnPlayAll = findViewById(R.id.btn_play_all);
         btnShuffle = findViewById(R.id.btn_shuffle);
         btnDownload = findViewById(R.id.btn_download);
+        btnAddVideo = findViewById(R.id.btn_add_video);
+        btnEdit = findViewById(R.id.btn_edit_playlist);
+        btnShare = findViewById(R.id.btn_share_playlist);
+
+        ivOwnerAvatar = findViewById(R.id.iv_owner_avatar);
+        tvOwner = findViewById(R.id.tv_owner_name);
 
 
         btnBack.setOnClickListener(v -> finish());
         btnPlayAll.setOnClickListener(v -> {
             if (!videoList.isEmpty()) {
-                // Đẩy toàn bộ list vào Queue
+                // Đẩy list gốc vào Queue
                 VideoQueueManager.getInstance().playPlaylist(videoList);
 
-                // Mở màn hình Video (nó sẽ tự play bài đầu tiên trong queue)
-                openVideoActivity();
+                // Mở màn hình phát, truyền ID của bài đầu tiên
+                openVideoActivity(videoList.get(0).getVideoID());
             } else {
                 Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show();
             }
         });
         btnShuffle.setOnClickListener(v -> {
             if (videoList != null && !videoList.isEmpty()) {
-                // 1. Tạo bản sao của danh sách (để không làm xáo trộn giao diện danh sách bên dưới)
                 List<Video> shuffledList = new ArrayList<>(videoList);
-
-                // 2. Xáo trộn ngẫu nhiên
                 Collections.shuffle(shuffledList);
 
-                // 3. Đưa vào hàng chờ (Queue)
-                com.example.metube.utils.VideoQueueManager.getInstance().playPlaylist(shuffledList);
+                // Đẩy list đã xáo trộn vào Queue
+                VideoQueueManager.getInstance().playPlaylist(shuffledList);
 
-                // 4. Mở màn hình phát
-                Intent intent = new Intent(this, com.example.metube.ui.video.VideoActivity.class);
-                startActivity(intent);
+                // QUAN TRỌNG: Lấy ID của bài đầu tiên trong list ĐÃ XÁO TRỘN
+                // Để VideoActivity biết bài nào phát đầu tiên
+                openVideoActivity(shuffledList.get(0).getVideoID());
 
                 Toast.makeText(this, "Shuffling playlist...", Toast.LENGTH_SHORT).show();
             } else {
@@ -141,7 +158,34 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             // Hiển thị hộp thoại xác nhận trước khi tải hàng loạt
             showDownloadConfirmationDialog();
         });
+        btnShare.setOnClickListener(v -> {
+            // Tạo link giả lập cho playlist
+            String link = "https://metube.app/playlist/" + playlistId;
+            // Lấy tiêu đề playlist hiện tại
+            String title = tvTitle.getText().toString();
+
+            // Gọi ShareUtil (bạn đã có sẵn hàm shareChannel, tái sử dụng được)
+            com.example.metube.utils.ShareUtil.sharePlaylist(this, title, link);
+        });
+        btnAddVideo.setOnClickListener(v -> {
+            // Chuyển sang màn hình tìm kiếm
+            Intent intent = new Intent(this, com.example.metube.ui.search.SearchActivity.class);
+            // (Tùy chọn) Có thể gửi kèm playlistId nếu bạn muốn màn hình Search biết đang thêm vào playlist nào
+            // intent.putExtra("add_to_playlist_id", playlistId);
+            startActivity(intent);
+        });
+        btnEdit.setOnClickListener(v -> {
+            Intent intent = new Intent(this, EditPlaylistActivity.class);
+            intent.putExtra("playlist_id", playlistId);
+            intent.putExtra("title", tvTitle.getText().toString());
+            intent.putExtra("visibility", tvMeta.getText().toString().contains("Private") ? "Private" : "Public");
+            // intent.putExtra("description", ...);
+
+            // Dùng launcher để khi edit xong quay lại thì reload data
+            editPlaylistLauncher.launch(intent);
+        });
         findViewById(R.id.btn_sort_playlist).setOnClickListener(this::showSortPopup);
+        findViewById(R.id.btn_more_options).setOnClickListener(this::showPlaylistOptionsMenu);
     }
     private void showDownloadConfirmationDialog() {
         int count = videoList.size();
@@ -169,9 +213,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
             );
         }
     }
-    private void openVideoActivity() {
+    private void openVideoActivity(String firstVideoId) {
         Intent intent = new Intent(this, VideoActivity.class);
-        // Không cần putExtra video_id vì VideoActivity sẽ tự check QueueManager trước
+        // Luôn truyền ID video đầu tiên để VideoActivity không bị lỗi check null
+        intent.putExtra("video_id", firstVideoId);
         startActivity(intent);
     }
 
@@ -183,45 +228,54 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     Playlist playlist = documentSnapshot.toObject(Playlist.class);
                     if (playlist == null) return;
 
-                    // 1. Set thông tin cơ bản
                     tvTitle.setText(playlist.getTitle());
 
-                    // Lấy tên Owner
                     firestore.collection("users").document(playlist.getOwnerId()).get()
                             .addOnSuccessListener(userDoc -> {
                                 if (userDoc.exists()) {
-                                    tvOwner.setText(userDoc.getString("name"));
-                                } else {
-                                    tvOwner.setText("Unknown Owner");
+                                    String name = userDoc.getString("name");
+                                    tvOwner.setText("by " + name);
+                                    String avatarUrl = userDoc.getString("profileURL");
+                                    if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                                        Glide.with(this).load(avatarUrl).into(ivOwnerAvatar);
+                                    }
                                 }
                             });
 
-                    // Set Meta
                     int count = (playlist.getVideoIds() != null) ? playlist.getVideoIds().size() : 0;
                     String visibility = playlist.getVisibility() != null ? playlist.getVisibility() : "Private";
-                    // Viết hoa chữ cái đầu
-                    String prettyVis = visibility.substring(0, 1).toUpperCase() + visibility.substring(1).toLowerCase();
-                    tvMeta.setText(count + " videos • " + prettyVis);
+                    tvMeta.setText(count + " videos • " + visibility);
 
-                    // 2. Load Video & Xử lý Ảnh bìa + Màu nền
-                    if (playlist.getVideoIds() != null && !playlist.getVideoIds().isEmpty()) {
-                        loadVideosInPlaylist(playlist.getVideoIds());
+                    // --- LOGIC MỚI: ƯU TIÊN CUSTOM THUMBNAIL ---
+                    String customThumb = documentSnapshot.getString("thumbnailURL");
+
+                    if (customThumb != null && !customThumb.isEmpty()) {
+                        // 1. Nếu có ảnh custom -> Load ngay
+                        setCoverImageAndColor(customThumb);
+
+                        // Vẫn load list video nhưng KHÔNG set lại cover nữa (tham số false)
+                        if (playlist.getVideoIds() != null && !playlist.getVideoIds().isEmpty()) {
+                            loadVideosInPlaylist(playlist.getVideoIds(), false);
+                        }
                     } else {
-                        // Nếu playlist rỗng -> Set nền mặc định màu xám
-                        setDefaultGradient();
+                        // 2. Nếu không có ảnh custom -> Mới lấy từ video đầu tiên (tham số true)
+                        if (playlist.getVideoIds() != null && !playlist.getVideoIds().isEmpty()) {
+                            loadVideosInPlaylist(playlist.getVideoIds(), true);
+                        } else {
+                            setDefaultGradient();
+                        }
                     }
                 });
     }
 
-    private void loadVideosInPlaylist(List<String> videoIds) {
+
+    private void loadVideosInPlaylist(List<String> videoIds, boolean shouldSetCover) {
         String firstVideoId = videoIds.get(0);
 
         firestore.collection("videos").whereIn(FieldPath.documentId(), videoIds)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     videoList.clear();
-
-                    // Tạo map tạm để sắp xếp đúng thứ tự videoIds (Date added)
                     Map<String, Video> tempMap = new HashMap<>();
                     for (DocumentSnapshot doc : querySnapshot) {
                         Video video = doc.toObject(Video.class);
@@ -231,22 +285,19 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                         }
                     }
 
-                    // Loop theo thứ tự trong mảng videoIds của Playlist
                     for (String id : videoIds) {
                         if (tempMap.containsKey(id)) {
                             Video v = tempMap.get(id);
                             videoList.add(v);
 
-                            // Load ảnh bìa
-                            if (id.equals(firstVideoId)) {
+                            // CHỈ SET COVER NẾU ĐƯỢC PHÉP (shouldSetCover = true)
+                            // VÀ LÀ VIDEO ĐẦU TIÊN
+                            if (shouldSetCover && id.equals(firstVideoId)) {
                                 setCoverImageAndColor(v.getThumbnailURL());
                             }
                         }
                     }
-
-                    // LƯU LẠI LIST GỐC (Backup)
                     originalVideoList = new ArrayList<>(videoList);
-
                     adapter.notifyDataSetChanged();
                 });
     }
@@ -304,6 +355,47 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         });
 
         popup.show();
+    }
+    // 2. Hàm hiển thị Menu
+    private void showPlaylistOptionsMenu(View view) {
+        PopupMenu popup = new PopupMenu(this, view);
+
+        popup.getMenu().add(0, 1, 0, "Delete playlist");
+
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == 1) {
+                confirmDeletePlaylist();
+                return true;
+            }
+            return false;
+        });
+
+        popup.show();
+    }
+    private void confirmDeletePlaylist() {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete playlist")
+                .setMessage("Are you sure you want to delete this playlist?")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    deletePlaylistFromFirestore();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+    private void deletePlaylistFromFirestore() {
+        if (playlistId == null) return;
+
+        firestore.collection("playlists").document(playlistId)
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Playlist deleted", Toast.LENGTH_SHORT).show();
+
+                    // Xóa xong thì đóng màn hình này quay về danh sách
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     // --- HÀM XỬ LÝ ẢNH BÌA VÀ MÀU NỀN ---

@@ -27,6 +27,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 import com.example.metube.model.Subscription;
 import com.example.metube.model.User;
+import com.example.metube.utils.VideoQueueManager;
 import com.google.android.material.card.MaterialCardView;
 
 import com.bumptech.glide.Glide;
@@ -63,7 +64,7 @@ public class VideoActivity extends AppCompatActivity {
     private ExoPlayer player;
     private TextView tvTitle, tvUploader, tvDescription, tvQuality, tvSpeed;
     private MaterialButton btnLike, btnDislike;
-    private String videoId;
+    private String currentVideoId;
     private boolean hasViewCountBeenIncremented = false;
     private enum UserVoteState { NONE, LIKED, DISLIKED }
     private UserVoteState currentUserVoteState = UserVoteState.NONE;
@@ -106,27 +107,25 @@ public class VideoActivity extends AppCompatActivity {
         videoStatRef = null;
         statListener = null;
 
-        videoId = getIntent().getStringExtra("video_id");
+        currentVideoId = getIntent().getStringExtra("video_id");
         startPosition = getIntent().getLongExtra("resume_position", 0);
-        Log.d("VIDEO_ID_CHECK", "Video ID nhận được là: " + videoId);
-        if (videoId == null) {
+        if (currentVideoId == null && VideoQueueManager.getInstance().getQueue().isEmpty()) {
             Toast.makeText(this, "Video not found.", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 if (isFullscreen) {
                     exitFullscreen();
                 } else {
                     setEnabled(false);
-                    VideoActivity.super.onBackPressed();
+                    finish();
                 }
             }
-        };
-        getOnBackPressedDispatcher().addCallback(this, callback);
+        });
 
         initViews();
         setupDescriptionToggle();
@@ -218,13 +217,13 @@ public class VideoActivity extends AppCompatActivity {
 
         Map<String, Object> data = new HashMap<>();
         data.put("userID", userId);
-        data.put("videoID", videoId);
+        data.put("videoID", currentVideoId);
         data.put("watchedAt", FieldValue.serverTimestamp());
         data.put("resumePosition", position);
 
         FirebaseFirestore.getInstance()
                 .collection("watchHistory")
-                .document(userId + "_" + videoId)
+                .document(userId + "_" + currentVideoId)
                 .set(data, SetOptions.merge());
     }
 
@@ -251,12 +250,11 @@ public class VideoActivity extends AppCompatActivity {
     private void initializePlayer() {
         if (player == null) {
             trackSelector = new DefaultTrackSelector(this);
-            player = new ExoPlayer.Builder(this)
-                    .setTrackSelector(trackSelector)
-                    .build();
-
+            player = new ExoPlayer.Builder(this).setTrackSelector(trackSelector).build();
             playerView.setPlayer(player);
             setupCustomPlayerControls();
+
+            // Lắng nghe sự kiện chuyển bài
             player.addListener(new Player.Listener() {
                 @Override
                 public void onPlaybackStateChanged(int state) {
@@ -265,10 +263,115 @@ public class VideoActivity extends AppCompatActivity {
                         hasViewCountBeenIncremented = true;
                     }
                 }
+
+                @Override
+                public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
+                    // KHI CHUYỂN BÀI (Tự động hoặc bấm Next)
+                    if (mediaItem != null && mediaItem.localConfiguration != null) {
+                        Video nextVideo = (Video) mediaItem.localConfiguration.tag;
+                        if (nextVideo != null) {
+                            // Reset view count flag cho video mới
+                            hasViewCountBeenIncremented = false;
+
+                            // Cập nhật giao diện (Title, Description, Stats...)
+                            updateUIForCurrentVideo(nextVideo);
+                        }
+                    }
+                }
             });
         }
 
-        loadVideoDetails(videoId);
+        // --- LOGIC PHÂN ĐỊNH: PHÁT TỪ QUEUE HAY PHÁT LẺ ---
+        List<Video> queue = VideoQueueManager.getInstance().getQueue();
+
+        if (!queue.isEmpty()) {
+            // TRƯỜNG HỢP 1: CÓ HÀNG CHỜ (Play All / Shuffle)
+            playFromQueue();
+        } else if (currentVideoId != null) {
+            // TRƯỜNG HỢP 2: PHÁT LẺ (Từ Home/Search/History)
+            loadSingleVideoAndPlay(currentVideoId);
+        }
+    }
+    private void playFromQueue() {
+        List<Video> queue = VideoQueueManager.getInstance().getQueue();
+        int startIndex = VideoQueueManager.getInstance().getCurrentPosition();
+
+        // Nếu player đang phát đúng danh sách này rồi thì không load lại để tránh khựng
+        // (Ở đây ta cứ clear load lại cho đơn giản và chắc chắn)
+        player.clearMediaItems();
+
+        for (Video v : queue) {
+            // Tạo MediaItem và gắn TAG là object Video để sau này lấy lại thông tin
+            MediaItem mediaItem = MediaItem.fromUri(Uri.parse(v.getVideoURL()))
+                    .buildUpon()
+                    .setTag(v)
+                    .build();
+            player.addMediaItem(mediaItem);
+        }
+
+        // Nhảy đến bài được chọn (startIndex) và vị trí resume (startPosition)
+        player.seekTo(startIndex, startPosition);
+        player.prepare();
+        player.play();
+
+        // Cập nhật UI ngay lập tức cho bài đầu tiên
+        updateUIForCurrentVideo(queue.get(startIndex));
+    }
+    // Hàm phát video lẻ (Logic cũ nhưng tách ra)
+    private void loadSingleVideoAndPlay(String videoId) {
+        firestore.collection("videos").document(videoId).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists()) return;
+                    Video video = snapshot.toObject(Video.class);
+                    if (video == null) return;
+                    video.setVideoID(snapshot.getId());
+
+                    MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()))
+                            .buildUpon()
+                            .setTag(video)
+                            .build();
+
+                    player.setMediaItem(mediaItem);
+                    if (startPosition > 0) {
+                        player.seekTo(startPosition);
+                        Toast.makeText(this, "Resuming...", Toast.LENGTH_SHORT).show();
+                    }
+                    player.prepare();
+                    player.play();
+
+                    updateUIForCurrentVideo(video);
+                });
+    }
+    // --- HÀM CẬP NHẬT GIAO DIỆN KHI ĐỔI VIDEO ---
+    private void updateUIForCurrentVideo(Video video) {
+        if (video == null) return;
+
+        // 1. Cập nhật ID hiện tại
+        currentVideoId = video.getVideoID();
+        currentUploaderID = video.getUploaderID();
+
+        // 2. Cập nhật Text cơ bản
+        tvTitle.setText(video.getTitle());
+        tvDescription.setText(video.getDescription() != null ? video.getDescription() : "");
+        if (video.getCreatedAt() != null) {
+            currentRelativeTime = getRelativeTime(video.getCreatedAt());
+        }
+
+        // 3. Load thông tin User (Avatar, Tên)
+        // Vì trong Queue object Video có thể thiếu thông tin user chi tiết, nên gọi Firestore check lại
+        firestore.collection("users").document(video.getUploaderID()).get()
+                .addOnSuccessListener(doc -> {
+                    String uploaderName = doc.exists() ? doc.getString("name") : "Unknown";
+                    currentUploaderName = uploaderName;
+                    tvUploader.setText(uploaderName);
+
+                    String avatar = doc.getString("profileURL");
+                    if (avatar != null) Glide.with(this).load(avatar).into(ivChannelAvatar);
+
+                    // Sau khi có tên user thì mới load stats để hiển thị đúng format
+                    fetchAndListenToVideoStats(currentVideoId);
+                    listenToSubscriptionStatus();
+                });
     }
 
     private void setupCustomPlayerControls() {

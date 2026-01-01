@@ -2,6 +2,7 @@ package com.example.metube.ui.playlist;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -53,7 +54,11 @@ public class PlaylistPreviewAdapter extends RecyclerView.Adapter<PlaylistPreview
         holder.ivThumb.setImageResource(android.R.color.black);
 
         // 2. Kiểm tra xem playlist có video không
-        if (p.getVideoIds() != null && !p.getVideoIds().isEmpty()) {
+        if (p.getThumbnailURL() != null && !p.getThumbnailURL().isEmpty()) {
+            loadThumbnailAndColor(holder, p.getThumbnailURL());
+        }
+        // B. Nếu không có mới lấy từ Video đầu tiên
+        else if (p.getVideoIds() != null && !p.getVideoIds().isEmpty()) {
             String firstVideoId = p.getVideoIds().get(0);
 
             FirebaseFirestore.getInstance()
@@ -64,42 +69,7 @@ public class PlaylistPreviewAdapter extends RecyclerView.Adapter<PlaylistPreview
                         if (documentSnapshot.exists()) {
                             String thumbUrl = documentSnapshot.getString("thumbnailURL");
                             if (thumbUrl != null && !thumbUrl.isEmpty()) {
-
-                                // --- DÙNG GLIDE ĐỂ LẤY BITMAP ---
-                                Glide.with(holder.itemView.getContext())
-                                        .asBitmap() // Quan trọng: Load dạng Bitmap
-                                        .load(thumbUrl)
-                                        .centerCrop()
-                                        .into(new CustomTarget<Bitmap>() {
-                                            @Override
-                                            public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                                                // A. Hiển thị ảnh
-                                                holder.ivThumb.setImageBitmap(resource);
-
-                                                // B. Dùng Palette trích xuất màu
-                                                Palette.from(resource).generate(palette -> {
-                                                    if (palette != null) {
-                                                        // Lấy màu chủ đạo (Dominant) hoặc màu rực rỡ (Vibrant)
-                                                        // Fallback là màu xám nếu không tìm ra
-                                                        int defaultColor = ContextCompat.getColor(holder.itemView.getContext(), android.R.color.darker_gray);
-
-                                                        // Bạn có thể thử getVibrantColor hoặc getMutedColor tùy gu
-                                                        int color = palette.getDominantColor(defaultColor);
-
-                                                        // C. Tô màu cho 2 cái Stack phía sau
-                                                        applyColorToStack(holder.viewStack1, color);
-//                                                        applyColorToStack(holder.viewStack2, color);
-                                                    }
-                                                });
-                                            }
-
-                                            @Override
-                                            public void onLoadCleared(@Nullable android.graphics.drawable.Drawable placeholder) {
-                                                // Reset khi view bị tái sử dụng
-                                                holder.ivThumb.setImageDrawable(placeholder);
-                                                resetStackColors(holder);
-                                            }
-                                        });
+                                loadThumbnailAndColor(holder, thumbUrl);
                             }
                         }
                     });
@@ -109,6 +79,32 @@ public class PlaylistPreviewAdapter extends RecyclerView.Adapter<PlaylistPreview
             intent.putExtra("playlist_id", p.getPlaylistId());
             holder.itemView.getContext().startActivity(intent);
         });
+    }
+    private void loadThumbnailAndColor(ViewHolder holder, String url) {
+        Glide.with(holder.itemView.getContext())
+                .asBitmap()
+                .load(url)
+                .centerCrop()
+                .into(new CustomTarget<Bitmap>() {
+                    @Override
+                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                        holder.ivThumb.setImageBitmap(resource);
+
+                        Palette.from(resource).generate(palette -> {
+                            if (palette != null) {
+                                int defaultColor = ContextCompat.getColor(holder.itemView.getContext(), android.R.color.darker_gray);
+                                int color = palette.getDominantColor(defaultColor);
+                                applyColorToStack(holder.viewStack1, color);
+                            }
+                        });
+                    }
+
+                    @Override
+                    public void onLoadCleared(@Nullable Drawable placeholder) {
+                        holder.ivThumb.setImageDrawable(placeholder);
+                        resetStackColors(holder);
+                    }
+                });
     }
     // Hàm tô màu cho View (giữ nguyên bo góc)
     private void applyColorToStack(View view, int color) {

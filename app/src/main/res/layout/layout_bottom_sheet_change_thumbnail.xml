@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:paddingTop="16dp"
+    android:paddingBottom="24dp"
+    android:background="@drawable/background_bottom_sheet_white">
+
+    <LinearLayout
+        android:id="@+id/btn_choose_library"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_photo_library"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Choose from library" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/btn_take_photo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_photo_camera"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Take photo" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+</LinearLayout>

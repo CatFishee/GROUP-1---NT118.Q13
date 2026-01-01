@@ -75,7 +75,14 @@ public class CreatePlaylistBottomSheet extends DialogFragment {
         });
 
         // 3. Logic chọn Visibility (Mở BottomSheet thứ 2)
-        layoutVisibilitySelector.setOnClickListener(v -> showVisibilitySelector());
+        layoutVisibilitySelector.setOnClickListener(v -> {
+            VisibilityBottomSheet bottomSheet = new VisibilityBottomSheet(selectedVisibility -> {
+                this.currentVisibility = selectedVisibility;
+                tvVisibility.setText(selectedVisibility);
+            });
+            // Lưu ý: Vì đang ở trong Fragment (Dialog) nên dùng getChildFragmentManager()
+            bottomSheet.show(getChildFragmentManager(), "VisibilitySelector");
+        });
 
         // 4. Logic nút Create -> Lưu lên Firestore
         btnCreate.setOnClickListener(v -> createPlaylist());
@@ -94,35 +101,6 @@ public class CreatePlaylistBottomSheet extends DialogFragment {
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
     }
-
-    private void showVisibilitySelector() {
-        // Tạo BottomSheetDialog thứ 2 thủ công để dễ kiểm soát
-        BottomSheetDialog visibilityDialog = new BottomSheetDialog(requireContext());
-        View sheetView = LayoutInflater.from(getContext()).inflate(R.layout.layout_bottom_sheet_visibility, null);
-        visibilityDialog.setContentView(sheetView);
-
-        // Xử lý sự kiện chọn từng dòng
-        // Xử lý click chọn option
-        View.OnClickListener clickListener = v -> {
-            int id = v.getId();
-            if (id == R.id.option_public) updateVisibility("Public");
-            else if (id == R.id.option_unlisted) updateVisibility("Unlisted");
-            else updateVisibility("Private");
-            visibilityDialog.dismiss();
-        };
-
-        sheetView.findViewById(R.id.option_public).setOnClickListener(clickListener);
-        sheetView.findViewById(R.id.option_unlisted).setOnClickListener(clickListener);
-        sheetView.findViewById(R.id.option_private).setOnClickListener(clickListener);
-
-        visibilityDialog.show();
-    }
-
-    private void updateVisibility(String visibility) {
-        this.currentVisibility = visibility;
-        tvVisibility.setText(visibility);
-    }
-
     private void createPlaylist() {
         String title = etTitle.getText().toString().trim();
         if (title.isEmpty()) return;
