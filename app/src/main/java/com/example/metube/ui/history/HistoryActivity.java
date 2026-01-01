@@ -21,6 +21,7 @@ import com.example.metube.model.HistoryItem;
 import com.example.metube.model.User;
 import com.example.metube.model.Video;
 import com.example.metube.ui.playlist.AddToPlaylistBottomSheet;
+import com.example.metube.utils.VideoQueueManager;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
@@ -591,5 +592,10 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
                 video.getTitle(),
                 video.getVideoURL()
         );
+    }
+    @Override
+    public void onPlayNextInQueue(Video video) {
+        VideoQueueManager.getInstance().playNext(video);
+        Toast.makeText(this, "Added to queue as next video", Toast.LENGTH_SHORT).show();
     }
 }

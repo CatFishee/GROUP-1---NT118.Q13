@@ -18,6 +18,7 @@ public class HistoryMenuBottomSheet extends BottomSheetDialogFragment {
         void onSaveToPlaylist(Video video);
         void onDownload(Video video);
         void onShare(Video video);
+        void onPlayNextInQueue(Video video);
     }
 
     private Video video;
@@ -63,6 +64,10 @@ public class HistoryMenuBottomSheet extends BottomSheetDialogFragment {
         // 4. Share
         view.findViewById(R.id.option_share).setOnClickListener(v -> {
             if (listener != null) listener.onShare(video);
+            dismiss();
+        });
+        view.findViewById(R.id.option_play_next).setOnClickListener(v -> {
+            if (listener != null) listener.onPlayNextInQueue(video);
             dismiss();
         });
     }

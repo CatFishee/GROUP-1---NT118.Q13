@@ -448,5 +448,12 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
     public void onShare(Video video) {
         com.example.metube.utils.ShareUtil.shareVideo(getContext(), video.getTitle(), video.getVideoURL());
     }
+    @Override
+    public void onPlayNextInQueue(Video video) {
+        // Gọi QueueManager để thêm vào hàng chờ
+        com.example.metube.utils.VideoQueueManager.getInstance().playNext(video);
+
+        Toast.makeText(getContext(), "Playing next in queue", Toast.LENGTH_SHORT).show();
+    }
 
 }

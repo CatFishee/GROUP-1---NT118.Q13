@@ -121,6 +121,7 @@
 
                 <!-- DOWNLOAD ICON -->
                 <ImageView
+                    android:id="@+id/btn_download"
                     android:layout_width="56dp"
                     android:layout_height="56dp"
                     android:background="@drawable/background_button_glass"
@@ -177,6 +178,7 @@
             <!-- === LIST SECTION === -->
             <!-- Nút Sort -->
             <LinearLayout
+                android:id="@+id/btn_sort_playlist"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"

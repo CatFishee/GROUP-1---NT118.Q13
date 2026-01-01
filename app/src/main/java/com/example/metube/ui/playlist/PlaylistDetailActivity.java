@@ -1,5 +1,6 @@
 package com.example.metube.ui.playlist;
 
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
@@ -7,17 +8,22 @@ import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.palette.graphics.Palette;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import android.widget.PopupMenu;
+import java.util.Collections;
+import java.util.Comparator;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
@@ -25,12 +31,18 @@ import com.bumptech.glide.request.transition.Transition;
 import com.example.metube.R;
 import com.example.metube.model.Playlist;
 import com.example.metube.model.Video;
+import com.example.metube.ui.video.VideoActivity;
+import com.example.metube.utils.DownloadUtil;
+import com.example.metube.utils.VideoQueueManager;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldPath;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PlaylistDetailActivity extends AppCompatActivity {
 
@@ -46,6 +58,10 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     // Adapter riêng cho Playlist (để có icon kéo thả)
     private PlaylistVideoAdapter adapter;
     private List<Video> videoList = new ArrayList<>();
+    private Button btnPlayAll, btnShuffle;
+    private ImageView btnDownload;
+    private List<Video> originalVideoList = new ArrayList<>();
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -78,8 +94,85 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         tvMeta = findViewById(R.id.tv_playlist_meta);
         rvVideos = findViewById(R.id.rv_videos);
         btnBack = findViewById(R.id.btn_back);
+        // Ánh xạ nút
+        btnPlayAll = findViewById(R.id.btn_play_all);
+        btnShuffle = findViewById(R.id.btn_shuffle);
+        btnDownload = findViewById(R.id.btn_download);
+
 
         btnBack.setOnClickListener(v -> finish());
+        btnPlayAll.setOnClickListener(v -> {
+            if (!videoList.isEmpty()) {
+                // Đẩy toàn bộ list vào Queue
+                VideoQueueManager.getInstance().playPlaylist(videoList);
+
+                // Mở màn hình Video (nó sẽ tự play bài đầu tiên trong queue)
+                openVideoActivity();
+            } else {
+                Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show();
+            }
+        });
+        btnShuffle.setOnClickListener(v -> {
+            if (videoList != null && !videoList.isEmpty()) {
+                // 1. Tạo bản sao của danh sách (để không làm xáo trộn giao diện danh sách bên dưới)
+                List<Video> shuffledList = new ArrayList<>(videoList);
+
+                // 2. Xáo trộn ngẫu nhiên
+                Collections.shuffle(shuffledList);
+
+                // 3. Đưa vào hàng chờ (Queue)
+                com.example.metube.utils.VideoQueueManager.getInstance().playPlaylist(shuffledList);
+
+                // 4. Mở màn hình phát
+                Intent intent = new Intent(this, com.example.metube.ui.video.VideoActivity.class);
+                startActivity(intent);
+
+                Toast.makeText(this, "Shuffling playlist...", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show();
+            }
+        });
+        btnDownload.setOnClickListener(v -> {
+            if (videoList == null || videoList.isEmpty()) {
+                Toast.makeText(this, "Playlist is empty", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Hiển thị hộp thoại xác nhận trước khi tải hàng loạt
+            showDownloadConfirmationDialog();
+        });
+        findViewById(R.id.btn_sort_playlist).setOnClickListener(this::showSortPopup);
+    }
+    private void showDownloadConfirmationDialog() {
+        int count = videoList.size();
+
+        new AlertDialog.Builder(this)
+                .setTitle("Download Playlist")
+                .setMessage("Do you want to download " + count + " videos from this playlist?")
+                .setPositiveButton("Download", (dialog, which) -> {
+                    // Bắt đầu tải từng video
+                    startDownloadAll();
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void startDownloadAll() {
+        Toast.makeText(this, "Starting download...", Toast.LENGTH_SHORT).show();
+
+        for (Video video : videoList) {
+            // Gọi hàm tiện ích DownloadUtil mà bạn đã viết
+            DownloadUtil.downloadVideo(
+                    this,
+                    video.getVideoURL(),
+                    video.getTitle()
+            );
+        }
+    }
+    private void openVideoActivity() {
+        Intent intent = new Intent(this, VideoActivity.class);
+        // Không cần putExtra video_id vì VideoActivity sẽ tự check QueueManager trước
+        startActivity(intent);
     }
 
     private void loadPlaylistInfo() {
@@ -121,7 +214,6 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     }
 
     private void loadVideosInPlaylist(List<String> videoIds) {
-        // Lấy video đầu tiên làm ảnh bìa
         String firstVideoId = videoIds.get(0);
 
         firestore.collection("videos").whereIn(FieldPath.documentId(), videoIds)
@@ -129,21 +221,89 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                 .addOnSuccessListener(querySnapshot -> {
                     videoList.clear();
 
-                    // Lưu tạm để xử lý logic
+                    // Tạo map tạm để sắp xếp đúng thứ tự videoIds (Date added)
+                    Map<String, Video> tempMap = new HashMap<>();
                     for (DocumentSnapshot doc : querySnapshot) {
                         Video video = doc.toObject(Video.class);
                         if (video != null) {
                             video.setVideoID(doc.getId());
-                            videoList.add(video);
+                            tempMap.put(doc.getId(), video);
+                        }
+                    }
 
-                            // --- LOGIC QUAN TRỌNG: LẤY ẢNH VÀ MÀU ---
-                            if (doc.getId().equals(firstVideoId)) {
-                                setCoverImageAndColor(video.getThumbnailURL());
+                    // Loop theo thứ tự trong mảng videoIds của Playlist
+                    for (String id : videoIds) {
+                        if (tempMap.containsKey(id)) {
+                            Video v = tempMap.get(id);
+                            videoList.add(v);
+
+                            // Load ảnh bìa
+                            if (id.equals(firstVideoId)) {
+                                setCoverImageAndColor(v.getThumbnailURL());
                             }
                         }
                     }
+
+                    // LƯU LẠI LIST GỐC (Backup)
+                    originalVideoList = new ArrayList<>(videoList);
+
                     adapter.notifyDataSetChanged();
                 });
+    }
+    private void showSortPopup(View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+
+        // Thêm các lựa chọn y hệt ảnh
+        popup.getMenu().add(0, 0, 0, "Manual");
+        popup.getMenu().add(0, 1, 1, "Date added (newest)");
+        popup.getMenu().add(0, 2, 2, "Date added (oldest)");
+        popup.getMenu().add(0, 3, 3, "Most popular");
+        popup.getMenu().add(0, 4, 4, "Date published (newest)");
+        popup.getMenu().add(0, 5, 5, "Date published (oldest)");
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 0: // Manual (Khôi phục thứ tự gốc)
+                    videoList.clear();
+                    videoList.addAll(originalVideoList);
+                    break;
+
+                case 1: // Date added (newest) -> Đảo ngược list gốc
+                    videoList.clear();
+                    videoList.addAll(originalVideoList);
+                    Collections.reverse(videoList);
+                    break;
+
+                case 2: // Date added (oldest) -> Giống Manual
+                    videoList.clear();
+                    videoList.addAll(originalVideoList);
+                    break;
+
+                case 3: // Most popular (Nhiều view nhất lên đầu)
+                    Collections.sort(videoList, (v1, v2) ->
+                            Long.compare(v2.getViewCount(), v1.getViewCount())
+                    );
+                    break;
+
+                case 4: // Date published (newest) -> Ngày tạo mới nhất
+                    Collections.sort(videoList, (v1, v2) -> {
+                        if (v1.getCreatedAt() == null || v2.getCreatedAt() == null) return 0;
+                        return v2.getCreatedAt().compareTo(v1.getCreatedAt());
+                    });
+                    break;
+
+                case 5: // Date published (oldest) -> Ngày tạo cũ nhất
+                    Collections.sort(videoList, (v1, v2) -> {
+                        if (v1.getCreatedAt() == null || v2.getCreatedAt() == null) return 0;
+                        return v1.getCreatedAt().compareTo(v2.getCreatedAt());
+                    });
+                    break;
+            }
+            adapter.notifyDataSetChanged();
+            return true;
+        });
+
+        popup.show();
     }
 
     // --- HÀM XỬ LÝ ẢNH BÌA VÀ MÀU NỀN ---
