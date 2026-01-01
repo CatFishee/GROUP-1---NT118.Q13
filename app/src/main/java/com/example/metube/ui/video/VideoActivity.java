@@ -7,49 +7,47 @@ import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageButton;
+import androidx.appcompat.widget.PopupMenu;
+import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.activity.OnBackPressedCallback;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.PopupMenu;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import de.hdodenhof.circleimageview.CircleImageView;
+
+import com.example.metube.model.Subscription;
+import com.example.metube.model.User;
+import com.google.android.material.card.MaterialCardView;
 
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
-import com.example.metube.model.User;
 import com.example.metube.model.Video;
-import com.example.metube.utils.VideoQueueManager; // Đảm bảo bạn đã tạo file này
+import com.example.metube.model.VideoStat;
+import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
+import com.google.firebase.database.*;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackParameters;
-import com.google.android.exoplayer2.Player;
-import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
-import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
 import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
-import com.google.firebase.Timestamp;
+import com.google.android.exoplayer2.Player;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.MutableData;
-import com.google.firebase.database.Transaction;
-import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.FieldValue;
-import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.SetOptions;
 
 import java.util.Arrays;
@@ -57,80 +55,93 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import de.hdodenhof.circleimageview.CircleImageView;
-
 public class VideoActivity extends AppCompatActivity {
 
-    private static final String TAG = "VideoActivity";
+    private static final String TAG = "VideoActivity_Debug";
 
-    // UI Components
     private PlayerView playerView;
-    private TextView tvTitle, tvUploader, tvDescription, tvVideoStats;
+    private ExoPlayer player;
+    private TextView tvTitle, tvUploader, tvDescription, tvQuality, tvSpeed;
     private MaterialButton btnLike, btnDislike;
+    private String videoId;
+    private boolean hasViewCountBeenIncremented = false;
+    private enum UserVoteState { NONE, LIKED, DISLIKED }
+    private UserVoteState currentUserVoteState = UserVoteState.NONE;
+    private boolean isFullscreen = false;
+    private DefaultTrackSelector trackSelector;
+    private ScrollView scrollView;
+
+    private TextView tvVideoStats;
     private CircleImageView ivChannelAvatar;
     private Button btnSubscribe;
     private MaterialCardView cardDescription;
-    private ScrollView scrollView;
-
-    // Player & Logic
-    private ExoPlayer player;
-    private DefaultTrackSelector trackSelector;
-    private boolean isFullscreen = false;
     private boolean isDescriptionExpanded = false;
-    private boolean hasViewCountBeenIncremented = false;
-
-    // Data Variables
-    private String currentVideoId; // ID video đang phát
     private String currentUploaderName = "";
     private String currentRelativeTime = "";
-    private long startPosition = 0;
+    private String currentUploaderID = "";
+    private boolean isSubscribed = false;
 
-    // Firebase
-    private FirebaseFirestore firestore;
-    private FirebaseUser currentUser;
     private DatabaseReference videoStatRef;
     private ValueEventListener statListener;
-    private com.google.firebase.firestore.ListenerRegistration userSettingsListener;
-
-    // State
-    private enum UserVoteState { NONE, LIKED, DISLIKED }
-    private UserVoteState currentUserVoteState = UserVoteState.NONE;
+    private FirebaseFirestore firestore;
+    private FirebaseUser currentUser;
+    private float currentSpeed = 1.0f;
+    private int currentQualityIndex = 0;
+    private long startPosition = 0;
     private boolean isHistoryRecordingEnabled = true;
+    private com.google.firebase.firestore.ListenerRegistration userSettingsListener;
+    private com.google.firebase.firestore.ListenerRegistration subscriptionListener;
+    private List<String> qualities = Arrays.asList("480p", "720p", "1080p");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video);
+        scrollView = findViewById(R.id.scroll_view_content);
 
         firestore = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        // 1. Nhận dữ liệu từ Intent
-        currentVideoId = getIntent().getStringExtra("video_id");
-        startPosition = getIntent().getLongExtra("resume_position", 0);
+        hasViewCountBeenIncremented = false;
+        videoStatRef = null;
+        statListener = null;
 
-        if (currentVideoId == null && VideoQueueManager.getInstance().getQueue().isEmpty()) {
-            Toast.makeText(this, "No video to play.", Toast.LENGTH_SHORT).show();
+        videoId = getIntent().getStringExtra("video_id");
+        startPosition = getIntent().getLongExtra("resume_position", 0);
+        Log.d("VIDEO_ID_CHECK", "Video ID nhận được là: " + videoId);
+        if (videoId == null) {
+            Toast.makeText(this, "Video not found.", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        // 2. Xử lý nút Back
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+        OnBackPressedCallback callback = new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
                 if (isFullscreen) {
                     exitFullscreen();
                 } else {
                     setEnabled(false);
-                    finish();
+                    VideoActivity.super.onBackPressed();
                 }
             }
-        });
+        };
+        getOnBackPressedDispatcher().addCallback(this, callback);
 
-        // 3. Init UI & Logic
         initViews();
         setupDescriptionToggle();
+        checkUserHistorySetting();
+    }
+
+    private void checkUserHistorySetting() {
+        if (currentUser == null) return;
+        firestore.collection("users").document(currentUser.getUid())
+                .get().addOnSuccessListener(snapshot -> {
+                    if (snapshot.exists()) {
+                        User user = snapshot.toObject(User.class);
+                        isHistoryRecordingEnabled = !user.isHistoryPaused();
+                    }
+                });
     }
 
     private void initViews() {
@@ -138,9 +149,9 @@ public class VideoActivity extends AppCompatActivity {
         tvTitle = findViewById(R.id.tv_video_title);
         tvUploader = findViewById(R.id.tv_video_uploader);
         tvDescription = findViewById(R.id.tv_video_description);
-        tvVideoStats = findViewById(R.id.tv_video_stats);
         btnLike = findViewById(R.id.btn_like);
         btnDislike = findViewById(R.id.btn_dislike);
+        tvVideoStats = findViewById(R.id.tv_video_stats);
         ivChannelAvatar = findViewById(R.id.iv_channel_avatar);
         btnSubscribe = findViewById(R.id.btn_subscribe);
         cardDescription = findViewById(R.id.card_description);
@@ -148,6 +159,7 @@ public class VideoActivity extends AppCompatActivity {
 
         btnLike.setOnClickListener(v -> onLikeClicked());
         btnDislike.setOnClickListener(v -> onDislikeClicked());
+        btnSubscribe.setOnClickListener(v -> onSubscribeClicked());
     }
 
     private void setupDescriptionToggle() {
@@ -162,13 +174,11 @@ public class VideoActivity extends AppCompatActivity {
         });
     }
 
-    // --- LIFECYCLE ---
-
     @Override
     protected void onStart() {
         super.onStart();
         initializePlayer();
-        startListeningToUserStatus(); // Lắng nghe cài đặt Pause History
+        startListeningToUserStatus();
     }
 
     @Override
@@ -182,41 +192,61 @@ public class VideoActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        if (player != null) {
-            // Lưu lịch sử trước khi pause
-            long currentPos = player.getCurrentPosition();
-            long duration = player.getDuration();
+        long currentPosition = player.getCurrentPosition();
+        long duration = player.getDuration();
 
-            // Logic lưu thông minh: Xem > 5s và chưa hết
-            if (currentPos > 5000 && duration > 0) {
-                if ((duration - currentPos) < 1000) {
-                    saveWatchHistory(0); // Đã xem hết -> Reset
-                } else {
-                    saveWatchHistory(currentPos); // Đang xem dở
-                }
+        if (currentPosition > 1000 && duration > 0) {
+            if ((duration - currentPosition) < 1000) {
+                saveWatchHistory(0);
+            } else {
+                saveWatchHistory(currentPosition);
             }
+        }
+        if (player != null) {
             player.pause();
         }
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (userSettingsListener != null) {
-            userSettingsListener.remove();
+    private void saveWatchHistory(long position) {
+        if (currentUser == null) return;
+        String userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+
+        if (!isHistoryRecordingEnabled) {
+            Log.d(TAG, "History recording is PAUSED by user.");
+            return;
         }
-        releasePlayer();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("userID", userId);
+        data.put("videoID", videoId);
+        data.put("watchedAt", FieldValue.serverTimestamp());
+        data.put("resumePosition", position);
+
+        FirebaseFirestore.getInstance()
+                .collection("watchHistory")
+                .document(userId + "_" + videoId)
+                .set(data, SetOptions.merge());
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (videoStatRef != null && statListener != null) {
-            videoStatRef.removeEventListener(statListener);
-        }
-    }
+    private void startListeningToUserStatus() {
+        if (currentUser == null) return;
 
-    // --- PLAYER INITIALIZATION (QUAN TRỌNG) ---
+        userSettingsListener = firestore.collection("users").document(currentUser.getUid())
+                .addSnapshotListener((documentSnapshot, e) -> {
+                    if (e != null) {
+                        Log.e(TAG, "Listen failed.", e);
+                        return;
+                    }
+
+                    if (documentSnapshot != null && documentSnapshot.exists()) {
+                        User user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            isHistoryRecordingEnabled = !user.isHistoryPaused();
+                            Log.d(TAG, "History Status Updated: " + isHistoryRecordingEnabled);
+                        }
+                    }
+                });
+    }
 
     private void initializePlayer() {
         if (player == null) {
@@ -224,10 +254,9 @@ public class VideoActivity extends AppCompatActivity {
             player = new ExoPlayer.Builder(this)
                     .setTrackSelector(trackSelector)
                     .build();
+
             playerView.setPlayer(player);
             setupCustomPlayerControls();
-
-            // Lắng nghe sự kiện chuyển bài (cho Queue)
             player.addListener(new Player.Listener() {
                 @Override
                 public void onPlaybackStateChanged(int state) {
@@ -236,162 +265,72 @@ public class VideoActivity extends AppCompatActivity {
                         hasViewCountBeenIncremented = true;
                     }
                 }
-
-                @Override
-                public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
-                    // Khi chuyển sang video khác trong danh sách phát
-                    if (mediaItem != null && mediaItem.localConfiguration != null) {
-                        Video video = (Video) mediaItem.localConfiguration.tag;
-                        if (video != null) {
-                            // Reset trạng thái view count cho video mới
-                            hasViewCountBeenIncremented = false;
-                            // Cập nhật UI (Title, Desc...) cho video mới
-                            updateUIForCurrentVideo(video);
-                            // Cập nhật currentVideoId để dùng cho Like/History
-                            currentVideoId = video.getVideoID();
-                            // Load lại stats của video mới
-                            fetchAndListenToVideoStats(currentVideoId);
-                        }
-                    }
-                }
             });
         }
 
-        // --- LOAD DANH SÁCH PHÁT ---
-        List<Video> queue = VideoQueueManager.getInstance().getQueue();
-
-        // Nếu Queue rỗng (mở từ Home/Search lẻ), ta tự thêm video hiện tại vào Queue giả
-        if (queue.isEmpty() && currentVideoId != null) {
-            // Cần load video info trước để tạo object Video (hoặc query nhanh)
-            // Ở đây để đơn giản, ta load details rồi play 1 bài
-            loadSingleVideoAndPlay(currentVideoId);
-        } else {
-            // Nếu Queue có sẵn (từ nút Play All)
-            playFromQueue();
-        }
+        loadVideoDetails(videoId);
     }
-
-    private void playFromQueue() {
-        List<Video> queue = VideoQueueManager.getInstance().getQueue();
-        int startIndex = VideoQueueManager.getInstance().getCurrentPosition();
-
-        player.clearMediaItems();
-        for (Video v : queue) {
-            MediaItem mediaItem = MediaItem.fromUri(Uri.parse(v.getVideoURL()));
-            // Gắn Tag để lấy lại thông tin khi chuyển bài
-            MediaItem itemWithMeta = mediaItem.buildUpon().setTag(v).build();
-            player.addMediaItem(itemWithMeta);
-        }
-
-        // Seek đến bài đang chọn và vị trí resume (nếu có)
-        player.seekTo(startIndex, startPosition);
-        player.prepare();
-        player.play();
-    }
-
-    private void loadSingleVideoAndPlay(String videoId) {
-        firestore.collection("videos").document(videoId).get()
-                .addOnSuccessListener(snapshot -> {
-                    if (!snapshot.exists()) return;
-                    Video video = snapshot.toObject(Video.class);
-                    if (video == null) return;
-                    video.setVideoID(snapshot.getId()); // Đảm bảo có ID
-
-                    // Setup Player cho 1 bài
-                    MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()));
-                    // Gắn Tag
-                    MediaItem itemWithMeta = mediaItem.buildUpon().setTag(video).build();
-
-                    player.setMediaItem(itemWithMeta);
-
-                    // Tua đến vị trí Resume (nếu có)
-                    if (startPosition > 0) {
-                        player.seekTo(startPosition);
-                        Toast.makeText(this, "Resuming video", Toast.LENGTH_SHORT).show();
-                    }
-
-                    player.prepare();
-                    player.play();
-
-                    // Cập nhật UI ngay lập tức
-                    updateUIForCurrentVideo(video);
-                    fetchAndListenToVideoStats(videoId);
-                });
-    }
-
-    // --- UI UPDATES ---
-
-    private void updateUIForCurrentVideo(Video video) {
-        if (video == null) return;
-
-        // 1. Cập nhật Text
-        tvTitle.setText(video.getTitle());
-        tvDescription.setText(video.getDescription() != null ? video.getDescription() : "");
-        if (video.getCreatedAt() != null) {
-            currentRelativeTime = getRelativeTime(video.getCreatedAt());
-        }
-
-        // 2. Load thông tin kênh (Uploader)
-        firestore.collection("users").document(video.getUploaderID()).get()
-                .addOnSuccessListener(doc -> {
-                    String name = doc.exists() ? doc.getString("name") : "Unknown";
-                    currentUploaderName = name;
-                    tvUploader.setText(name);
-
-                    String avatar = doc.getString("profileURL");
-                    if (avatar != null) Glide.with(this).load(avatar).into(ivChannelAvatar);
-
-                    // Gọi lại update stats để refresh tên người đăng
-                    // (Lấy viewCount hiện tại từ view cũ nếu có, hoặc để listener tự update)
-                });
-    }
-
-    // --- CÁC HÀM TIỆN ÍCH KHÁC (GIỮ NGUYÊN LOGIC CỦA BẠN) ---
 
     private void setupCustomPlayerControls() {
         ImageButton settingsButton = playerView.findViewById(R.id.exo_settings_button);
         ImageButton volumeButton = playerView.findViewById(R.id.exo_volume_button);
         ImageButton fullscreenButton = playerView.findViewById(R.id.exo_fullscreen_button);
 
-        settingsButton.setOnClickListener(this::showSettingsMenu);
-
-        volumeButton.setOnClickListener(v -> {
-            boolean isMuted = player.getVolume() == 0f;
-            player.setVolume(isMuted ? 1f : 0f);
-            volumeButton.setImageResource(isMuted ? R.drawable.ic_volume_up : R.drawable.ic_volume_off);
+        settingsButton.setOnClickListener(view -> {
+            PopupMenu popupMenu = new PopupMenu(this, view);
+            popupMenu.getMenuInflater().inflate(R.menu.player_settings_menu, popupMenu.getMenu());
+            popupMenu.setOnMenuItemClickListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.menu_speed_0_5x) player.setPlaybackParameters(new PlaybackParameters(0.5f));
+                else if (id == R.id.menu_speed_1x) player.setPlaybackParameters(new PlaybackParameters(1.0f));
+                else if (id == R.id.menu_speed_1_5x) player.setPlaybackParameters(new PlaybackParameters(1.5f));
+                else if (id == R.id.menu_speed_2x) player.setPlaybackParameters(new PlaybackParameters(2.0f));
+                else if (id == R.id.menu_quality_auto) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().clearVideoSizeConstraints().build();
+                    trackSelector.setParameters(params);
+                } else if (id == R.id.menu_quality_1080p) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().setMaxVideoSize(1920, 1080).build();
+                    trackSelector.setParameters(params);
+                } else if (id == R.id.menu_quality_720p) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().setMaxVideoSize(1280, 720).build();
+                    trackSelector.setParameters(params);
+                } else if (id == R.id.menu_quality_480p) {
+                    TrackSelectionParameters params = trackSelector.getParameters().buildUpon().setMaxVideoSize(854, 480).build();
+                    trackSelector.setParameters(params);
+                }
+                return true;
+            });
+            popupMenu.show();
         });
 
-        fullscreenButton.setOnClickListener(v -> {
-            if (isFullscreen) exitFullscreen(); else enterFullscreen();
-        });
-    }
-
-    private void showSettingsMenu(View view) {
-        PopupMenu popup = new PopupMenu(this, view);
-        popup.getMenu().add(0, 1, 0, "0.5x");
-        popup.getMenu().add(0, 2, 0, "1.0x (Normal)");
-        popup.getMenu().add(0, 3, 0, "1.5x");
-        popup.getMenu().add(0, 4, 0, "2.0x");
-
-        popup.setOnMenuItemClickListener(item -> {
-            float speed = 1.0f;
-            switch (item.getItemId()) {
-                case 1: speed = 0.5f; break;
-                case 3: speed = 1.5f; break;
-                case 4: speed = 2.0f; break;
+        fullscreenButton.setOnClickListener(view -> {
+            if (isFullscreen) {
+                exitFullscreen();
+            } else {
+                enterFullscreen();
             }
-            player.setPlaybackParameters(new PlaybackParameters(speed));
-            return true;
         });
-        popup.show();
+
+        volumeButton.setOnClickListener(view -> {
+            if (player.getVolume() > 0) {
+                player.setVolume(0f);
+                volumeButton.setImageResource(R.drawable.ic_volume_off);
+            } else {
+                player.setVolume(1f);
+                volumeButton.setImageResource(R.drawable.ic_volume_up);
+            }
+        });
     }
 
     private void enterFullscreen() {
         isFullscreen = true;
-        playerView.findViewById(R.id.exo_fullscreen_button).setBackgroundResource(R.drawable.ic_fullscreen_exit);
-        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        controller.hide(WindowInsetsCompat.Type.systemBars());
-        controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+        ImageButton fullscreenButton = playerView.findViewById(R.id.exo_fullscreen_button);
+        fullscreenButton.setImageResource(R.drawable.ic_fullscreen_exit);
+
+        WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars());
+        windowInsetsController.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
         scrollView.setVisibility(View.GONE);
@@ -403,15 +342,19 @@ public class VideoActivity extends AppCompatActivity {
 
     private void exitFullscreen() {
         isFullscreen = false;
-        playerView.findViewById(R.id.exo_fullscreen_button).setBackgroundResource(R.drawable.ic_fullscreen_enter);
-        WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
-        controller.show(WindowInsetsCompat.Type.systemBars());
+        ImageButton fullscreenButton = playerView.findViewById(R.id.exo_fullscreen_button);
+        fullscreenButton.setImageResource(R.drawable.ic_fullscreen_enter);
+
+        WindowInsetsControllerCompat windowInsetsController = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        windowInsetsController.show(WindowInsetsCompat.Type.systemBars());
+
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
 
         scrollView.setVisibility(View.VISIBLE);
         ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) playerView.getLayoutParams();
         params.width = ViewGroup.LayoutParams.MATCH_PARENT;
-        params.height = 0; // ratio
+        params.height = 0;
+        params.dimensionRatio = "16:9";
         playerView.setLayoutParams(params);
     }
 
@@ -422,38 +365,90 @@ public class VideoActivity extends AppCompatActivity {
         }
     }
 
-    // --- FIREBASE LOGIC (HISTORY, STATS, LIKE) ---
+    private void updateStatsUI(Long viewCount) {
+        if (viewCount == null) viewCount = 0L;
 
-    private void startListeningToUserStatus() {
-        if (currentUser == null) return;
-        userSettingsListener = firestore.collection("users").document(currentUser.getUid())
-                .addSnapshotListener((snapshot, e) -> {
-                    if (snapshot != null && snapshot.exists()) {
-                        User user = snapshot.toObject(User.class);
-                        if (user != null) isHistoryRecordingEnabled = !user.isHistoryPaused();
+        if (currentUploaderName != null && !currentUploaderName.isEmpty()) {
+            String stats = String.format("%s • %s views • %s",
+                    currentUploaderName,
+                    formatViewCount(viewCount),
+                    currentRelativeTime);
+            tvVideoStats.setText(stats);
+            Log.d(TAG, "Stats updated: " + stats);
+        } else {
+            Log.d(TAG, "updateStatsUI: uploaderName chưa sẵn sàng");
+        }
+    }
+
+    private void loadVideoDetails(String videoId) {
+        firestore.collection("videos").document(videoId).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.exists()) {
+                        Toast.makeText(this, "Video not found", Toast.LENGTH_SHORT).show();
+                        finish();
+                        return;
                     }
+
+                    Video video = snapshot.toObject(Video.class);
+                    if (video == null || video.getVideoURL() == null || video.getVideoURL().isEmpty()) {
+                        Toast.makeText(this, "Video source not available.", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    tvTitle.setText(video.getTitle());
+                    if (video.getDescription() != null) {
+                        tvDescription.setText(video.getDescription());
+                    } else {
+                        tvDescription.setText("");
+                    }
+                    if (video.getCreatedAt() != null) {
+                        currentRelativeTime = getRelativeTime(video.getCreatedAt());
+                    }
+
+                    currentUploaderID = video.getUploaderID();
+
+                    firestore.collection("users").document(video.getUploaderID()).get()
+                            .addOnSuccessListener(doc -> {
+                                String uploaderName = doc.exists() ? doc.getString("name") : "Unknown Channel";
+                                tvUploader.setText(uploaderName);
+                                currentUploaderName = uploaderName;
+
+                                Log.d(TAG, "Uploader loaded: " + currentUploaderName + " (value assigned)");
+                                String avatarUrl = doc.getString("profileURL");
+                                if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                                    Glide.with(this).load(avatarUrl).into(ivChannelAvatar);
+                                }
+                                Log.d(TAG, "Calling fetchAndListenToVideoStats...");
+                                fetchAndListenToVideoStats(videoId);
+                                listenToSubscriptionStatus();
+                            })
+                            .addOnFailureListener(e -> {
+                                tvUploader.setText("Unknown Channel");
+                                currentUploaderName = "Unknown Channel";
+                                fetchAndListenToVideoStats(videoId);
+                            });
+
+                    MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()));
+                    player.setMediaItem(mediaItem);
+                    if (startPosition > 0) {
+                        player.seekTo(startPosition);
+                        Toast.makeText(this, "Resuming from where you left off", Toast.LENGTH_SHORT).show();
+                    }
+                    player.prepare();
+                    player.play();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to load video: ", e);
+                    Toast.makeText(this, "Error loading video", Toast.LENGTH_SHORT).show();
                 });
     }
 
-    private void saveWatchHistory(long position) {
-        if (currentUser == null || !isHistoryRecordingEnabled || currentVideoId == null) return;
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("userID", currentUser.getUid());
-        data.put("videoID", currentVideoId);
-        data.put("watchedAt", FieldValue.serverTimestamp());
-        data.put("resumePosition", position);
-
-        firestore.collection("watchHistory")
-                .document(currentUser.getUid() + "_" + currentVideoId)
-                .set(data, SetOptions.merge());
-    }
-
-    private void fetchAndListenToVideoStats(String vid) {
+    private void fetchAndListenToVideoStats(String videoId) {
         if (videoStatRef != null && statListener != null) {
-            videoStatRef.removeEventListener(statListener);
+            Log.d(TAG, "Listener đã được đăng ký rồi, bỏ qua!");
+            return;
         }
-        videoStatRef = FirebaseDatabase.getInstance().getReference("videostat").child(vid);
+        videoStatRef = FirebaseDatabase.getInstance().getReference("videostat").child(videoId);
 
         statListener = new ValueEventListener() {
             @Override
@@ -464,78 +459,280 @@ public class VideoActivity extends AppCompatActivity {
                     updateStatsUI(0L);
                     return;
                 }
-                long likes = snapshot.child("likes").getChildrenCount();
-                long dislikes = snapshot.child("dislikes").getChildrenCount();
-                Long views = snapshot.child("viewCount").getValue(Long.class);
 
-                btnLike.setText(formatViewCount(likes));
-                btnDislike.setText(formatViewCount(dislikes));
-                updateStatsUI(views);
+                long likeCount = snapshot.child("likes").getChildrenCount();
+                long dislikeCount = snapshot.child("dislikes").getChildrenCount();
+
+                btnLike.setText(String.valueOf(likeCount));
+                btnDislike.setText(String.valueOf(dislikeCount));
+                Long viewCount = snapshot.child("viewCount").getValue(Long.class);
+                Log.d(TAG, "Calling updateStatsUI with viewCount: " + viewCount + ", uploaderName: " + currentUploaderName);
+                updateStatsUI(viewCount);
 
                 if (currentUser != null) {
-                    if (snapshot.child("likes").hasChild(currentUser.getUid())) currentUserVoteState = UserVoteState.LIKED;
-                    else if (snapshot.child("dislikes").hasChild(currentUser.getUid())) currentUserVoteState = UserVoteState.DISLIKED;
-                    else currentUserVoteState = UserVoteState.NONE;
+                    if (snapshot.child("likes").hasChild(currentUser.getUid())) {
+                        currentUserVoteState = UserVoteState.LIKED;
+                    } else if (snapshot.child("dislikes").hasChild(currentUser.getUid())) {
+                        currentUserVoteState = UserVoteState.DISLIKED;
+                    } else {
+                        currentUserVoteState = UserVoteState.NONE;
+                    }
                 }
                 updateLikeDislikeButtons();
             }
-            @Override public void onCancelled(@NonNull DatabaseError error) {}
+            @Override public void onCancelled(@NonNull DatabaseError error) { }
         };
         videoStatRef.addValueEventListener(statListener);
     }
 
-    private void updateStatsUI(Long viewCount) {
-        if (viewCount == null) viewCount = 0L;
-        String stats = String.format("%s • %s views • %s",
-                currentUploaderName,
-                formatViewCount(viewCount),
-                currentRelativeTime);
-        tvVideoStats.setText(stats);
+    // NEW: Listen to subscription status and count
+    private void listenToSubscriptionStatus() {
+        if (currentUser == null || currentUploaderID == null || currentUploaderID.isEmpty()) {
+            btnSubscribe.setEnabled(false);
+            return;
+        }
+
+        // Don't allow subscribing to yourself
+        if (currentUser.getUid().equals(currentUploaderID)) {
+            btnSubscribe.setVisibility(View.GONE);
+            return;
+        }
+
+        String subscriptionDocId = currentUser.getUid() + "_" + currentUploaderID;
+
+        subscriptionListener = firestore.collection("subscriptions")
+                .document(subscriptionDocId)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "Subscription listener error: ", error);
+                        return;
+                    }
+
+                    if (snapshot != null && snapshot.exists()) {
+                        Subscription subscription = snapshot.toObject(Subscription.class);
+                        if (subscription != null) {
+                            isSubscribed = (subscription.getStatus() == Subscription.Status.SUBSCRIBED
+                                    || subscription.getStatus() == Subscription.Status.MEMBERSHIP);
+                        } else {
+                            isSubscribed = false;
+                        }
+                    } else {
+                        isSubscribed = false;
+                    }
+
+                    updateSubscribeButton();
+                    updateSubscriberCount();
+                });
     }
 
-    // Các hàm helper (Like, Dislike, Increment View) giữ nguyên như cũ
+    // NEW: Update subscribe button appearance
+    private void updateSubscribeButton() {
+        if (isSubscribed) {
+            btnSubscribe.setText("Subscribed");
+            btnSubscribe.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+        } else {
+            btnSubscribe.setText("Subscribe");
+            btnSubscribe.setBackgroundColor(getResources().getColor(android.R.color.holo_red_dark));
+        }
+    }
+
+    // NEW: Update subscriber count display
+    private void updateSubscriberCount() {
+        if (currentUploaderID == null || currentUploaderID.isEmpty()) return;
+
+        firestore.collection("subscriptions")
+                .whereEqualTo("uploaderID", currentUploaderID)
+                .whereIn("status", Arrays.asList(
+                        Subscription.Status.SUBSCRIBED.name(),
+                        Subscription.Status.MEMBERSHIP.name()
+                ))
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    long count = querySnapshot.size();
+                    String currentText = btnSubscribe.getText().toString();
+
+                    if (isSubscribed) {
+                        btnSubscribe.setText("Subscribed (" + formatSubscriberCount(count) + ")");
+                    } else {
+                        btnSubscribe.setText("Subscribe (" + formatSubscriberCount(count) + ")");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to get subscriber count: ", e);
+                });
+    }
+
+    // NEW: Handle subscribe button click
+    private void onSubscribeClicked() {
+        if (currentUser == null) {
+            Toast.makeText(this, "Please login to subscribe", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (currentUploaderID == null || currentUploaderID.isEmpty()) {
+            Toast.makeText(this, "Unable to subscribe at this time", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String subscriptionDocId = currentUser.getUid() + "_" + currentUploaderID;
+
+        if (isSubscribed) {
+            // Unsubscribe
+            Map<String, Object> updateData = new HashMap<>();
+            updateData.put("status", Subscription.Status.UNSUBSCRIBED.name());
+
+            firestore.collection("subscriptions")
+                    .document(subscriptionDocId)
+                    .update(updateData)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Unsubscribed", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Failed to unsubscribe: ", e);
+                        Toast.makeText(this, "Failed to unsubscribe", Toast.LENGTH_SHORT).show();
+                    });
+        } else {
+            // Subscribe
+            Subscription subscription = new Subscription(
+                    subscriptionDocId,
+                    currentUploaderID,
+                    currentUser.getUid(),
+                    Timestamp.now(),
+                    Subscription.Status.SUBSCRIBED
+            );
+
+            firestore.collection("subscriptions")
+                    .document(subscriptionDocId)
+                    .set(subscription)
+                    .addOnSuccessListener(aVoid -> {
+                        Toast.makeText(this, "Subscribed!", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Failed to subscribe: ", e);
+                        Toast.makeText(this, "Failed to subscribe", Toast.LENGTH_SHORT).show();
+                    });
+        }
+    }
+
     private void onLikeClicked() {
         if (videoStatRef == null || currentUser == null) return;
-        DatabaseReference likesRef = videoStatRef.child("likes").child(currentUser.getUid());
-        DatabaseReference dislikesRef = videoStatRef.child("dislikes").child(currentUser.getUid());
 
-        if (currentUserVoteState == UserVoteState.LIKED) likesRef.removeValue();
-        else { dislikesRef.removeValue(); likesRef.setValue(true); }
+        DatabaseReference myLikeRef = videoStatRef.child("likes").child(currentUser.getUid());
+        DatabaseReference myDislikeRef = videoStatRef.child("dislikes").child(currentUser.getUid());
+
+        if (currentUserVoteState == UserVoteState.LIKED) {
+            myLikeRef.removeValue();
+        } else {
+            myDislikeRef.removeValue();
+            myLikeRef.setValue(true);
+        }
     }
 
     private void onDislikeClicked() {
         if (videoStatRef == null || currentUser == null) return;
-        DatabaseReference likesRef = videoStatRef.child("likes").child(currentUser.getUid());
-        DatabaseReference dislikesRef = videoStatRef.child("dislikes").child(currentUser.getUid());
 
-        if (currentUserVoteState == UserVoteState.DISLIKED) dislikesRef.removeValue();
-        else { likesRef.removeValue(); dislikesRef.setValue(true); }
+        DatabaseReference myLikeRef = videoStatRef.child("likes").child(currentUser.getUid());
+        DatabaseReference myDislikeRef = videoStatRef.child("dislikes").child(currentUser.getUid());
+
+        if (currentUserVoteState == UserVoteState.DISLIKED) {
+            myDislikeRef.removeValue();
+        } else {
+            myLikeRef.removeValue();
+            myDislikeRef.setValue(true);
+        }
     }
 
     private void updateLikeDislikeButtons() {
         if (currentUserVoteState == UserVoteState.LIKED) {
+            btnLike.setChecked(true);
             btnLike.setIconResource(R.drawable.ic_like_filled);
-            btnDislike.setIconResource(R.drawable.ic_dislike);
-        } else if (currentUserVoteState == UserVoteState.DISLIKED) {
+        } else {
+            btnLike.setChecked(false);
             btnLike.setIconResource(R.drawable.ic_like);
+        }
+
+        if (currentUserVoteState == UserVoteState.DISLIKED) {
             btnDislike.setIconResource(R.drawable.ic_dislike_filled);
         } else {
-            btnLike.setIconResource(R.drawable.ic_like);
             btnDislike.setIconResource(R.drawable.ic_dislike);
         }
     }
 
-    private void incrementViewCount() {
-        if (videoStatRef == null) return;
-        videoStatRef.child("viewCount").runTransaction(new Transaction.Handler() {
+    private void updateCountTransaction(DatabaseReference ref, int amount) {
+        ref.runTransaction(new Transaction.Handler() {
             @NonNull @Override
             public Transaction.Result doTransaction(@NonNull MutableData currentData) {
                 Integer current = currentData.getValue(Integer.class);
-                currentData.setValue(current == null ? 1 : current + 1);
+                if (current == null) {
+                    currentData.setValue(amount > 0 ? amount : 0);
+                } else {
+                    currentData.setValue(Math.max(0, current + amount));
+                }
                 return Transaction.success(currentData);
             }
-            @Override public void onComplete(@Nullable DatabaseError error, boolean committed, @Nullable DataSnapshot currentData) {}
+
+            @Override
+            public void onComplete(@Nullable DatabaseError error, boolean committed, @Nullable DataSnapshot currentData) {
+                if (!committed) {
+                    Log.e(TAG, "Transaction failed: ", error.toException());
+                }
+            }
         });
+    }
+
+    private void incrementViewCount() {
+        if (videoStatRef == null) return;
+        videoStatRef.child("viewCount")
+                .runTransaction(new Transaction.Handler() {
+                    @NonNull
+                    @Override
+                    public Transaction.Result doTransaction(@NonNull MutableData currentData) {
+                        Integer current = currentData.getValue(Integer.class);
+                        currentData.setValue(current == null ? 1 : current + 1);
+                        return Transaction.success(currentData);
+                    }
+                    @Override
+                    public void onComplete(@Nullable DatabaseError error, boolean committed, @Nullable DataSnapshot currentData) {
+                    }
+                });
+    }
+
+    private void incrementLike() {
+        if (videoStatRef == null) return;
+        videoStatRef.child("likeCount")
+                .setValue(ServerValue.increment(1));
+    }
+
+    private void incrementDislike() {
+        if (videoStatRef == null) return;
+        videoStatRef.child("dislikeCount")
+                .setValue(ServerValue.increment(1));
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        releasePlayer();
+        if (userSettingsListener != null) {
+            userSettingsListener.remove();
+        }
+        if (subscriptionListener != null) {
+            subscriptionListener.remove();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (player != null) {
+            player.release();
+        }
+        if (videoStatRef != null && statListener != null) {
+            videoStatRef.removeEventListener(statListener);
+        }
+        if (subscriptionListener != null) {
+            subscriptionListener.remove();
+        }
     }
 
     private String formatViewCount(long count) {
@@ -544,8 +741,22 @@ public class VideoActivity extends AppCompatActivity {
         return String.format("%.1fM", count / 1000000.0);
     }
 
+    private String formatSubscriberCount(long count) {
+        if (count < 1000) return String.valueOf(count);
+        if (count < 1000000) return String.format("%.1fK", count / 1000.0);
+        return String.format("%.1fM", count / 1000000.0);
+    }
+
     private String getRelativeTime(Timestamp timestamp) {
         if (timestamp == null) return "";
-        return DateUtils.getRelativeTimeSpanString(timestamp.toDate().getTime(), System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString();
+
+        long timeInMillis = timestamp.toDate().getTime();
+        long now = System.currentTimeMillis();
+
+        return DateUtils.getRelativeTimeSpanString(
+                timeInMillis,
+                now,
+                DateUtils.MINUTE_IN_MILLIS
+        ).toString();
     }
 }
