@@ -29,7 +29,6 @@ import com.example.metube.model.Video;
 import com.example.metube.ui.upload.UploadActivity;
 import com.example.metube.ui.search.SearchActivity;
 import com.example.metube.ui.video.VideoActivity;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -271,15 +270,15 @@ public class HomepageActivity extends AppCompatActivity {
         View tabHome = bottomNavView.findViewById(R.id.tabHome);
         View tabCreator = bottomNavView.findViewById(R.id.tabCreator);
         View tabUpload = bottomNavView.findViewById(R.id.tabUpload);
-        View tabSubs = bottomNavView.findViewById(R.id.tabSubs);
+        View tabSubs = bottomNavView.findViewById(R.id.tabWatch);
         View tabProfile = bottomNavView.findViewById(R.id.tabProfile);
 
         ivHome = bottomNavView.findViewById(R.id.iv_home);
         tvHome = bottomNavView.findViewById(R.id.tv_home);
         ivCreator = bottomNavView.findViewById(R.id.iv_creator);
         tvCreator = bottomNavView.findViewById(R.id.tv_creator);
-        ivSubs = bottomNavView.findViewById(R.id.iv_subs);
-        tvSubs = bottomNavView.findViewById(R.id.tv_subs);
+        ivSubs = bottomNavView.findViewById(R.id.iv_watch);
+        tvSubs = bottomNavView.findViewById(R.id.tv_watch);
         ivProfile = bottomNavView.findViewById(R.id.iv_profile);
         tvProfile = bottomNavView.findViewById(R.id.tv_profile);
 
@@ -296,7 +295,7 @@ public class HomepageActivity extends AppCompatActivity {
         });
         tabSubs.setOnClickListener(v -> {
             updateTabSelection(ivSubs);
-            loadFragment(new SubscriptionsFragment());
+            loadFragment(new WatchTogetherFragment());
         });
         tabProfile.setOnClickListener(v -> {
             updateTabSelection(ivProfile);
