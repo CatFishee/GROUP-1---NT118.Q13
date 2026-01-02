@@ -1,16 +1,20 @@
 package com.example.metube.ui.playlist;
 
+import android.content.Context;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.example.metube.ui.history.HistoryMenuBottomSheet;
 import com.example.metube.utils.TimeUtil;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -24,9 +28,19 @@ import java.util.Locale;
 public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdapter.ViewHolder> {
 
     private List<Video> videos;
+    private OnPlaylistVideoActionListener listener;
+    private String playlistTitle;
 
-    public PlaylistVideoAdapter(List<Video> videos) {
+    public PlaylistVideoAdapter(List<Video> videos, OnPlaylistVideoActionListener listener) {
         this.videos = videos;
+        this.listener = listener;
+    }
+    public interface OnPlaylistVideoActionListener {
+        void onRemoveVideo(Video video, int position);
+        void onShareVideo(Video video);
+    }
+    public void updatePlaylistTitle(String title) {
+        this.playlistTitle = title;
     }
 
     @NonNull
@@ -40,6 +54,7 @@ public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdap
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Video video = videos.get(position);
+        Context context = holder.itemView.getContext();
 
         holder.tvTitle.setText(video.getTitle());
         holder.tvDuration.setText(TimeUtil.formatDuration(video.getDuration()));
@@ -107,12 +122,34 @@ public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdap
                     holder.tvUploader.setText("Unknown • 0 views • " + finalTimeAgo);
                 });
 
-
         // Click mở video
         holder.itemView.setOnClickListener(v -> {
             android.content.Intent intent = new android.content.Intent(holder.itemView.getContext(), com.example.metube.ui.video.VideoActivity.class);
             intent.putExtra("video_id", video.getVideoID());
             holder.itemView.getContext().startActivity(intent);
+        });
+        holder.btnMore.setOnClickListener(v -> {
+            // 1. Ép kiểu Context sang AppCompatActivity để lấy FragmentManager
+            AppCompatActivity activity = (AppCompatActivity) context;
+            int currentPosition = holder.getAdapterPosition();
+
+            // 2. Tạo BottomSheet
+            // ID để xóa: Trong playlist ta dùng videoID làm key để xóa khỏi mảng
+            String idToRemove = video.getVideoID();
+
+            if (currentPosition == RecyclerView.NO_POSITION) return;
+
+            HistoryMenuBottomSheet bottomSheet = new HistoryMenuBottomSheet(
+                    video,
+                    idToRemove,
+                    currentPosition,  // ✅ Dùng vị trí thực tế
+                    HistoryMenuBottomSheet.TYPE_PLAYLIST,
+                    playlistTitle,
+                    (HistoryMenuBottomSheet.HistoryMenuListener) activity
+            );
+
+            // 3. Hiển thị (Đây là đoạn thay thế cho dấu chấm chấm)
+            bottomSheet.show(activity.getSupportFragmentManager(), "PlaylistMenu");
         });
     }
     // Hàm format số view (1000 -> 1K)
@@ -126,7 +163,7 @@ public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdap
     @Override public int getItemCount() { return videos != null ? videos.size() : 0; }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView ivThumbnail, ivDragHandle; // Drag Handle ở đây
+        ImageView ivThumbnail, ivDragHandle, btnMore; // Drag Handle ở đây
         TextView tvTitle, tvUploader, tvDuration;
 
         ViewHolder(@NonNull View itemView) {
@@ -138,6 +175,7 @@ public class PlaylistVideoAdapter extends RecyclerView.Adapter<PlaylistVideoAdap
 
             // Nếu bạn muốn xử lý sự kiện kéo thả sau này thì ánh xạ nó, giờ để hiển thị thì không cần cũng được
             ivDragHandle = itemView.findViewById(R.id.iv_drag_handle);
+            btnMore = itemView.findViewById(R.id.btn_more);
         }
     }
 }

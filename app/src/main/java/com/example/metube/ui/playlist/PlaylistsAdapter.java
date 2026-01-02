@@ -30,6 +30,14 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
     public PlaylistsAdapter(List<Playlist> playlists) {
         if (playlists != null) this.playlists = playlists;
     }
+    public interface OnPlaylistMoreClickListener {
+        void onMoreClick(Playlist playlist);
+    }
+    private OnPlaylistMoreClickListener moreClickListener;
+
+    public void setOnPlaylistMoreClickListener(OnPlaylistMoreClickListener listener) {
+        this.moreClickListener = listener;
+    }
 
     @NonNull @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -72,6 +80,11 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
             Intent intent = new Intent(holder.itemView.getContext(), PlaylistDetailActivity.class);
             intent.putExtra("playlist_id", playlist.getPlaylistId()); // Truyền ID sang
             holder.itemView.getContext().startActivity(intent);
+        });
+        holder.btnMore.setOnClickListener(v -> {
+            if (moreClickListener != null) {
+                moreClickListener.onMoreClick(playlist);
+            }
         });
     }
     private void loadThumbnailAndColor(ViewHolder holder, String url) {
@@ -118,7 +131,7 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvTitle, tvInfo, tvCount;
-        ImageView ivThumb;
+        ImageView ivThumb, btnMore;
         View viewStack; // Ánh xạ view stack
 
         ViewHolder(@NonNull View itemView) {
@@ -128,6 +141,7 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
             tvCount = itemView.findViewById(R.id.tv_video_count);
             ivThumb = itemView.findViewById(R.id.iv_playlist_thumb);
             viewStack = itemView.findViewById(R.id.view_stack_1);
+            btnMore = itemView.findViewById(R.id.btn_more);
         }
     }
 }

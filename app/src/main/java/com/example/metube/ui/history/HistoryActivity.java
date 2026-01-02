@@ -90,6 +90,8 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
                         historyItem.getVideo(),
                         historyItem.getDocumentId(),
                         position,
+                        HistoryMenuBottomSheet.TYPE_HISTORY,  // ← Thêm type
+                        "",                                    // ← Playlist title (rỗng vì đây là History)
                         this
                 );
                 bottomSheet.show(getSupportFragmentManager(), "HistoryMenu");

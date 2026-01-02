@@ -81,5 +81,10 @@
         <activity
             android:name=".ui.playlist.EditPlaylistActivity"
             android:exported="false" />
+        <activity android:name=".ui.downloads.DownloadsActivity" />
+        <activity android:name=".ui.video.YourVideosActivity" />
+        <activity
+            android:name=".ui.video.EditYourVideoActivity"
+            android:exported="false" />
     </application>
 </manifest>

@@ -9,7 +9,7 @@
 
     <!-- 1. Remove from watch history -->
     <LinearLayout
-        android:id="@+id/option_remove_history"
+        android:id="@+id/option_remove"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -24,6 +24,7 @@
             android:src="@drawable/ic_delete" />
 
         <TextView
+            android:id="@+id/tv_remove_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Remove from watch history"

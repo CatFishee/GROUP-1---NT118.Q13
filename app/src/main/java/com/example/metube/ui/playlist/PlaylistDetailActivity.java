@@ -33,11 +33,13 @@ import com.bumptech.glide.request.transition.Transition;
 import com.example.metube.R;
 import com.example.metube.model.Playlist;
 import com.example.metube.model.Video;
+import com.example.metube.ui.history.HistoryMenuBottomSheet;
 import com.example.metube.ui.video.VideoActivity;
 import com.example.metube.utils.DownloadUtil;
 import com.example.metube.utils.VideoQueueManager;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldPath;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -49,7 +51,7 @@ import java.util.Map;
 import de.hdodenhof.circleimageview.CircleImageView;
 
 
-public class PlaylistDetailActivity extends AppCompatActivity {
+public class PlaylistDetailActivity extends AppCompatActivity implements HistoryMenuBottomSheet.HistoryMenuListener{
 
     private String playlistId;
     private FirebaseFirestore firestore;
@@ -57,7 +59,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     // UI Components
     private View viewGradientBg;
     private ImageView ivCover, btnBack;
-    private TextView tvTitle, tvOwner, tvMeta;
+    private TextView tvTitle, tvOwner, tvMeta, tvDescription;
     private RecyclerView rvVideos;
 
     // Adapter riêng cho Playlist (để có icon kéo thả)
@@ -77,6 +79,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
     );
 
 
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -93,11 +96,61 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         initViews();
 
         // Setup RecyclerView
-        adapter = new PlaylistVideoAdapter(videoList);
+        adapter = new PlaylistVideoAdapter(videoList, new PlaylistVideoAdapter.OnPlaylistVideoActionListener() {
+            @Override
+            public void onRemoveVideo(Video video, int position) {
+                removeVideoFromPlaylist(video.getVideoID(), position);
+            }
+
+            @Override
+            public void onShareVideo(Video video) {
+                com.example.metube.utils.ShareUtil.shareVideo(
+                        PlaylistDetailActivity.this,
+                        video.getTitle(),
+                        video.getVideoURL()
+                );
+            }
+        });
         rvVideos.setLayoutManager(new LinearLayoutManager(this));
         rvVideos.setAdapter(adapter);
 
+
         loadPlaylistInfo();
+    }
+    private void removeVideoFromPlaylist(String videoIdToRemove, int position) {
+        if (playlistId == null) return;
+
+        // Dùng FieldValue.arrayRemove để xóa ID khỏi mảng videoIds
+        firestore.collection("playlists").document(playlistId)
+                .update("videoIds", FieldValue.arrayRemove(videoIdToRemove))
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Removed from playlist", Toast.LENGTH_SHORT).show();
+
+                    // Cập nhật giao diện: Xóa khỏi list và báo Adapter
+                    if (position >= 0 && position < videoList.size()) {
+                        videoList.remove(position);
+                        adapter.notifyItemRemoved(position);
+                        adapter.notifyItemRangeChanged(position, videoList.size());
+
+                        // (Tùy chọn) Cập nhật lại số lượng video ở Header nếu muốn
+                        // loadPlaylistInfo(); // Hoặc trừ thủ công số đếm
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to remove: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+    @Override
+    public void onRemoveFromHistory(String videoId, int position) {
+        // Xóa videoId khỏi mảng videoIds của Playlist trên Firestore
+        firestore.collection("playlists").document(playlistId)
+                .update("videoIds", FieldValue.arrayRemove(videoId))
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Removed from playlist", Toast.LENGTH_SHORT).show();
+                    // Cập nhật giao diện
+                    videoList.remove(position);
+                    adapter.notifyItemRemoved(position);
+                });
     }
 
     private void initViews() {
@@ -106,6 +159,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         tvTitle = findViewById(R.id.tv_playlist_title);
         tvOwner = findViewById(R.id.tv_owner_name);
         tvMeta = findViewById(R.id.tv_playlist_meta);
+        tvDescription = findViewById(R.id.tv_playlist_description);
         rvVideos = findViewById(R.id.rv_videos);
         btnBack = findViewById(R.id.btn_back);
         // Ánh xạ nút
@@ -229,6 +283,7 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     if (playlist == null) return;
 
                     tvTitle.setText(playlist.getTitle());
+                    adapter.updatePlaylistTitle(playlist.getTitle());
 
                     firestore.collection("users").document(playlist.getOwnerId()).get()
                             .addOnSuccessListener(userDoc -> {
@@ -245,6 +300,16 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     int count = (playlist.getVideoIds() != null) ? playlist.getVideoIds().size() : 0;
                     String visibility = playlist.getVisibility() != null ? playlist.getVisibility() : "Private";
                     tvMeta.setText(count + " videos • " + visibility);
+
+                    String desc = playlist.getDescription();
+
+                    // Kiểm tra null hoặc rỗng
+                    if (desc != null && !desc.trim().isEmpty()) {
+                        tvDescription.setText(desc);
+                        tvDescription.setVisibility(View.VISIBLE);
+                    } else {
+                        tvDescription.setVisibility(View.GONE);
+                    }
 
                     // --- LOGIC MỚI: ƯU TIÊN CUSTOM THUMBNAIL ---
                     String customThumb = documentSnapshot.getString("thumbnailURL");
@@ -267,7 +332,6 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     }
                 });
     }
-
 
     private void loadVideosInPlaylist(List<String> videoIds, boolean shouldSetCover) {
         String firstVideoId = videoIds.get(0);
@@ -331,9 +395,15 @@ public class PlaylistDetailActivity extends AppCompatActivity {
                     break;
 
                 case 3: // Most popular (Nhiều view nhất lên đầu)
-                    Collections.sort(videoList, (v1, v2) ->
-                            Long.compare(v2.getViewCount(), v1.getViewCount())
-                    );
+                    Collections.sort(videoList, (v1, v2) -> {
+                        // Xử lý null để tránh lỗi (coi như 0 view)
+                        long view1 = v1.getViewCount(); // Đảm bảo getter trả về long primitive hoặc check null
+                        long view2 = v2.getViewCount();
+
+                        // So sánh GIẢM DẦN: v2 - v1
+                        // Dùng Long.compare để an toàn với số lớn
+                        return Long.compare(view2, view1);
+                    });
                     break;
 
                 case 4: // Date published (newest) -> Ngày tạo mới nhất
@@ -441,4 +511,37 @@ public class PlaylistDetailActivity extends AppCompatActivity {
         );
         viewGradientBg.setBackground(gd);
     }
+    @Override
+    public void onDownload(Video video) {
+        com.example.metube.utils.DownloadUtil.downloadVideo(
+                this,
+                video.getVideoURL(),
+                video.getTitle()
+        );
+        Toast.makeText(this, "Downloading video...", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onShare(Video video) {
+        com.example.metube.utils.ShareUtil.shareVideo(
+                this,
+                video.getTitle(),
+                video.getVideoURL()
+        );
+    }
+
+    @Override
+    public void onPlayNextInQueue(Video video) {
+        // Thêm video vào hàng chờ
+        com.example.metube.utils.VideoQueueManager.getInstance().playNext(video);
+        Toast.makeText(this, "Video added to play next", Toast.LENGTH_SHORT).show();
+    }
+    @Override
+    public void onSaveToPlaylist(Video video) {
+        // Mở bottom sheet để chọn playlist
+        com.example.metube.ui.playlist.AddToPlaylistBottomSheet bottomSheet =
+                new com.example.metube.ui.playlist.AddToPlaylistBottomSheet(video);
+        bottomSheet.show(getSupportFragmentManager(), "AddToPlaylistBottomSheet");
+    }
+
 }

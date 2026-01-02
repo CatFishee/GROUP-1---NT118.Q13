@@ -25,8 +25,12 @@ public class Video {
     @Exclude
     private String historyDocId; // ID để xóa lịch sử
     private long viewCount; // Temporary field for sorting (not stored in Firestore)
+    private String visibility = "Private";;
+    private boolean allowComments = true;
 
-    public Video() {}
+    public Video() {
+        this.visibility = "Private";
+    }
 
     public Video(String videoID, String uploaderID, String title, String description,
                  List<String> topics, String thumbnailURL, String videoURL,
@@ -40,6 +44,7 @@ public class Video {
         this.videoURL = videoURL;
         this.duration = duration;
         this.createdAt = createdAt;
+
     }
 
     // Getters & Setters
@@ -92,4 +97,10 @@ public class Video {
     public String getHistoryDocId() { return historyDocId; }
     @Exclude
     public void setHistoryDocId(String historyDocId) { this.historyDocId = historyDocId; }
+    public String getVisibility() {
+        return visibility != null ? visibility : "Private";
+    }
+    public void setVisibility(String visibility) { this.visibility = visibility; }
+    public boolean isAllowComments() { return allowComments; }
+    public void setAllowComments(boolean allowComments) { this.allowComments = allowComments; }
 }

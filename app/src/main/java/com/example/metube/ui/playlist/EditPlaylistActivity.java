@@ -139,7 +139,7 @@ public class EditPlaylistActivity extends AppCompatActivity {
 
         Map<String, Object> updates = new HashMap<>();
         updates.put("title", newTitle);
-        // updates.put("description", newDesc); // Uncomment nếu bạn đã thêm field này vào model
+        updates.put("description", newDesc);
         updates.put("visibility", currentVisibility);
 
         // TRƯỜNG HỢP 1: Có chọn ảnh mới -> Upload trước

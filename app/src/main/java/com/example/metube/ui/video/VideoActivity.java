@@ -11,7 +11,6 @@ import android.widget.ImageButton;
 import androidx.appcompat.widget.PopupMenu;
 import android.widget.Button;
 import android.widget.ScrollView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
@@ -33,11 +32,9 @@ import com.google.android.material.card.MaterialCardView;
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
-import com.example.metube.model.VideoStat;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
 import com.google.firebase.database.*;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -130,6 +127,26 @@ public class VideoActivity extends AppCompatActivity {
         initViews();
         setupDescriptionToggle();
         checkUserHistorySetting();
+
+        String localPath = getIntent().getStringExtra("local_video_path");
+
+        if (localPath != null) {
+            // PHÁT VIDEO OFFLINE
+            tvTitle.setText("Offline Video"); // Hoặc lấy tên file
+            tvUploader.setText("Downloaded");
+
+            // Tạo MediaItem từ đường dẫn file
+            MediaItem mediaItem = MediaItem.fromUri(Uri.parse(localPath));
+            player.setMediaItem(mediaItem);
+            player.prepare();
+            player.play();
+
+            // Ẩn các nút Like/Subscribe/Comment vì offline không dùng được
+            // btnLike.setEnabled(false);
+            // ...
+
+            return; // Thoát hàm onCreate, không chạy logic Firestore bên dưới
+        }
     }
 
     private void checkUserHistorySetting() {

@@ -12,6 +12,7 @@ public class Playlist {
     private List<String> videoIds; // Danh sách ID các video trong playlist
     private List<String> containedTopics;
     private String thumbnailURL;
+    private String description;
 
 
     @ServerTimestamp
@@ -50,4 +51,6 @@ public class Playlist {
     public void setContainedTopics(List<String> containedTopics) { this.containedTopics = containedTopics; }
     public String getThumbnailURL() { return thumbnailURL; }
     public void setThumbnailURL(String thumbnailURL) { this.thumbnailURL = thumbnailURL; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 }

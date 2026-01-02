@@ -4,6 +4,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import com.example.metube.R;
@@ -25,11 +27,18 @@ public class HistoryMenuBottomSheet extends BottomSheetDialogFragment {
     private String historyDocId; // ID document để xóa
     private int position; // Vị trí trong list để xóa UI mượt
     private HistoryMenuListener listener;
+    public static final int TYPE_HISTORY = 0;
+    public static final int TYPE_PLAYLIST = 1;
 
-    public HistoryMenuBottomSheet(Video video, String historyDocId, int position, HistoryMenuListener listener) {
+    private int menuType = TYPE_HISTORY; // Mặc định là History
+    private String playlistTitle = "";   // Dùng cho Playlist (Remove from [Name])
+
+    public HistoryMenuBottomSheet(Video video, String docId, int position, int type, String title, HistoryMenuListener listener) {
         this.video = video;
-        this.historyDocId = historyDocId;
+        this.historyDocId = docId;
         this.position = position;
+        this.menuType = type;
+        this.playlistTitle = title;
         this.listener = listener;
     }
 
@@ -43,9 +52,23 @@ public class HistoryMenuBottomSheet extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
+        TextView tvRemove = view.findViewById(R.id.tv_remove_text);
+        if (menuType == TYPE_HISTORY) {
+            tvRemove.setText("Remove from watch history");
+        } else if (menuType == TYPE_PLAYLIST) {
+            // Thay đổi text: Remove from [Tên Playlist]
+            tvRemove.setText("Remove from " + playlistTitle);
+
+            // Icon có thể đổi thành dấu gạch chéo hoặc thùng rác tùy ý
+            // ((ImageView)view.findViewById(R.id.iv_remove_icon)).setImageResource(...);
+        }
+
         // 1. Remove
-        view.findViewById(R.id.option_remove_history).setOnClickListener(v -> {
-            if (listener != null) listener.onRemoveFromHistory(historyDocId, position);
+        view.findViewById(R.id.option_remove).setOnClickListener(v -> {
+            if (listener != null) {
+                // Gọi hàm remove chung, Activity sẽ tự biết phải xóa ở đâu
+                listener.onRemoveFromHistory(historyDocId, position);
+            }
             dismiss();
         });
 

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:paddingVertical="8dp"
+    android:background="@drawable/background_bottom_sheet_white">
+
+    <!-- 1. Save to playlist -->
+    <LinearLayout
+        android:id="@+id/option_save_playlist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_playlist_play"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Save to playlist" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- 2. Share video -->
+    <LinearLayout
+        android:id="@+id/option_share"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_share"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Share video" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- 3. Edit (Cây bút) -->
+    <LinearLayout
+        android:id="@+id/option_edit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_edit"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Edit" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- 4. Save to device (Download) -->
+    <LinearLayout
+        android:id="@+id/option_save_device"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_download"/> <!-- Icon mũi tên xuống -->
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Save to device" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <!-- 5. Delete -->
+    <LinearLayout
+        android:id="@+id/option_delete"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_delete"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Delete" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0" android:layout_marginVertical="8dp"/>
+
+    <!-- 6. Cancel -->
+    <LinearLayout
+        android:id="@+id/btn_cancel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:clickable="true"
+        android:background="?attr/selectableItemBackground">
+        <ImageView android:layout_width="24dp" android:layout_height="24dp"
+            android:src="@drawable/ic_close"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Cancel" android:textSize="16sp"
+            android:textColor="@color/app_main_color" android:layout_marginStart="16dp"/>
+    </LinearLayout>
+
+</LinearLayout>

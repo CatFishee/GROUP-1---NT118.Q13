@@ -30,6 +30,7 @@ import com.example.metube.ui.login.SwitchAccountDialog;
 import com.example.metube.ui.playlist.CreatePlaylistBottomSheet;
 import com.example.metube.ui.playlist.PlaylistsActivity;
 import com.example.metube.ui.playlist.PlaylistPreviewAdapter;
+import com.example.metube.ui.video.YourVideosActivity;
 import com.example.metube.utils.AccountUtil;
 import com.example.metube.utils.ShareUtil;
 import com.google.firebase.auth.FirebaseAuth;
@@ -60,7 +61,7 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
     private TextView tvUserName, tvChannelName, btnViewChannel, btnViewAllPlaylists;
     private ImageView btnAddPlaylist;
     private View btnSwitchAccount, btnShareChannel;
-    private TextView btnViewAllHistory;
+    private TextView btnViewAllHistory, btnDownloads, btnYourVideos;
     private RecyclerView rvHistory;
     private User mUser;
 
@@ -118,6 +119,8 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         btnSwitchAccount = view.findViewById(R.id.btn_switch_account);
         btnShareChannel = view.findViewById(R.id.btn_share_channel);
         btnViewAllHistory = view.findViewById(R.id.btn_view_all_history);
+        btnDownloads = view.findViewById(R.id.btn_downloads);
+        btnYourVideos = view.findViewById(R.id.btn_your_videos);
         rvHistory = view.findViewById(R.id.rv_history);
         btnAddPlaylist = view.findViewById(R.id.btn_add_playlist);
         btnViewAllPlaylists = view.findViewById(R.id.btn_view_all_playlists);
@@ -135,7 +138,9 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
                     video,
                     video.getHistoryDocId(),
                     position,
-                    this // Fragment này sẽ xử lý sự kiện
+                    HistoryMenuBottomSheet.TYPE_HISTORY,  // ✅ THÊM: Loại menu
+                    "",                                    // ✅ THÊM: Playlist title (rỗng vì đây là History)
+                    this                                   // Listener
             );
             bottomSheet.show(getParentFragmentManager(), "HistoryMenu");
         });
@@ -190,6 +195,16 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         View.OnClickListener notImplementedListener = v ->
                 Toast.makeText(getContext(), "Feature not implemented yet", Toast.LENGTH_SHORT).show();
         btnViewChannel.setOnClickListener(notImplementedListener);
+
+        btnDownloads.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), com.example.metube.ui.downloads.DownloadsActivity.class);
+            startActivity(intent);
+        });
+        btnYourVideos.setOnClickListener(v -> {
+            Intent intent = new Intent(getContext(), YourVideosActivity.class);
+            startActivity(intent);
+        });
+
     }
 
     /**
