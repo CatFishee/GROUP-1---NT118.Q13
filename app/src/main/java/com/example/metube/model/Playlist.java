@@ -11,6 +11,7 @@ public class Playlist {
     private String visibility; // "PUBLIC", "UNLISTED", "PRIVATE"
     private List<String> videoIds; // Danh sách ID các video trong playlist
     private List<String> containedTopics;
+    private String thumbnailURL;
 
 
     @ServerTimestamp
@@ -24,6 +25,7 @@ public class Playlist {
         this.title = title;
         this.visibility = visibility;
         this.videoIds = videoIds;
+
     }
 
     // Getters and Setters
@@ -46,4 +48,6 @@ public class Playlist {
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
     public List<String> getContainedTopics() { return containedTopics; }
     public void setContainedTopics(List<String> containedTopics) { this.containedTopics = containedTopics; }
+    public String getThumbnailURL() { return thumbnailURL; }
+    public void setThumbnailURL(String thumbnailURL) { this.thumbnailURL = thumbnailURL; }
 }

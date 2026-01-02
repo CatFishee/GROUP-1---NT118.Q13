@@ -209,4 +209,11 @@ public class PlaylistsActivity extends AppCompatActivity {
         });
         popup.show();
     }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Gọi lại hàm load dữ liệu mỗi khi màn hình này xuất hiện
+        // Để cập nhật các thay đổi (Thumbnail mới, Tên mới...)
+        loadUserPlaylists();
+    }
 }
