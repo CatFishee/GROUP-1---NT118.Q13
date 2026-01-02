@@ -34,6 +34,7 @@ import com.example.metube.R;
 import com.example.metube.model.Playlist;
 import com.example.metube.model.Video;
 import com.example.metube.ui.history.HistoryMenuBottomSheet;
+import com.example.metube.ui.video.MakeShareableDialog;
 import com.example.metube.ui.video.VideoActivity;
 import com.example.metube.utils.DownloadUtil;
 import com.example.metube.utils.VideoQueueManager;
@@ -69,6 +70,7 @@ public class PlaylistDetailActivity extends AppCompatActivity implements History
     private ImageView btnDownload, btnEdit, btnShare, btnAddVideo;
     private List<Video> originalVideoList = new ArrayList<>();
     private CircleImageView ivOwnerAvatar;
+    private String currentVisibility = "Private";
     private final ActivityResultLauncher<Intent> editPlaylistLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
@@ -212,15 +214,7 @@ public class PlaylistDetailActivity extends AppCompatActivity implements History
             // Hiển thị hộp thoại xác nhận trước khi tải hàng loạt
             showDownloadConfirmationDialog();
         });
-        btnShare.setOnClickListener(v -> {
-            // Tạo link giả lập cho playlist
-            String link = "https://metube.app/playlist/" + playlistId;
-            // Lấy tiêu đề playlist hiện tại
-            String title = tvTitle.getText().toString();
-
-            // Gọi ShareUtil (bạn đã có sẵn hàm shareChannel, tái sử dụng được)
-            com.example.metube.utils.ShareUtil.sharePlaylist(this, title, link);
-        });
+        btnShare.setOnClickListener(v -> handleSharePlaylist());
         btnAddVideo.setOnClickListener(v -> {
             // Chuyển sang màn hình tìm kiếm
             Intent intent = new Intent(this, com.example.metube.ui.search.SearchActivity.class);
@@ -241,6 +235,50 @@ public class PlaylistDetailActivity extends AppCompatActivity implements History
         findViewById(R.id.btn_sort_playlist).setOnClickListener(this::showSortPopup);
         findViewById(R.id.btn_more_options).setOnClickListener(this::showPlaylistOptionsMenu);
     }
+    private void handleSharePlaylist() {
+        // Kiểm tra visibility
+        if ("Private".equalsIgnoreCase(currentVisibility)) {
+            // Nếu Private -> Hiển thị dialog bắt chọn Public hoặc Unlisted
+            showMakeShareableDialog();
+        } else {
+            // Nếu đã Public hoặc Unlisted -> Share ngay
+            sharePlaylist();
+        }
+    }
+    private void showMakeShareableDialog() {
+        MakeShareableDialog dialog = new MakeShareableDialog(this, visibility -> {
+            // Callback khi user chọn Public hoặc Unlisted
+            updatePlaylistVisibility(visibility);
+        });
+
+        dialog.setTitle("Make playlist shareable");
+        dialog.show();
+    }
+    private void updatePlaylistVisibility(String newVisibility) {
+        firestore.collection("playlists").document(playlistId)
+                .update("visibility", newVisibility)
+                .addOnSuccessListener(aVoid -> {
+                    currentVisibility = newVisibility;
+
+                    // Cập nhật UI
+                    int count = videoList.size();
+                    tvMeta.setText(count + " videos • " + newVisibility);
+
+                    Toast.makeText(this, "Playlist is now " + newVisibility, Toast.LENGTH_SHORT).show();
+
+                    // Share ngay sau khi cập nhật
+                    sharePlaylist();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to update visibility: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+    private void sharePlaylist() {
+        String link = "https://metube.app/playlist/" + playlistId;
+        String title = tvTitle.getText().toString();
+        com.example.metube.utils.ShareUtil.sharePlaylist(this, title, link);
+    }
+
     private void showDownloadConfirmationDialog() {
         int count = videoList.size();
 
@@ -298,8 +336,8 @@ public class PlaylistDetailActivity extends AppCompatActivity implements History
                             });
 
                     int count = (playlist.getVideoIds() != null) ? playlist.getVideoIds().size() : 0;
-                    String visibility = playlist.getVisibility() != null ? playlist.getVisibility() : "Private";
-                    tvMeta.setText(count + " videos • " + visibility);
+                    currentVisibility = playlist.getVisibility() != null ? playlist.getVisibility() : "Private";
+                    tvMeta.setText(count + " videos • " + currentVisibility);
 
                     String desc = playlist.getDescription();
 

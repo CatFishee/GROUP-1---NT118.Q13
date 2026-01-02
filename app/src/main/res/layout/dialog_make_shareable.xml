@@ -14,7 +14,7 @@
         android:text="Make your playlist shareable"
         android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="@color/black"
+        android:textColor="@color/app_main_color"
         android:layout_marginBottom="24dp"/>
 
     <!-- Option 1: Public -->
@@ -40,14 +40,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginStart="16dp">
+            android:layout_marginStart="5dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Public"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/app_main_color"
                 android:textStyle="bold"/>
 
             <TextView
@@ -83,14 +83,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:orientation="vertical"
-            android:layout_marginStart="16dp">
+            android:layout_marginStart="5dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Unlisted"
                 android:textSize="16sp"
-                android:textColor="@color/black"
+                android:textColor="@color/app_main_color"
                 android:textStyle="bold"/>
 
             <TextView
