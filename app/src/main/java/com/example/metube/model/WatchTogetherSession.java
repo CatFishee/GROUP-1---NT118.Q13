@@ -1,38 +1,53 @@
 package com.example.metube.model;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WatchTogetherSession {
-    public String watchTogetherSessionID;
-    public String videoID;
-    public String hostID;
-    public List<String> participantID;
-    public PlaybackState playbackState;
+    private String sessionID;
+    private String videoID; // Stores URL
+    private String videoTitle;
+    private String hostID;
+    private Map<String, Long> participants = new HashMap<>(); // Key: UserID, Value: Join Timestamp
+    private PlaybackState playbackState;
+    private long currentTimestamp;
+    private float playbackSpeed;
+
     public enum PlaybackState {
         PAUSED,
         PLAYING,
         STOPPED
     }
-    public long currentTimestamp;
-    public WatchTogetherSession() {}
 
-    public WatchTogetherSession(String watchTogetherSessionID, String videoID, String hostID, List<String> participantID, WatchTogetherSession.PlaybackState playbackState) {
-        this.watchTogetherSessionID = watchTogetherSessionID;
-        this.videoID = videoID;
-        this.hostID = hostID;
-        this.participantID = participantID;
-        this.playbackState = playbackState;
+    public WatchTogetherSession() {
+        // Default constructor required for DataSnapshot.getValue(WatchTogetherSession.class)
+        this.playbackState = PlaybackState.PAUSED;
+        this.playbackSpeed = 1.0f;
+        this.currentTimestamp = 0;
     }
-    public String getWatchTogetherSessionID() { return watchTogetherSessionID; }
-    public void setWatchTogetherSessionID(String watchTogetherSessionID) { this.watchTogetherSessionID = watchTogetherSessionID; }
+
+    // Getters and Setters
+    public String getSessionID() { return sessionID; }
+    public void setSessionID(String sessionID) { this.sessionID = sessionID; }
 
     public String getVideoID() { return videoID; }
     public void setVideoID(String videoID) { this.videoID = videoID; }
 
+    public String getVideoTitle() { return videoTitle; }
+    public void setVideoTitle(String videoTitle) { this.videoTitle = videoTitle; }
+
     public String getHostID() { return hostID; }
     public void setHostID(String hostID) { this.hostID = hostID; }
 
-    public WatchTogetherSession.PlaybackState getPlaybackState() { return playbackState; }
-    public void setStatus(WatchTogetherSession.PlaybackState playbackState) { this.playbackState = playbackState; }
+    public Map<String, Long> getParticipants() { return participants; }
+    public void setParticipants(Map<String, Long> participants) { this.participants = participants; }
 
+    public PlaybackState getPlaybackState() { return playbackState; }
+    public void setPlaybackState(PlaybackState playbackState) { this.playbackState = playbackState; }
+
+    public long getCurrentTimestamp() { return currentTimestamp; }
+    public void setCurrentTimestamp(long currentTimestamp) { this.currentTimestamp = currentTimestamp; }
+
+    public float getPlaybackSpeed() { return playbackSpeed; }
+    public void setPlaybackSpeed(float playbackSpeed) { this.playbackSpeed = playbackSpeed; }
 }

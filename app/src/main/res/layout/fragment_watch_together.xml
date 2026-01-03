@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/white">
@@ -19,10 +20,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="24dp"
             android:text="Watch Together"
             android:textSize="24sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:layout_marginBottom="24dp"/>
 
         <EditText
             android:id="@+id/etRoomCode"
@@ -31,27 +32,27 @@
             android:hint="Enter 8-digit Code"
             android:inputType="number"
             android:maxLength="8"
-            android:textAlignment="center" />
+            android:textAlignment="center"/>
 
         <Button
             android:id="@+id/btnJoin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Join Room" />
+            android:text="Join Room"
+            android:layout_marginTop="16dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginVertical="16dp"
-            android:text="OR" />
+            android:layout_gravity="center"
+            android:text="OR"
+            android:layout_marginVertical="16dp"/>
 
         <Button
             android:id="@+id/btnCreate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Create New Room" />
+            android:text="Create New Room"/>
     </LinearLayout>
 
     <!-- STATE 2: ROOM -->
@@ -60,52 +61,124 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:visibility="gone">
+        android:visibility="gone"
+        tools:visibility="visible">
 
         <!-- Video Player -->
-        <com.google.android.exoplayer2.ui.PlayerView
-            android:id="@+id/playerView"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:background="#000000"
-            app:show_buffering="when_playing"
-            app:use_controller="true" />
+            android:layout_height="wrap_content">
 
-        <!-- Room Info Bar -->
+            <com.google.android.exoplayer2.ui.PlayerView
+                android:id="@+id/playerView"
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:background="#000000"
+                app:show_buffering="when_playing"
+                app:use_controller="true" />
+
+            <!-- GUEST OVERLAY: Visible only to guests -->
+            <!-- We place it at the bottom of the player container -->
+            <LinearLayout
+                android:id="@+id/layoutGuestControls"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:background="#80000000"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvGuestTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="00:00 / 00:00"
+                        android:textColor="#FFFFFF"
+                        android:textSize="12sp"/>
+
+                    <View android:layout_width="0dp" android:layout_height="0dp" android:layout_weight="1"/>
+
+                    <TextView
+                        android:id="@+id/tvGuestSpeed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="1.0x"
+                        android:textColor="#FFFFFF"
+                        android:textStyle="bold"
+                        android:textSize="12sp"/>
+                </LinearLayout>
+
+                <!-- enabled="false" prevents user interaction -->
+                <SeekBar
+                    android:id="@+id/sbGuestProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:enabled="false"
+                    android:max="100"
+                    android:progress="0"/>
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Room Info & Actions -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="#EEEEEE"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
             android:padding="12dp">
 
-            <TextView
-                android:id="@+id/tvRoomCodeDisplay"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Room: 00000000"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvRoomCodeDisplay"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Room: 00000000"
+                    android:textSize="16sp"
+                    android:textStyle="bold"/>
+
+                <TextView
+                    android:id="@+id/tvHostStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Status: Guest"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btnAddVideo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+ Add"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
 
             <Button
                 android:id="@+id/btnLeave"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minHeight="0dp"
-                android:paddingVertical="8dp"
                 android:text="Leave"
-                android:textSize="12sp" />
+                android:backgroundTint="#FF5252"/>
         </LinearLayout>
 
         <!-- Video Queue -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvVideoQueue"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:padding="8dp" />
+            android:layout_height="match_parent"
+            android:padding="8dp"/>
 
     </LinearLayout>
-
 </FrameLayout>
