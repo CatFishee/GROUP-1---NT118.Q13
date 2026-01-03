@@ -574,7 +574,8 @@ public class CreatorFragment extends Fragment {
         leftAxis.setDrawGridLines(true);
         leftAxis.setGridColor(gridColor);
         leftAxis.setTextColor(textColor);
-        leftAxis.setAxisMinimum(0f);
+        leftAxis.setAxisMinimum(0f);    // Bắt đầu tại 0
+
 
         chart.getAxisRight().setEnabled(false);
         chart.getLegend().setEnabled(false);

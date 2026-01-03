@@ -6,17 +6,36 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:paddingBottom="16dp">
 
-    <!-- Thumbnail của video -->
-    <ImageView
-        android:id="@+id/video_thumbnail"
+    <!-- Khung chứa Video & Thumbnail (Tỷ lệ 16:9) -->
+    <FrameLayout
+        android:id="@+id/video_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:scaleType="centerCrop"
-        tools:src="@drawable/logo_metube"
         app:layout_constraintDimensionRatio="16:9"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Trình phát Video Autoplay -->
+        <com.google.android.exoplayer2.ui.PlayerView
+            android:id="@+id/player_view_autoplay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            app:use_controller="false"
+            app:resize_mode="zoom"
+            app:surface_type="texture_view" /> <!-- TextureView mượt hơn cho danh sách cuộn -->
+        <!-- Hình nền (Hiện lúc chưa phát hoặc khi dừng) -->
+        <ImageView
+            android:id="@+id/video_thumbnail"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            tools:src="@drawable/logo_metube" />
+
+
+    </FrameLayout>
+
 
     <!-- Avatar của kênh -->
     <de.hdodenhof.circleimageview.CircleImageView
@@ -26,7 +45,7 @@
         android:layout_marginTop="12dp"
         android:layout_marginStart="12dp"
         tools:src="@drawable/logo_metube"
-        app:layout_constraintTop_toBottomOf="@id/video_thumbnail"
+        app:layout_constraintTop_toBottomOf="@id/video_container"
         app:layout_constraintStart_toStartOf="parent"/>
 
     <!-- Tiêu đề video -->

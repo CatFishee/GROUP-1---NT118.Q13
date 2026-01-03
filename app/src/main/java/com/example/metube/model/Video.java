@@ -25,11 +25,11 @@ public class Video {
     @Exclude
     private String historyDocId; // ID để xóa lịch sử
     private long viewCount; // Temporary field for sorting (not stored in Firestore)
-    private String visibility = "Private";;
+    private String visibility = "Public";;
     private boolean allowComments = true;
 
     public Video() {
-        this.visibility = "Private";
+        this.visibility = "Public";
     }
 
     public Video(String videoID, String uploaderID, String title, String description,

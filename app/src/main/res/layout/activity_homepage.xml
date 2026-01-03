@@ -10,28 +10,48 @@
         layout="@layout/layout_topbar"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ScrollView
+<!--    <ScrollView-->
+<!--        android:id="@+id/home_content_container"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="0dp"-->
+<!--        android:backgroundTint="@color/white"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/topBar"-->
+<!--        app:layout_constraintBottom_toTopOf="@id/bottomNav"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent">-->
+
+<!--        <LinearLayout-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:orientation="vertical">-->
+<!--            <include layout="@layout/layout_topic_filter" />-->
+<!--            <androidx.recyclerview.widget.RecyclerView-->
+<!--                android:id="@+id/recyclerViewVideos"-->
+<!--                android:backgroundTint="@color/white"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content" />-->
+<!--        </LinearLayout>-->
+<!--    </ScrollView>-->
+    <LinearLayout
         android:id="@+id/home_content_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:backgroundTint="@color/white"
+        android:orientation="vertical"
+        android:background="@color/bg_main"
         app:layout_constraintTop_toBottomOf="@id/topBar"
         app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <LinearLayout
+        <include layout="@layout/layout_topic_filter" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerViewVideos"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <include layout="@layout/layout_topic_filter" />
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/recyclerViewVideos"
-                android:backgroundTint="@color/white"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-    </ScrollView>
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="200dp" /> <!-- Thêm padding để video cuối có thể lên giữa màn hình -->
+    </LinearLayout>
     <!-- KHUNG CHỨA CHO CÁC FRAGMENT KHÁC -->
     <FrameLayout
         android:id="@+id/fragment_container"

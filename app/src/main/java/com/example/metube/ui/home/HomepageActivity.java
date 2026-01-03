@@ -35,6 +35,7 @@ import com.example.metube.ui.settings.SettingsActivity;
 import com.example.metube.ui.upload.UploadActivity;
 import com.example.metube.ui.search.SearchActivity;
 import com.example.metube.ui.video.VideoActivity;
+import com.example.metube.utils.NetworkUtil;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -58,7 +59,8 @@ public class HomepageActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private ListenerRegistration firestoreListener;
     private FrameLayout fragmentContainer;
-    private ScrollView homeContentContainer;
+//    private ScrollView homeContentContainer;
+    private LinearLayout homeContentContainer;
     private List<ImageView> tabImageViews;
     private List<TextView> tabTextViews;
     private ImageView ivHome, ivCreator, ivSubs, ivProfile;
@@ -94,6 +96,8 @@ public class HomepageActivity extends AppCompatActivity {
 
         setupBottomNav();
         setupTopBarActions();
+
+        setupAutoplay();
 
         // Default view
         showHomeContent();
@@ -456,6 +460,88 @@ public class HomepageActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (firestoreListener != null) firestoreListener.remove();
+//        if (firestoreListener != null) firestoreListener.remove();
+        if (videoAdapter != null) videoAdapter.releasePlayer();
+    }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (videoAdapter != null) {
+            boolean canAutoplay = shouldAutoplay();
+            videoAdapter.setAutoplayEnabled(canAutoplay);
+
+            // Nếu được phép phát, hãy thử phát video đang hiển thị ngay lập tức
+            if (canAutoplay) {
+                recyclerViewVideos.postDelayed(() -> {
+                    if (videoList != null && !videoList.isEmpty()) {
+                        videoAdapter.playVideoAt(0);
+                    }
+                }, 800); // Tăng delay lên một chút để chắc chắn RV đã load xong
+            }
+        }
+    }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (videoAdapter != null) videoAdapter.stopVideo();
+    }
+
+    private void setupAutoplay() {
+        recyclerViewVideos.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+                    if (layoutManager == null) return;
+
+                    int firstVisible = layoutManager.findFirstVisibleItemPosition();
+                    int lastVisible = layoutManager.findLastVisibleItemPosition();
+
+                    int targetPos = -1;
+
+                    // TRƯỜNG HỢP ĐẶC BIỆT 1: ĐANG Ở ĐỈNH (Hiện video đầu tiên)
+                    if (firstVisible == 0) {
+                        targetPos = 0;
+                    }
+                    // TRƯỜNG HỢP ĐẶC BIỆT 2: ĐANG Ở ĐÁY (Hiện video cuối cùng)
+                    else if (lastVisible == videoList.size() - 1) {
+                        targetPos = lastVisible;
+                    }
+                    // TRƯỜNG HỢP Ở GIỮA: Tìm item gần tâm màn hình nhất
+                    else {
+                        float closestToCenter = Float.MAX_VALUE;
+                        int screenCenter = recyclerView.getHeight() / 2;
+
+                        for (int i = firstVisible; i <= lastVisible; i++) {
+                            View itemView = layoutManager.findViewByPosition(i);
+                            if (itemView == null) continue;
+
+                            int itemCenter = (itemView.getTop() + itemView.getBottom()) / 2;
+                            int distance = Math.abs(screenCenter - itemCenter);
+
+                            if (distance < closestToCenter) {
+                                closestToCenter = distance;
+                                targetPos = i;
+                            }
+                        }
+                    }
+
+                    if (targetPos != -1 && shouldAutoplay()) {
+                        videoAdapter.playVideoAt(targetPos);
+                    }
+                }
+            }
+        });
+    }
+
+    private boolean shouldAutoplay() {
+        SharedPreferences prefs = getSharedPreferences("settings_prefs", MODE_PRIVATE);
+        int mode = prefs.getInt("playback_feeds_mode", 0); // 0: Always, 1: Wifi, 2: Off
+
+        if (mode == 0) return true;
+        if (mode == 1) return NetworkUtil.isWifiConnected(this);
+        return false;
     }
 }

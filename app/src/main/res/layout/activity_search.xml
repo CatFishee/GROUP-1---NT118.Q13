@@ -31,27 +31,41 @@
         android:imeOptions="actionSearch"
         android:inputType="text"
         android:paddingStart="16dp"
-        android:paddingEnd="40dp"
+        android:paddingEnd="90dp"
         android:textColor="@color/app_main_color"
         android:textColorHint="@color/app_main_color"
         app:layout_constraintStart_toEndOf="@id/iv_back"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Nút Xóa -->
-    <ImageView
-        android:id="@+id/iv_clear_text"
+    <!-- Layout chứa các nút chức năng bên trong ô search -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:src="@drawable/ic_clear"
-        android:padding="8dp"
-        android:visibility="gone"
-        app:tint="@color/app_main_color"
-        app:layout_constraintTop_toTopOf="@id/et_search_input"
-        app:layout_constraintBottom_toBottomOf="@id/et_search_input"
-        app:layout_constraintEnd_toEndOf="@id/et_search_input"
+        android:orientation="horizontal"
         android:layout_marginEnd="8dp"
-        tools:visibility="visible" />
+        app:layout_constraintBottom_toBottomOf="@+id/et_search_input"
+        app:layout_constraintEnd_toEndOf="@+id/et_search_input"
+        app:layout_constraintTop_toTopOf="@+id/et_search_input">
+
+        <ImageView
+            android:id="@+id/iv_clear_text"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:padding="6dp"
+            android:src="@drawable/ic_clear"
+            android:visibility="gone"
+            app:tint="@color/app_main_color" />
+
+        <ImageView
+            android:id="@+id/iv_voice_search"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:padding="8dp"
+            android:src="@drawable/ic_mic"
+            android:visibility="visible"
+            app:tint="@color/app_main_color" />
+    </LinearLayout>
 
     <!-- Danh sách lịch sử/kết quả -->
     <androidx.recyclerview.widget.RecyclerView

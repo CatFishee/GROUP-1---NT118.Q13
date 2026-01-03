@@ -1,6 +1,8 @@
 package com.example.metube.ui.home;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +15,11 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.google.android.exoplayer2.DefaultLoadControl;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.Player;
+import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -35,6 +42,11 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     private Context context;
     private final OnVideoClickListener clickListener;
 
+    private ExoPlayer sharedPlayer;
+    private Player.Listener currentVideoListener;
+    private int currentPlayingPos = -1;
+    private boolean isAutoplayEnabled = false;
+
     public VideoAdapter(Context context, List<Video> videoList, OnVideoClickListener clickListener) {
         this.context = context;
         this.videoList = videoList;
@@ -47,11 +59,127 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_video, parent, false);
         return new VideoViewHolder(view);
     }
+    // 1. Khởi tạo Player tối ưu (Mute + Low Buffer)
+    private void initPlayer(Context context) {
+        if (sharedPlayer == null) {
+            // Giảm buffer: min 2s, max 5s, buffer để phát 1s
+            DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(2000, 5000, 1000, 1500)
+                    .build();
+
+            sharedPlayer = new ExoPlayer.Builder(context)
+                    .setLoadControl(loadControl)
+                    .build();
+
+            sharedPlayer.setVolume(0f); // MUTE hoàn toàn
+            sharedPlayer.setRepeatMode(Player.REPEAT_MODE_ONE); // Phát lặp lại ở Feed
+        }
+    }
+
+    // 2. Hàm điều khiển phát từ Activity
+    public void playVideoAt(int position) {
+        if (position == currentPlayingPos && sharedPlayer != null && sharedPlayer.isPlaying()) {
+            return;
+        }
+
+        if (position < 0 || position >= videoList.size() || !isAutoplayEnabled) return;
+
+        int lastPos = currentPlayingPos;
+        currentPlayingPos = position;
+
+        if (lastPos != -1 && lastPos != currentPlayingPos) {
+            notifyItemChanged(lastPos, "DETACH_PLAYER");
+        }
+
+        initPlayer(context);
+
+        // --- SỬA ĐOẠN NÀY ---
+        // 1. Nếu đã có listener cũ, hãy gỡ nó ra khỏi player
+        if (currentVideoListener != null) {
+            sharedPlayer.removeListener(currentVideoListener);
+        }
+
+        // 2. Khởi tạo listener mới và lưu vào biến để lần sau có thể gỡ
+        currentVideoListener = new Player.Listener() {
+            @Override
+            public void onRenderedFirstFrame() {
+                notifyItemChanged(currentPlayingPos, "HIDE_THUMBNAIL");
+            }
+        };
+
+        // 3. Thêm listener mới vào player
+        sharedPlayer.addListener(currentVideoListener);
+        // --------------------
+
+        Video video = videoList.get(position);
+        sharedPlayer.setMediaItem(MediaItem.fromUri(video.getVideoURL()));
+        sharedPlayer.prepare();
+        sharedPlayer.play();
+
+        notifyItemChanged(currentPlayingPos, "ATTACH_PLAYER");
+    }
+
+    public void stopVideo() {
+        if (sharedPlayer != null) {
+            sharedPlayer.stop();
+            currentPlayingPos = -1;
+            notifyDataSetChanged();
+        }
+    }
+
+    public void releasePlayer() {
+        if (sharedPlayer != null) {
+            if (currentVideoListener != null) {
+                sharedPlayer.removeListener(currentVideoListener);
+            }
+            sharedPlayer.release();
+            sharedPlayer = null;
+        }
+    }
+
+    public void setAutoplayEnabled(boolean enabled) {
+        this.isAutoplayEnabled = enabled;
+        if (!enabled) stopVideo();
+    }
 
     @Override
     public void onBindViewHolder(@NonNull VideoViewHolder holder, int position) {
         Video currentVideo = videoList.get(position);
         holder.bind(currentVideo, context, clickListener);
+
+        // 3. Logic hiển thị PlayerView
+        if (position == currentPlayingPos && sharedPlayer != null) {
+            holder.playerView.setVisibility(View.VISIBLE);
+            holder.playerView.setPlayer(sharedPlayer);
+            // QUAN TRỌNG: Không set thumbnail GONE ở đây nữa để tránh màn hình đen
+        } else {
+            holder.playerView.setVisibility(View.GONE);
+            holder.playerView.setPlayer(null);
+            holder.thumbnail.setVisibility(View.VISIBLE); // Hiện lại thumbnail cho các bài khác
+        }
+    }
+    @Override
+    public void onBindViewHolder(@NonNull VideoViewHolder holder, int position, @NonNull List<Object> payloads) {
+        if (!payloads.isEmpty()) {
+            for (Object payload : payloads) {
+                if (payload.equals("ATTACH_PLAYER")) {
+                    // Chỉ hiện PlayerView và gắn Player, tuyệt đối không chạm vào info text
+                    holder.playerView.setVisibility(View.VISIBLE);
+                    holder.playerView.setPlayer(sharedPlayer);
+                } else if (payload.equals("HIDE_THUMBNAIL")) {
+                    // Chỉ ẩn thumbnail khi video đã chạy
+                    holder.thumbnail.setVisibility(View.INVISIBLE);
+                } else if (payload.equals("DETACH_PLAYER")) {
+                    // Trả về trạng thái thumbnail bình thường cho bài cũ
+                    holder.playerView.setVisibility(View.GONE);
+                    holder.playerView.setPlayer(null);
+                    holder.thumbnail.setVisibility(View.VISIBLE);
+                }
+            }
+        } else {
+            // Chỉ khi trượt tới item mới hoàn toàn (chưa có data) mới gọi bind()
+            onBindViewHolder(holder, position);
+        }
     }
 
     @Override
@@ -77,6 +205,8 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         private String channelName = "";
         private long viewCount = 0;
         private String timeAgo = "";
+        private String currentBoundVideoId = ""; // Để kiểm tra tránh nạp lại dữ liệu cũ
+        PlayerView playerView;
 
         public VideoViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -84,16 +214,31 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             avatar = itemView.findViewById(R.id.channel_avatar);
             title = itemView.findViewById(R.id.video_title);
             info = itemView.findViewById(R.id.video_info);
+            playerView = itemView.findViewById(R.id.player_view_autoplay);
         }
 
         public void bind(final Video video, Context context, final OnVideoClickListener listener) {
             // Reset cache
+            // Kiểm tra nếu videoId giống video đang hiện thì không reset chữ (Tránh nhảy chữ)
+            if (currentBoundVideoId.equals(video.getVideoID())) {
+                // Chỉ cập nhật listener click (phòng trường hợp listener thay đổi)
+                itemView.setOnClickListener(v -> {
+                    if (listener != null) listener.onVideoClick(video);
+                });
+                return;
+            }
+
+            // Nếu là video mới hoàn toàn thì mới reset
+            currentBoundVideoId = video.getVideoID();
             channelName = "";
             viewCount = 0;
             timeAgo = "";
 
             title.setText(video.getTitle());
-            info.setText("Loading...");
+            if (info.getText().toString().isEmpty() || info.getText().equals("Loading...")) {
+                info.setText("Loading...");
+            }
+
 
             // Load uploader info from Firestore
             loadChannelInfo(video);
