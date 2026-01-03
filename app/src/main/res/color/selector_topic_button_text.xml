@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Khi nút được chọn -->
-    <item android:color="@android:color/white" android:state_selected="true" />
-    <!-- Mặc định-->
-    <item android:color="@color/app_main_color"  />
+    <item android:state_selected="true" android:color="@color/topic_text_selected" />
+    <item android:color="@color/topic_text_normal" />
 </selector>

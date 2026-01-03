@@ -552,6 +552,11 @@ public class CreatorFragment extends Fragment {
     }
 
     private void setupChart(LineChart chart) {
+        // Lấy màu từ Resource
+        int textColor = ContextCompat.getColor(requireContext(), R.color.chart_value_text);
+        int gridColor = ContextCompat.getColor(requireContext(), R.color.divider_color);
+
+        chart.setBackgroundColor(android.graphics.Color.TRANSPARENT); // ← Nền trong suốt
         chart.getDescription().setEnabled(false);
         chart.setTouchEnabled(true);
         chart.setDragEnabled(true);
@@ -562,19 +567,20 @@ public class CreatorFragment extends Fragment {
         XAxis xAxis = chart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
-        if (isAdded()) {
-            xAxis.setTextColor(ContextCompat.getColor(requireContext(), R.color.app_main_color));
-        }
+        xAxis.setTextColor(textColor);
+        xAxis.setGranularity(1f);
 
         YAxis leftAxis = chart.getAxisLeft();
         leftAxis.setDrawGridLines(true);
-        if (isAdded()) {
-            leftAxis.setTextColor(ContextCompat.getColor(requireContext(), R.color.app_main_color));
-        }
+        leftAxis.setGridColor(gridColor);
+        leftAxis.setTextColor(textColor);
         leftAxis.setAxisMinimum(0f);
 
         chart.getAxisRight().setEnabled(false);
         chart.getLegend().setEnabled(false);
+
+        Log.d(TAG, "Setting up chart - textColor: #" + Integer.toHexString(textColor) +
+                ", gridColor: #" + Integer.toHexString(gridColor));
     }
 
     private void updateChart(LineChart chart, List<Entry> entries, String label) {
@@ -585,23 +591,30 @@ public class CreatorFragment extends Fragment {
             return;
         }
 
-        Log.d(TAG, "Updating chart with " + entries.size() + " entries");
+        // Lấy màu
+        int textColor = ContextCompat.getColor(requireContext(), R.color.creator_text);
+        int lineColor = ContextCompat.getColor(requireContext(), R.color.chart_line_color);
+        int valueTextColor = ContextCompat.getColor(requireContext(), R.color.chart_value_text); // ← MÀU MỚI
 
         LineDataSet dataSet = new LineDataSet(entries, label);
-        dataSet.setColor(ContextCompat.getColor(requireContext(), R.color.app_main_color));
-        dataSet.setCircleColor(ContextCompat.getColor(requireContext(), R.color.app_main_color));
-        dataSet.setFillColor(ContextCompat.getColor(requireContext(), R.color.light_green_background));
-        dataSet.setLineWidth(2.5f);
+        dataSet.setColor(lineColor);
+        dataSet.setCircleColor(lineColor);
+        dataSet.setLineWidth(3f);
         dataSet.setCircleRadius(4f);
         dataSet.setDrawCircleHole(false);
-        dataSet.setValueTextSize(0f);
-        dataSet.setDrawFilled(true);
+
+        // Thiết lập hiển thị giá trị với màu CỐ ĐỊNH
+        dataSet.setDrawValues(true);
+        dataSet.setValueTextColor(valueTextColor); // ← DÙNG MÀU #364335
+        dataSet.setValueTextSize(10f);
         dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
 
         LineData lineData = new LineData(dataSet);
         chart.setData(lineData);
         chart.animateX(1000);
         chart.invalidate();
+
+        Log.d(TAG, "Chart updated - valueTextColor: #" + Integer.toHexString(valueTextColor));
     }
 
     private void animateValue(TextView textView, int start, int end, int duration) {

@@ -1,7 +1,25 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+    <!-- Base application theme cho chế độ tối -->
     <style name="Base.Theme.MeTube" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <!-- Nền ứng dụng đen tuyền -->
+        <item name="android:windowBackground">@color/bg_main</item>
+        <item name="android:statusBarColor">@color/bg_main</item>
+
+        <!-- Màu chủ đạo là xanh Neon -->
+        <item name="colorPrimary">@color/accent_neon</item>
+
+        <!-- Quy định chữ trên màu Primary (xanh Neon) sẽ là màu Đen -->
+        <item name="colorOnPrimary">@color/text_on_neon</item>
+
+        <!-- Màu của các thành phần bề mặt (Card, Dialog) -->
+        <item name="colorSurface">@color/surface_dark</item>
+        <item name="colorOnSurface">@color/app_main_color</item>
+
+        <!-- Màu phụ (Secondary) cũng dùng tông xanh -->
+        <item name="colorSecondary">@color/accent_neon_dark</item>
+
+        <!-- Màu nút tròn -->
+        <item name="circleButtonColor">#EAF3EA</item>
+        <item name="circleButtonIconColor">#364335</item>
     </style>
 </resources>

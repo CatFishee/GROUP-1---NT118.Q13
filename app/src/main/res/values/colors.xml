@@ -5,7 +5,41 @@
     <!-- Màu chủ đạo của app -->
     <color name="app_main_color">#63A361</color>
     <color name="light_green_background">#EAF3EA</color>
+    <color name="bg_main">#FFFFFF</color>
 
     <color name="login_gradient_end">#32964f</color> <!-- Xanh lá đậm -->
     <color name="login_gradient_start">#67e088</color>   <!-- Xanh lá nhạt -->
+
+    <color name="accent_neon">#00FFC5</color>
+    <color name="accent_neon_dark">#00B88E</color>
+    <color name="surface_dark">#F0F0F0</color>
+    <color name="text_on_neon">#000000</color>
+    <color name="icon_color">#000000</color>
+    <color name="divider_color">#CCCCCC</color>
+
+    <!-- Màu cho Topic khi ở bản Sáng -->
+    <color name="topic_bg_selected">#63A361</color> <!-- Xanh lá cực nhạt -->
+    <color name="topic_text_selected">#FFFFFFFF</color>=
+    <color name="topic_bg_normal">#EAF3EA</color> <!-- Xám nhạt cho nút chưa chọn -->
+    <color name="topic_text_normal">#63A361</color> <!-- Chữ xám cho nút chưa chọn -->
+
+    <color name="nav_selected">#63A361</color> <!-- Màu khi được -->
+    <color name="nav_unselected">#FF000000</color> <!-- Màu khi không chọn (Xám) -->
+
+    <!-- Nền trang và nền Card -->
+    <color name="creator_card_bg">#EAF3EA</color> <!-- Xanh lá nhạt-->
+
+    <!-- Màu chữ -->
+    <color name="creator_text">#63A361</color> <!-- Xanh lá đậm -->
+    <color name="creator_card_text">#63A361</color> <!-- Xanh neon -->
+
+    <color name="button_bg">#EAF3EA</color> <!-- Xanh lá đậm -->
+    <color name="button_text">#63A361</color>
+
+    <!-- Biểu đồ -->
+    <color name="chart_line_color">#63A361</color> <!-- Đường kẻ xanh lá -->
+    <!-- Màu số liệu trên biểu đồ -->
+    <color name="chart_value_text">#63A361</color>
+
+
 </resources>

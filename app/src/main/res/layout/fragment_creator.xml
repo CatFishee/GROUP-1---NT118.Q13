@@ -6,7 +6,7 @@
     android:id="@+id/swipe_refresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/bg_main">
 
     <ScrollView
         android:id="@+id/scroll_view"
@@ -41,7 +41,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="24dp"
                     android:text="Start Your Creator Journey"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="24sp"
                     android:textStyle="bold"/>
 
@@ -50,7 +50,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:text="Upload your first video to see analytics here"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="16sp"
                     android:gravity="center"/>
 
@@ -59,9 +59,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="60dp"
                     android:layout_marginTop="32dp"
-                    android:backgroundTint="@color/app_main_color"
+                    android:backgroundTint="@color/button_bg"
                     android:text="Upload Video"
-                    android:textColor="@color/white"
+                    android:textColor="@color/button_text"
                     android:textSize="18sp"
                     android:paddingHorizontal="40dp"/>
 
@@ -80,7 +80,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Overview"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="12dp"/>
@@ -99,7 +99,7 @@
                         android:layout_height="wrap_content"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
-                        app:cardBackgroundColor="@color/light_green_background"
+                        app:cardBackgroundColor="@color/creator_card_bg"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="2dp">
 
@@ -115,7 +115,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="28sp"
                                 android:textStyle="bold"/>
 
@@ -123,7 +123,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Subscribers"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
@@ -135,7 +135,7 @@
                         android:layout_height="wrap_content"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
-                        app:cardBackgroundColor="@color/light_green_background"
+                        app:cardBackgroundColor="@color/creator_card_bg"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="2dp">
 
@@ -151,7 +151,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="28sp"
                                 android:textStyle="bold"/>
 
@@ -159,7 +159,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Total Views"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
@@ -171,7 +171,7 @@
                         android:layout_height="wrap_content"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
-                        app:cardBackgroundColor="@color/light_green_background"
+                        app:cardBackgroundColor="@color/creator_card_bg"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="2dp">
 
@@ -187,7 +187,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="28sp"
                                 android:textStyle="bold"/>
 
@@ -195,7 +195,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Videos"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
@@ -207,7 +207,7 @@
                         android:layout_height="wrap_content"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
-                        app:cardBackgroundColor="@color/light_green_background"
+                        app:cardBackgroundColor="@color/creator_card_bg"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="2dp">
 
@@ -223,7 +223,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="28sp"
                                 android:textStyle="bold"/>
 
@@ -231,7 +231,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Average Views"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
@@ -244,7 +244,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Growth Over Time"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:layout_marginTop="24dp"
@@ -266,7 +266,7 @@
                         android:text="7 Days"
                         android:layout_width="wrap_content"
                         android:layout_height="60dp"
-                        android:textColor="@color/app_main_color"/>
+                        android:textColor="@color/button_text"/>
 
                     <Button
                         android:id="@+id/btn_30_days"
@@ -274,7 +274,7 @@
                         android:text="30 Days"
                         android:layout_width="wrap_content"
                         android:layout_height="60dp"
-                        android:textColor="@color/app_main_color"/>
+                        android:textColor="@color/button_text"/>
 
                     <Button
                         android:id="@+id/btn_90_days"
@@ -282,7 +282,7 @@
                         android:text="90 Days"
                         android:layout_width="wrap_content"
                         android:layout_height="60dp"
-                        android:textColor="@color/app_main_color"/>
+                        android:textColor="@color/button_text"/>
                 </com.google.android.material.button.MaterialButtonToggleGroup>
 
                 <!-- Views Growth -->
@@ -290,7 +290,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Total Views"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp"/>
@@ -298,7 +298,7 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="220dp"
-                    app:cardBackgroundColor="@color/white"
+                    app:cardBackgroundColor="@color/creator_card_bg"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="4dp">
 
@@ -313,7 +313,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Total Videos"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginTop="16dp"
@@ -322,7 +322,7 @@
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="match_parent"
                     android:layout_height="220dp"
-                    app:cardBackgroundColor="@color/white"
+                    app:cardBackgroundColor="@color/creator_card_bg"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="4dp">
 
@@ -339,7 +339,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Engagement"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:layout_marginTop="24dp"
@@ -357,7 +357,7 @@
                         android:layout_height="wrap_content"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
-                        app:cardBackgroundColor="@color/light_green_background"
+                        app:cardBackgroundColor="@color/creator_card_bg"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="2dp">
 
@@ -373,7 +373,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0%"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="28sp"
                                 android:textStyle="bold"/>
 
@@ -381,7 +381,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Like Ratio"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
@@ -393,7 +393,7 @@
                         android:layout_height="wrap_content"
                         android:layout_columnWeight="1"
                         android:layout_margin="6dp"
-                        app:cardBackgroundColor="@color/light_green_background"
+                        app:cardBackgroundColor="@color/creator_card_bg"
                         app:cardCornerRadius="12dp"
                         app:cardElevation="2dp">
 
@@ -409,7 +409,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0%"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="28sp"
                                 android:textStyle="bold"/>
 
@@ -417,7 +417,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="Engagement"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
@@ -430,7 +430,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Top Performing"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:layout_marginTop="24dp"
@@ -440,7 +440,7 @@
                     android:id="@+id/card_top_video"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="@color/light_green_background"
+                    app:cardBackgroundColor="@color/creator_card_bg"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="2dp">
 
@@ -455,7 +455,7 @@
                             android:layout_width="120dp"
                             android:layout_height="68dp"
                             android:scaleType="centerCrop"
-                            android:background="@color/light_green_background"
+                            android:background="@color/creator_card_bg"
                             tools:src="@drawable/logo_metube"/>
 
                         <LinearLayout
@@ -470,7 +470,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:text="No videos yet"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="16sp"
                                 android:textStyle="bold"
                                 android:maxLines="2"
@@ -481,7 +481,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="0 views • 0 likes"
-                                android:textColor="@color/app_main_color"
+                                android:textColor="@color/creator_card_text"
                                 android:textSize="14sp"
                                 android:layout_marginTop="4dp"/>
                         </LinearLayout>
@@ -493,7 +493,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Recent Videos"
-                    android:textColor="@color/app_main_color"
+                    android:textColor="@color/creator_text"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:layout_marginTop="24dp"

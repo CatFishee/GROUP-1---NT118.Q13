@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Màu nền chính -->
+    <color name="bg_main" tools:ignore="MissingDefaultResource">#000000</color>
+
+    <!-- Màu của các bề mặt nổi lên như CardView, BottomSheet, Dialog -->
+    <color name="accent_neon" tools:ignore="MissingDefaultResource">#00FFC5</color>
+
+    <!-- Màu xanh đậm hơn một chút cho các hiệu ứng phụ -->
+    <color name="accent_neon_dark" tools:ignore="MissingDefaultResource">#00B88E</color>
+
+    <!-- Màu chữ phụ/mô tả (Xám nhạt) -->
+    <color name="surface_dark" tools:ignore="MissingDefaultResource">#121212</color>
+
+    <color name="app_main_color">#FFFFFF</color>
+
+    <!-- Màu chữ trên các nút bấm màu Xanh (Chữ đen như bạn yêu cầu) -->
+    <color name="text_on_neon" tools:ignore="MissingDefaultResource">#000000</color>
+
+    <!-- Màu icon khi ở chế độ tối -->
+    <color name="icon_color" tools:ignore="MissingDefaultResource">#FFFFFF</color>
+
+    <!-- Màu đường kẻ phân cách (Divider) -->
+    <color name="divider_color" tools:ignore="MissingDefaultResource">#2F2F2F</color>
+
+    <!-- Màu cho Topic khi ở bản Sáng -->
+    <color name="topic_bg_selected">#63A361</color> <!-- Xanh lá cực nhạt -->
+    <color name="topic_text_selected">#FFFFFFFF</color>=
+    <color name="topic_bg_normal">#EAF3EA</color> <!-- Xám nhạt cho nút chưa chọn -->
+    <color name="topic_text_normal">#63A361</color> <!-- Chữ xám cho nút chưa chọn -->
+
+    <color name="nav_selected">#FFFFFF</color> <!-- Màu khi được chọn (Neon Green) -->
+    <color name="nav_unselected">#63A361</color> <!-- Màu xám trắng như bạn muốn -->
+
+    <!-- Nền trang và nền Card -->
+    <color name="creator_card_bg">#EAF3EA</color>
+
+    <!-- Màu chữ -->
+    <color name="creator_text">#EAF3EA</color>
+    <color name="creator_card_text">#364335</color>
+
+    <color name="button_bg">#63A361</color> <!-- Xanh lá đậm -->
+    <color name="button_text">#FFFFFF</color>
+
+    <!-- Biểu đồ -->
+    <color name="chart_line_color">#364335</color> <!-- Đường kẻ xanh lá -->
+    <color name="chart_value_text">#364335</color>
+
+</resources>

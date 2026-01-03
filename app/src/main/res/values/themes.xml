@@ -17,6 +17,10 @@
         <item name="colorSurface">@color/white</item>
         <!-- Màu chữ/icon trên các bề mặt đó -->
         <item name="colorOnSurface">@color/black</item>
+
+        <!-- Màu nút tròn -->
+        <item name="circleButtonColor">#63A361</item>
+        <item name="circleButtonIconColor">#FFFFFF</item>
     </style>
 
     <style name="Theme.MeTube" parent="Base.Theme.MeTube" />
