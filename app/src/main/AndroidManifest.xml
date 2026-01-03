@@ -86,5 +86,8 @@
         <activity
             android:name=".ui.video.EditYourVideoActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.userstat.UserStatisticsActivity"
+            android:exported="false" />
     </application>
 </manifest>

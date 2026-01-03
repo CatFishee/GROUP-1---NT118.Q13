@@ -41,6 +41,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.example.metube.R;
+import com.example.metube.ui.userstat.UserStatisticsActivity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,7 +62,7 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
     private TextView tvUserName, tvChannelName, btnViewChannel, btnViewAllPlaylists;
     private ImageView btnAddPlaylist;
     private View btnSwitchAccount, btnShareChannel;
-    private TextView btnViewAllHistory, btnDownloads, btnYourVideos;
+    private TextView btnViewAllHistory, btnDownloads, btnYourVideos, btnStats;
     private RecyclerView rvHistory;
     private User mUser;
 
@@ -121,6 +122,7 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         btnViewAllHistory = view.findViewById(R.id.btn_view_all_history);
         btnDownloads = view.findViewById(R.id.btn_downloads);
         btnYourVideos = view.findViewById(R.id.btn_your_videos);
+        btnStats = view.findViewById(R.id.btn_statistics);
         rvHistory = view.findViewById(R.id.rv_history);
         btnAddPlaylist = view.findViewById(R.id.btn_add_playlist);
         btnViewAllPlaylists = view.findViewById(R.id.btn_view_all_playlists);
@@ -204,7 +206,10 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
             Intent intent = new Intent(getContext(), YourVideosActivity.class);
             startActivity(intent);
         });
-
+        btnStats.setOnClickListener(v -> {
+            Intent intent = new Intent(requireContext(), com.example.metube.ui.userstat.UserStatisticsActivity.class);
+            startActivity(intent);
+        });
     }
 
     /**

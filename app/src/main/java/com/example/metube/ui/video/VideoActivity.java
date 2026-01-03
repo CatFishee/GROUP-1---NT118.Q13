@@ -26,6 +26,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 
 import com.example.metube.model.Subscription;
 import com.example.metube.model.User;
+import com.example.metube.model.UserWatchStat;
 import com.example.metube.utils.VideoQueueManager;
 import com.google.android.material.card.MaterialCardView;
 
@@ -35,6 +36,8 @@ import com.example.metube.model.Video;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
 import com.google.firebase.database.*;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -48,9 +51,13 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.SetOptions;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class VideoActivity extends AppCompatActivity {
@@ -77,6 +84,7 @@ public class VideoActivity extends AppCompatActivity {
     private String currentUploaderName = "";
     private String currentRelativeTime = "";
     private String currentUploaderID = "";
+    private Video currentVideoObject;
     private boolean isSubscribed = false;
 
     private DatabaseReference videoStatRef;
@@ -90,6 +98,7 @@ public class VideoActivity extends AppCompatActivity {
     private com.google.firebase.firestore.ListenerRegistration userSettingsListener;
     private com.google.firebase.firestore.ListenerRegistration subscriptionListener;
     private List<String> qualities = Arrays.asList("480p", "720p", "1080p");
+    private long sessionStartTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -203,11 +212,24 @@ public class VideoActivity extends AppCompatActivity {
         if (player != null) {
             player.play();
         }
+        sessionStartTime = System.currentTimeMillis();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        long sessionDuration = System.currentTimeMillis() - sessionStartTime;
+        // Nếu xem > 5 giây thì mới tính là có xem để update thống kê
+        if (sessionDuration > 5000 && currentVideoId != null) {
+            // Để lấy được object Video đầy đủ (có topics), bạn nên lưu biến 'currentVideo' toàn cục
+            // ở hàm updateUIForCurrentVideo.
+            if (currentVideoObject != null) {
+                updateUserStatistics(currentVideoObject, sessionDuration);
+            } else {
+                Log.e(TAG, "Cannot update stats: currentVideoObject is NULL"); // Thêm log này để kiểm tra
+            }
+        }
+
         long currentPosition = player.getCurrentPosition();
         long duration = player.getDuration();
 
@@ -364,7 +386,7 @@ public class VideoActivity extends AppCompatActivity {
         if (video == null) return;
 
         // 1. Cập nhật ID hiện tại
-        currentVideoId = video.getVideoID();
+        currentVideoObject = video;
         currentUploaderID = video.getUploaderID();
 
         // 2. Cập nhật Text cơ bản
@@ -514,6 +536,7 @@ public class VideoActivity extends AppCompatActivity {
                         Toast.makeText(this, "Video source not available.", Toast.LENGTH_SHORT).show();
                         return;
                     }
+                    currentVideoObject = video;
 
                     tvTitle.setText(video.getTitle());
                     if (video.getDescription() != null) {
@@ -878,5 +901,84 @@ public class VideoActivity extends AppCompatActivity {
                 now,
                 DateUtils.MINUTE_IN_MILLIS
         ).toString();
+    }
+    private void updateUserStatistics(Video video, long watchDuration) {
+        if (currentUser == null || watchDuration <= 0) return;
+
+        String userId = currentUser.getUid();
+
+        String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+
+
+        // 1. Tìm xem User này đã có thống kê chưa
+        firestore.collection("userWatchStats")
+                .whereEqualTo("userID", userId)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        // --- TRƯỜNG HỢP A: ĐÃ CÓ DỮ LIỆU -> UPDATE ---
+                        DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
+                        DocumentReference docRef = doc.getReference();
+
+                        Map<String, Object> updates = new HashMap<>();
+
+                        // Cộng dồn thời gian xem (Tính bằng mili-giây)
+                        updates.put("totalWatchTime", FieldValue.increment(watchDuration));
+
+                        // Thêm Video ID vào danh sách (arrayUnion tự động lọc trùng)
+                        updates.put("videosWatched", FieldValue.arrayUnion(video.getVideoID()));
+
+                        // Thêm Topics vào danh sách
+                        if (video.getTopics() != null) {
+                            for (String topic : video.getTopics()) {
+                                // Lưu dạng: topicCounts.Gaming = increment(1)
+                                // Lưu ý: Topic không được chứa ký tự đặc biệt như dấu chấm (.)
+                                String cleanTopic = topic.trim().replaceAll("\\.", "");
+                                updates.put("topicCounts." + cleanTopic, FieldValue.increment(1));
+                            }
+                        }
+                        updates.put("dailyWatchTime." + todayDate, FieldValue.increment(watchDuration));
+
+                        docRef.update(updates)
+                                .addOnSuccessListener(aVoid -> Log.d(TAG, "Stats updated successfully"))
+                                .addOnFailureListener(e -> Log.e(TAG, "Failed to update stats", e));
+
+                    } else {
+                        // --- TRƯỜNG HỢP B: CHƯA CÓ DỮ LIỆU -> TẠO MỚI ---
+                        String newDocId = firestore.collection("userWatchStats").document().getId();
+
+                        UserWatchStat newStat = new UserWatchStat();
+                        newStat.setUserWatchStatID(newDocId);
+                        newStat.setUserID(userId);
+                        newStat.setTotalWatchTime(watchDuration);
+                        newStat.setCreatedAt(Timestamp.now());
+
+                        // Tạo Map ngày
+                        Map<String, Long> dailyMap = new HashMap<>();
+                        dailyMap.put(todayDate, watchDuration);
+                        newStat.setDailyWatchTime(dailyMap);
+
+                        // Tạo list video đã xem
+                        List<String> videoList = new ArrayList<>();
+                        videoList.add(video.getVideoID());
+                        newStat.setVideosWatched(videoList);
+
+                        // Tạo list topic đã xem
+                        Map<String, Long> initialTopics = new HashMap<>();
+                        if (video.getTopics() != null) {
+                            for (String topic : video.getTopics()) {
+                                String cleanTopic = topic.trim().replaceAll("\\.", "");
+                                initialTopics.put(cleanTopic, 1L); // Lần đầu xem là 1 view
+                            }
+                        }
+                        newStat.setTopicCounts(initialTopics);
+
+                        firestore.collection("userWatchStats").document(newDocId).set(newStat)
+                                .addOnSuccessListener(aVoid -> Log.d(TAG, "New stats created"))
+                                .addOnFailureListener(e -> Log.e(TAG, "Failed to create stats", e));
+                    }
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Error checking user stats", e));
     }
 }

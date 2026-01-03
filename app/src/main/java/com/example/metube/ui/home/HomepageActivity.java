@@ -261,6 +261,14 @@ public class HomepageActivity extends AppCompatActivity {
                 startActivity(intent);
             });
         }
+        View settingsButton = topBar.findViewById(R.id.btnSettings);
+        if (settingsButton != null) {
+            settingsButton.setOnClickListener(v -> {
+                // Mở activity UserStatisticsActivity (là file UserStatisticsActivity.java bạn gửi lúc đầu)
+                Intent intent = new Intent(HomepageActivity.this, com.example.metube.ui.userstat.UserStatisticsActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 
     private void setupBottomNav() {

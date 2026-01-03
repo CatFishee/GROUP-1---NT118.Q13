@@ -1,22 +1,30 @@
 package com.example.metube.model;
 
 import java.sql.Time;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import com.google.firebase.Timestamp;
 
 public class UserWatchStat {
     public String userWatchStatID;
     public String userID;
     public List<String> videosWatched;
-    public List<String> topicsWatched;
+    private Map<String, Long> topicCounts;
     public long totalWatchTime;
     public Timestamp createdAt;
-    public UserWatchStat() {}
-    public UserWatchStat(String userWatchStatID, String userID, List<String> videosWatched, List<String> topicsWatched, long totalWatchTime, Timestamp createdAt) {
+    private Map<String, Long> dailyWatchTime;
+    public UserWatchStat() {
+        // Init map để tránh null
+        this.topicCounts = new HashMap<>();
+        this.dailyWatchTime = new HashMap<>();
+    }
+    public UserWatchStat(String userWatchStatID, String userID, List<String> videosWatched, Map<String, Long> topicCounts, long totalWatchTime, Timestamp createdAt) {
         this.userWatchStatID = userWatchStatID;
         this.userID = userID;
         this.videosWatched = videosWatched;
-        this.topicsWatched = topicsWatched;
+        this.topicCounts = topicCounts;
         this.totalWatchTime = totalWatchTime;
         this.createdAt = createdAt;
     }
@@ -28,11 +36,13 @@ public class UserWatchStat {
 
     public List<String> getVideosWatched() { return videosWatched; }
     public void setVideosWatched(List<String> videosWatched) { this.videosWatched = videosWatched; }
-    public List<String> getTopicsWatched() { return topicsWatched; }
-    public void setTopicsWatched(List<String> topicsWatched) { this.topicsWatched = topicsWatched; }
+    public Map<String, Long> getTopicCounts() { return topicCounts; }
+    public void setTopicCounts(Map<String, Long> topicCounts) { this.topicCounts = topicCounts; }
 
     public long getTotalWatchTime() { return totalWatchTime; }
     public void setTotalWatchTime(long totalWatchTime) { this.totalWatchTime = totalWatchTime; }
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public Map<String, Long> getDailyWatchTime() { return dailyWatchTime; }
+    public void setDailyWatchTime(Map<String, Long> dailyWatchTime) { this.dailyWatchTime = dailyWatchTime; }
 }
