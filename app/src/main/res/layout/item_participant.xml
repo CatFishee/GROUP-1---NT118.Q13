@@ -6,15 +6,16 @@
     android:padding="16dp"
     android:gravity="center_vertical">
 
-    <!-- Avatar Placeholder -->
+    <!-- Added ID: ivAvatar -->
     <ImageView
+        android:id="@+id/ivAvatar"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:src="@android:drawable/sym_def_app_icon"
         android:background="@drawable/circle_shape"
-        android:padding="8dp"
+        android:padding="1dp"
+        android:scaleType="centerCrop"
         android:contentDescription="Avatar"/>
-    <!-- (Optional: Use ShapeableImageView for real circles) -->
 
     <TextView
         android:id="@+id/tvUserName"
