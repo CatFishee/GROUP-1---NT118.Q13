@@ -95,7 +95,7 @@ dependencies {
     implementation(libs.exoplayer.core)
     implementation(libs.exoplayer.ui)
 
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.13.2")
 
     implementation("androidx.palette:palette:1.0.0")
 

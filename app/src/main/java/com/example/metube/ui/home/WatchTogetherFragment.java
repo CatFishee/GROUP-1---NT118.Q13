@@ -1,10 +1,12 @@
 package com.example.metube.ui.home;
 
-import android.app.AlertDialog;
+import android.app.Dialog;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,12 +25,14 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.metube.R;
 import com.example.metube.model.QueueItem;
+import com.example.metube.model.Video;
 import com.example.metube.model.WatchTogetherSession;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackParameters;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -36,6 +40,9 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -51,13 +58,12 @@ public class WatchTogetherFragment extends Fragment {
     private EditText etRoomCode;
     private TextView tvRoomCodeDisplay;
     private TextView tvHostStatus;
-    private Button btnAddVideo;
+    private Button btnAddVideo, btnShowUsers;
 
     // Player & Guest Controls
     private PlayerView playerView;
     private LinearLayout layoutGuestControls;
-    private TextView tvGuestTime;
-    private TextView tvGuestSpeed;
+    private TextView tvGuestTime, tvGuestSpeed;
     private SeekBar sbGuestProgress;
 
     // Queue
@@ -68,8 +74,10 @@ public class WatchTogetherFragment extends Fragment {
     // --- Firebase ---
     private DatabaseReference roomsRef;
     private DatabaseReference currentSessionRef;
+    private FirebaseFirestore firestore; // For querying videos and users
     private String currentSessionId;
     private String myUid;
+    private String myName = "Unknown"; // Store current user's name
 
     // --- Logic State ---
     private boolean isHost = false;
@@ -86,11 +94,15 @@ public class WatchTogetherFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_watch_together, container, false);
 
         // 1. Initialize Firebase
+        firestore = FirebaseFirestore.getInstance();
         roomsRef = FirebaseDatabase.getInstance().getReference("sessions");
+
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             myUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
+            fetchMyProfile(); // Get my own name for the list
         } else {
-            myUid = "user_" + new Random().nextInt(10000);
+            myUid = "anon_" + new Random().nextInt(1000);
+            myName = "Anonymous";
         }
 
         // 2. Bind Views
@@ -108,17 +120,16 @@ public class WatchTogetherFragment extends Fragment {
 
         rvVideoQueue = view.findViewById(R.id.rvVideoQueue);
         btnAddVideo = view.findViewById(R.id.btnAddVideo);
+        btnShowUsers = view.findViewById(R.id.btnShowUsers);
 
-        // 3. Setup Queue Adapter with Click Listeners
+        // 3. Setup Queue Adapter
         rvVideoQueue.setLayoutManager(new LinearLayoutManager(getContext()));
         queueAdapter = new QueueAdapter();
         rvVideoQueue.setAdapter(queueAdapter);
 
-        // IMPLEMENT NEW LISTENER
         queueAdapter.setOnQueueActionListener(new QueueAdapter.OnQueueActionListener() {
             @Override
             public void onDeleteClick(int position) {
-                // Host deletes a video
                 if (isHost && position < currentQueue.size()) {
                     String key = currentQueue.get(position).getKey();
                     if (key != null && currentSessionRef != null) {
@@ -126,13 +137,10 @@ public class WatchTogetherFragment extends Fragment {
                     }
                 }
             }
-
             @Override
             public void onItemClick(int position) {
-                // Host plays a video
                 if (isHost && position < currentQueue.size()) {
-                    QueueItem item = currentQueue.get(position);
-                    playQueueItem(item);
+                    playQueueItem(currentQueue.get(position));
                 }
             }
         });
@@ -146,52 +154,43 @@ public class WatchTogetherFragment extends Fragment {
         view.findViewById(R.id.btnLeave).setOnClickListener(v -> leaveSession());
 
         if (btnAddVideo != null) {
-            btnAddVideo.setOnClickListener(v -> showAddVideoDialog());
+            btnAddVideo.setOnClickListener(v -> showVideoPickerDialog()); // Changed to Video Picker
+        }
+        if (btnShowUsers != null) {
+            btnShowUsers.setOnClickListener(v -> showUserListDialog());
         }
 
         return view;
     }
 
     // ==========================================
-    // EXOPLAYER CONFIGURATION
+    // EXOPLAYER & EVENTS
     // ==========================================
-
     private void initializePlayer() {
         if (player == null) {
             player = new ExoPlayer.Builder(requireContext()).build();
             playerView.setPlayer(player);
-
             player.addListener(new Player.Listener() {
                 @Override
                 public void onIsPlayingChanged(boolean isPlaying) {
                     if (isHost) {
                         pushSessionState();
-                        if (isPlaying) startHeartbeat();
-                        else stopHeartbeat();
+                        if (isPlaying) startHeartbeat(); else stopHeartbeat();
                     } else {
-                        if (isPlaying) startGuestUiUpdater();
-                        else stopGuestUiUpdater();
+                        if (isPlaying) startGuestUiUpdater(); else stopGuestUiUpdater();
                     }
                 }
-
                 @Override
                 public void onPlaybackParametersChanged(@NonNull PlaybackParameters playbackParameters) {
                     if (isHost) pushSessionState();
                 }
-
                 @Override
                 public void onPositionDiscontinuity(@NonNull Player.PositionInfo oldPosition, @NonNull Player.PositionInfo newPosition, int reason) {
-                    if (isHost && reason == Player.DISCONTINUITY_REASON_SEEK) {
-                        pushSessionState();
-                    }
+                    if (isHost && reason == Player.DISCONTINUITY_REASON_SEEK) pushSessionState();
                 }
-
                 @Override
                 public void onPlaybackStateChanged(int playbackState) {
-                    // Host: Auto-play next video when current ends
-                    if (isHost && playbackState == Player.STATE_ENDED) {
-                        playNextVideoInQueue();
-                    }
+                    if (isHost && playbackState == Player.STATE_ENDED) playNextVideoInQueue();
                 }
             });
         }
@@ -220,9 +219,23 @@ public class WatchTogetherFragment extends Fragment {
     }
 
     // ==========================================
+    // USER DATA FETCHING
+    // ==========================================
+    private void fetchMyProfile() {
+        firestore.collection("users").document(myUid).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        // Assuming field is "name" or "username"
+                        String name = documentSnapshot.getString("name");
+                        if (name == null) name = documentSnapshot.getString("username");
+                        if (name != null) myName = name;
+                    }
+                });
+    }
+
+    // ==========================================
     // SESSION MANAGEMENT
     // ==========================================
-
     private void createSession() {
         String code = String.format("%08d", new Random().nextInt(100000000));
         roomsRef.child(code).addListenerForSingleValueEvent(new ValueEventListener() {
@@ -254,11 +267,9 @@ public class WatchTogetherFragment extends Fragment {
 
         layoutLobby.setVisibility(View.GONE);
         layoutRoom.setVisibility(View.VISIBLE);
-        tvRoomCodeDisplay.setText("Room: " + code);
-
+        tvRoomCodeDisplay.setText("Code: " + code);
         updateUserInterface(isHost);
 
-        // 1. Register Participant
         Map<String, Object> updates = new HashMap<>();
         updates.put("participants/" + myUid, ServerValue.TIMESTAMP);
 
@@ -269,12 +280,9 @@ public class WatchTogetherFragment extends Fragment {
             updates.put("playbackSpeed", 1.0f);
             startHeartbeat();
         }
-
         currentSessionRef.updateChildren(updates);
         currentSessionRef.child("participants").child(myUid).onDisconnect().removeValue();
-        if (isHost) {
-            currentSessionRef.child("hostID").onDisconnect().removeValue();
-        }
+        if (isHost) currentSessionRef.child("hostID").onDisconnect().removeValue();
 
         listenToSessionChanges();
         listenToQueue();
@@ -283,9 +291,7 @@ public class WatchTogetherFragment extends Fragment {
     private void leaveSession() {
         stopHeartbeat();
         stopGuestUiUpdater();
-        if (currentSessionRef != null) {
-            currentSessionRef.child("participants").child(myUid).removeValue();
-        }
+        if (currentSessionRef != null) currentSessionRef.child("participants").child(myUid).removeValue();
         layoutLobby.setVisibility(View.VISIBLE);
         layoutRoom.setVisibility(View.GONE);
         player.pause();
@@ -294,10 +300,6 @@ public class WatchTogetherFragment extends Fragment {
         currentQueue.clear();
         queueAdapter.setQueueList(currentQueue);
     }
-
-    // ==========================================
-    // UI UPDATES
-    // ==========================================
 
     private void updateUserInterface(boolean amIHost) {
         if (amIHost) {
@@ -314,48 +316,14 @@ public class WatchTogetherFragment extends Fragment {
         queueAdapter.setHost(amIHost);
     }
 
-    private Runnable guestUiRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (!isHost && player != null) {
-                long current = player.getCurrentPosition();
-                long duration = player.getDuration();
-                if (duration > 0) {
-                    int progress = (int) ((current * 100) / duration);
-                    sbGuestProgress.setProgress(progress);
-                    tvGuestTime.setText(formatTime(current) + " / " + formatTime(duration));
-                }
-                uiHandler.postDelayed(this, 1000);
-            }
-        }
-    };
-
-    private void startGuestUiUpdater() {
-        uiHandler.removeCallbacks(guestUiRunnable);
-        guestUiRunnable.run();
-    }
-
-    private void stopGuestUiUpdater() {
-        uiHandler.removeCallbacks(guestUiRunnable);
-    }
-
-    private String formatTime(long millis) {
-        long seconds = millis / 1000;
-        long minutes = seconds / 60;
-        seconds = seconds % 60;
-        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
-    }
-
     // ==========================================
     // SYNC LOGIC
     // ==========================================
-
     private void listenToSessionChanges() {
         currentSessionRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
                 if (!snapshot.exists()) return;
-
                 WatchTogetherSession session = snapshot.getValue(WatchTogetherSession.class);
                 if (session == null) return;
 
@@ -374,11 +342,7 @@ public class WatchTogetherFragment extends Fragment {
                     }
                 }
 
-                // If Guest, sync with host.
-                // NOTE: Host does NOT sync here, or they would overwrite their own actions.
-                if (!isHost) {
-                    syncPlayerWithSession(session);
-                }
+                if (!isHost) syncPlayerWithSession(session);
             }
             @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
@@ -386,121 +350,198 @@ public class WatchTogetherFragment extends Fragment {
 
     private void syncPlayerWithSession(WatchTogetherSession session) {
         playVideo(session.getVideoID());
-
         if (player.getPlaybackParameters().speed != session.getPlaybackSpeed()) {
             player.setPlaybackParameters(new PlaybackParameters(session.getPlaybackSpeed()));
         }
-
         tvGuestSpeed.setText(String.format(Locale.getDefault(), "%.1fx", session.getPlaybackSpeed()));
 
         boolean shouldPlay = (session.getPlaybackState() == WatchTogetherSession.PlaybackState.PLAYING);
         if (shouldPlay && !player.isPlaying()) player.play();
         else if (!shouldPlay && player.isPlaying()) player.pause();
 
-        long hostPos = session.getCurrentTimestamp();
-        long localPos = player.getCurrentPosition();
-        if (Math.abs(hostPos - localPos) > 2000) {
-            player.seekTo(hostPos);
+        if (Math.abs(session.getCurrentTimestamp() - player.getCurrentPosition()) > 2000) {
+            player.seekTo(session.getCurrentTimestamp());
         }
     }
 
     private void pushSessionState() {
         if (!isHost || currentSessionRef == null) return;
-
         Map<String, Object> updates = new HashMap<>();
         updates.put("videoID", currentVideoUrl);
         updates.put("currentTimestamp", player.getCurrentPosition());
         updates.put("playbackSpeed", player.getPlaybackParameters().speed);
-
-        WatchTogetherSession.PlaybackState state = player.isPlaying()
-                ? WatchTogetherSession.PlaybackState.PLAYING
-                : WatchTogetherSession.PlaybackState.PAUSED;
-        updates.put("playbackState", state);
-
+        updates.put("playbackState", player.isPlaying() ? WatchTogetherSession.PlaybackState.PLAYING : WatchTogetherSession.PlaybackState.PAUSED);
         currentSessionRef.updateChildren(updates);
     }
 
-    private Runnable heartbeatRunnable = new Runnable() {
-        @Override
-        public void run() {
-            if (isHost && player.isPlaying()) {
-                pushSessionState();
-                heartbeatHandler.postDelayed(this, 3000);
-            }
-        }
-    };
-    private void startHeartbeat() {
-        heartbeatHandler.removeCallbacks(heartbeatRunnable);
-        heartbeatRunnable.run();
+    // ==========================================
+    // DIALOG: VIDEO PICKER (Search & Select)
+    // ==========================================
+    private void showVideoPickerDialog() {
+        BottomSheetDialog bottomSheetDialog = new BottomSheetDialog(requireContext());
+
+        // Inflate the XML layout
+        View sheetView = LayoutInflater.from(getContext()).inflate(R.layout.layout_video_picker, null);
+        bottomSheetDialog.setContentView(sheetView);
+
+        // Bind views from the XML
+        EditText etSearch = sheetView.findViewById(R.id.etSearch);
+        RecyclerView rvPicker = sheetView.findViewById(R.id.rvPicker);
+
+        // Ensure RecyclerView has a LayoutManager
+        rvPicker.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        // Initialize the logic
+        setupPickerLogic(etSearch, rvPicker, bottomSheetDialog);
+
+        bottomSheetDialog.show();
     }
-    private void stopHeartbeat() {
-        heartbeatHandler.removeCallbacks(heartbeatRunnable);
+
+    // Logic for the picker
+    private void setupPickerLogic(EditText etSearch, RecyclerView rvPicker, Dialog dialog) {
+        VideoPickerAdapter adapter = new VideoPickerAdapter(video -> {
+            addToQueue(video);
+            dialog.dismiss();
+        });
+        rvPicker.setAdapter(adapter);
+
+        // Load initial videos (Recent)
+        loadVideosFromFirestore(null, adapter);
+
+        // Search Listener
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                loadVideosFromFirestore(s.toString(), adapter);
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
     }
 
-    private void handleHostMissing(WatchTogetherSession session) {
-        if (session.getParticipants() == null) return;
-        String oldestUid = null;
-        long minTimestamp = Long.MAX_VALUE;
-
-        for (Map.Entry<String, Long> entry : session.getParticipants().entrySet()) {
-            if (entry.getValue() < minTimestamp) {
-                minTimestamp = entry.getValue();
-                oldestUid = entry.getKey();
-            }
+    private void loadVideosFromFirestore(String queryText, VideoPickerAdapter adapter) {
+        Query query;
+        if (TextUtils.isEmpty(queryText)) {
+            // Load recent 20 videos
+            query = firestore.collection("videos")
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(20);
+        } else {
+            // Simple title search (case sensitive usually in firestore, keeping it simple)
+            // Or use keywords if you populated them in lowercase
+            query = firestore.collection("videos")
+                    .whereArrayContains("searchKeywords", queryText.toLowerCase())
+                    .limit(20);
         }
 
-        if (oldestUid != null && oldestUid.equals(myUid)) {
-            currentSessionRef.child("hostID").setValue(myUid);
-            currentSessionRef.child("hostID").onDisconnect().removeValue();
-        }
+        query.get().addOnSuccessListener(snapshots -> {
+            List<Video> videos = snapshots.toObjects(Video.class);
+            adapter.setVideos(videos);
+        });
     }
 
     // ==========================================
-    // QUEUE LOGIC & PLAY HELPER
+    // DIALOG: USER LIST
     // ==========================================
-
-    private void showAddVideoDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Add Video");
-
+    private void showUserListDialog() {
+        BottomSheetDialog dialog = new BottomSheetDialog(requireContext());
         LinearLayout layout = new LinearLayout(getContext());
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 20, 50, 20);
+        layout.setPadding(16,16,16,16);
 
-        final EditText etUrl = new EditText(getContext());
-        etUrl.setHint("Video URL");
-        layout.addView(etUrl);
+        TextView title = new TextView(getContext());
+        title.setText("Participants");
+        title.setTextSize(20);
+        title.setPadding(0,0,0,20);
+        layout.addView(title);
 
-        final EditText etTitle = new EditText(getContext());
-        etTitle.setHint("Title (Optional)");
-        layout.addView(etTitle);
+        RecyclerView rvUsers = new RecyclerView(getContext());
+        rvUsers.setLayoutManager(new LinearLayoutManager(getContext()));
+        ParticipantAdapter adapter = new ParticipantAdapter();
+        rvUsers.setAdapter(adapter);
+        layout.addView(rvUsers);
 
-        builder.setView(layout);
-        builder.setPositiveButton("Add", (dialog, which) -> {
-            String url = etUrl.getText().toString().trim();
-            String title = etTitle.getText().toString().trim();
-            if (!TextUtils.isEmpty(url)) {
-                addToQueue(title, url);
+        dialog.setContentView(layout);
+        dialog.show();
+
+        // Load Users
+        currentSessionRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                WatchTogetherSession session = snapshot.getValue(WatchTogetherSession.class);
+                if (session != null && session.getParticipants() != null) {
+                    loadParticipantDetails(session, adapter);
+                }
             }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
-        builder.setNegativeButton("Cancel", null);
-        builder.show();
     }
 
-    private void addToQueue(String title, String url) {
+    private void loadParticipantDetails(WatchTogetherSession session, ParticipantAdapter adapter) {
+        List<ParticipantAdapter.Participant> list = new ArrayList<>();
+        Map<String, Long> participants = session.getParticipants();
+        String currentHostId = session.getHostID();
+
+        // We have a list of UIDs. We need to fetch names from Firestore for each.
+        // This is async. For simplicity, we create placeholders and update them.
+        for (String uid : participants.keySet()) {
+            ParticipantAdapter.Participant p = new ParticipantAdapter.Participant(uid, "Loading...", uid.equals(currentHostId));
+            list.add(p);
+
+            // Fetch Name
+            firestore.collection("users").document(uid).get().addOnSuccessListener(doc -> {
+                if (doc.exists()) {
+                    String name = doc.getString("name"); // Adjust field name
+                    if(name == null) name = doc.getString("username");
+                    if (name != null) {
+                        p.name = name;
+                        adapter.notifyDataSetChanged();
+                    }
+                }
+            });
+        }
+        adapter.setParticipants(list);
+    }
+
+    // ==========================================
+    // QUEUE LOGIC
+    // ==========================================
+    private void addToQueue(Video video) {
         if (currentSessionRef == null) return;
 
-        // Auto-play improvement: If host, queue empty, and player idle -> Play directly
+        // Auto-play if idle
         boolean shouldAutoPlay = isHost && currentQueue.isEmpty() && (!player.isPlaying() && currentVideoUrl.isEmpty());
 
+        // Create Queue Item from Video Model
+        QueueItem item = new QueueItem(video.getTitle(), video.getVideoURL(), myName);
+
         if (shouldAutoPlay) {
-            QueueItem item = new QueueItem(title.isEmpty() ? "Unknown" : title, url, myUid);
             playQueueItem(item);
         } else {
             String key = currentSessionRef.child("queue").push().getKey();
-            QueueItem item = new QueueItem(title.isEmpty() ? "Unknown" : title, url, myUid);
             currentSessionRef.child("queue").child(key).setValue(item);
         }
+    }
+
+    private void playQueueItem(QueueItem item) {
+        if (item == null) return;
+        if (item.getKey() != null) currentSessionRef.child("queue").child(item.getKey()).removeValue();
+        playVideo(item.getUrl());
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("videoID", item.getUrl());
+        updates.put("videoTitle", item.getTitle());
+        updates.put("currentTimestamp", 0);
+        updates.put("playbackState", WatchTogetherSession.PlaybackState.PLAYING);
+        updates.put("playbackSpeed", player.getPlaybackParameters().speed);
+        currentSessionRef.updateChildren(updates);
+    }
+
+    // ... (Helpers: playNextVideoInQueue, listenToQueue, formatTime, Handlers etc. same as before)
+    // Included purely to ensure no compile errors if you copy-paste, simplified here:
+
+    private void playNextVideoInQueue() {
+        if (currentQueue.isEmpty()) return;
+        playQueueItem(currentQueue.get(0));
     }
 
     private void listenToQueue() {
@@ -522,37 +563,48 @@ public class WatchTogetherFragment extends Fragment {
         });
     }
 
-    /**
-     * CRITICAL FIX: Handles playing a specific item.
-     * 1. Removes it from Queue DB.
-     * 2. Plays it locally (Host's device).
-     * 3. Updates Session DB (For guests).
-     */
-    private void playQueueItem(QueueItem item) {
-        if (item == null) return;
-
-        // 1. Remove from Queue
-        if (item.getKey() != null) {
-            currentSessionRef.child("queue").child(item.getKey()).removeValue();
+    private void handleHostMissing(WatchTogetherSession session) {
+        if (session.getParticipants() == null) return;
+        String oldestUid = null;
+        long minTimestamp = Long.MAX_VALUE;
+        for (Map.Entry<String, Long> entry : session.getParticipants().entrySet()) {
+            if (entry.getValue() < minTimestamp) {
+                minTimestamp = entry.getValue();
+                oldestUid = entry.getKey();
+            }
         }
-
-        // 2. Play Locally
-        playVideo(item.getUrl());
-
-        // 3. Update Remote Session
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("videoID", item.getUrl());
-        updates.put("videoTitle", item.getTitle());
-        updates.put("currentTimestamp", 0);
-        updates.put("playbackState", WatchTogetherSession.PlaybackState.PLAYING);
-        updates.put("playbackSpeed", player.getPlaybackParameters().speed);
-
-        currentSessionRef.updateChildren(updates);
+        if (oldestUid != null && oldestUid.equals(myUid)) {
+            currentSessionRef.child("hostID").setValue(myUid);
+            currentSessionRef.child("hostID").onDisconnect().removeValue();
+        }
     }
 
-    private void playNextVideoInQueue() {
-        if (currentQueue.isEmpty()) return;
-        // Use the helper method to ensure consistency
-        playQueueItem(currentQueue.get(0));
+    // Helpers
+    private void startHeartbeat() { heartbeatHandler.removeCallbacks(heartbeatRunnable); heartbeatRunnable.run(); }
+    private void stopHeartbeat() { heartbeatHandler.removeCallbacks(heartbeatRunnable); }
+    private Runnable heartbeatRunnable = new Runnable() {
+        @Override public void run() { if (isHost && player.isPlaying()) { pushSessionState(); heartbeatHandler.postDelayed(this, 3000); } }
+    };
+    private void startGuestUiUpdater() { uiHandler.removeCallbacks(guestUiRunnable); guestUiRunnable.run(); }
+    private void stopGuestUiUpdater() { uiHandler.removeCallbacks(guestUiRunnable); }
+    private Runnable guestUiRunnable = new Runnable() {
+        @Override public void run() {
+            if (!isHost && player != null) {
+                long current = player.getCurrentPosition();
+                long duration = player.getDuration();
+                if (duration > 0) {
+                    int progress = (int) ((current * 100) / duration);
+                    sbGuestProgress.setProgress(progress);
+                    tvGuestTime.setText(formatTime(current) + " / " + formatTime(duration));
+                }
+                uiHandler.postDelayed(this, 1000);
+            }
+        }
+    };
+    private String formatTime(long millis) {
+        long seconds = millis / 1000;
+        long minutes = seconds / 60;
+        seconds = seconds % 60;
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
     }
 }

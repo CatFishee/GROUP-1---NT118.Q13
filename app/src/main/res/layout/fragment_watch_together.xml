@@ -156,7 +156,13 @@
                     android:text="Status: Guest"
                     android:textSize="12sp"/>
             </LinearLayout>
-
+            <Button
+                android:id="@+id/btnShowUsers"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Users"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
             <Button
                 android:id="@+id/btnAddVideo"
                 android:layout_width="wrap_content"

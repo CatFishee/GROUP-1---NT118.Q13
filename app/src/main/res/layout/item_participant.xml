@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:gravity="center_vertical">
+
+    <!-- Avatar Placeholder -->
+    <ImageView
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@android:drawable/sym_def_app_icon"
+        android:background="@drawable/circle_shape"
+        android:padding="8dp"
+        android:contentDescription="Avatar"/>
+    <!-- (Optional: Use ShapeableImageView for real circles) -->
+
+    <TextView
+        android:id="@+id/tvUserName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="16dp"
+        android:text="User Name"
+        android:textSize="16sp"
+        android:textStyle="bold"/>
+
+    <TextView
+        android:id="@+id/tvHostBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="HOST"
+        android:textSize="12sp"
+        android:textColor="#FF0000"
+        android:textStyle="bold"
+        android:background="#20FF0000"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="4dp"
+        android:visibility="gone"/>
+
+</LinearLayout>
