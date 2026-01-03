@@ -210,12 +210,22 @@ public class WatchTogetherFragment extends Fragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        // Prevent disconnecting when simply rotating the screen
+        if (getActivity() != null && getActivity().isChangingConfigurations()) {
+            return;
+        }
+
+        // Check if we are actually in a session before trying to leave
+        if (currentSessionRef != null) {
+            leaveSession();
+        }
+
+        // Clean up player resources
         if (player != null) {
             player.release();
             player = null;
         }
-        stopHeartbeat();
-        stopGuestUiUpdater();
     }
 
     // ==========================================
@@ -289,14 +299,62 @@ public class WatchTogetherFragment extends Fragment {
     }
 
     private void leaveSession() {
+        // 1. Stop local background tasks
         stopHeartbeat();
         stopGuestUiUpdater();
-        if (currentSessionRef != null) currentSessionRef.child("participants").child(myUid).removeValue();
+
+        // 2. Pause player
+        if (player != null) {
+            player.pause();
+        }
+
+        // 3. Database Cleanup
+        if (currentSessionRef != null && myUid != null) {
+            // We need a temporary reference because currentSessionRef gets nulled below
+            DatabaseReference refToClean = currentSessionRef;
+            String uidToRemove = myUid;
+            boolean wasHost = isHost;
+
+            refToClean.child("participants").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    if (snapshot.exists() && snapshot.getChildrenCount() <= 1) {
+                        // CASE A: I am the last person (or list is empty).
+                        // Delete the ENTIRE session node.
+                        refToClean.removeValue();
+                    } else {
+                        // CASE B: Others are still here.
+                        // 1. Remove myself
+                        refToClean.child("participants").child(uidToRemove).removeValue();
+
+                        // 2. If I was host, remove hostId to trigger auto-promotion for others
+                        if (wasHost) {
+                            refToClean.child("hostId").removeValue();
+                        }
+                    }
+                }
+
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    // Fallback: just remove self if read fails
+                    refToClean.child("participants").child(uidToRemove).removeValue();
+                }
+            });
+        }
+
+        // 4. Reset Local UI State
+        resetLocalState();
+    }
+
+    private void resetLocalState() {
         layoutLobby.setVisibility(View.VISIBLE);
         layoutRoom.setVisibility(View.GONE);
-        player.pause();
+
+        currentSessionRef = null;
         currentSessionId = null;
         isHost = false;
+        currentVideoUrl = "";
+
         currentQueue.clear();
         queueAdapter.setQueueList(currentQueue);
     }
