@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/white">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select a Video"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <EditText
+        android:id="@+id/etSearch"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:background="@drawable/bg_edit_text"
+        android:hint="Search videos..."
+        android:paddingHorizontal="12dp"
+        android:inputType="text"
+        android:maxLines="1"
+        android:layout_marginBottom="12dp"/>
+    <!-- Note: create a simple bg_edit_text drawable or remove background attribute -->
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rvPicker"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="200dp"/>
+
+</LinearLayout>
