@@ -539,21 +539,34 @@ public class WatchTogetherFragment extends Fragment {
         Map<String, Long> participants = session.getParticipants();
         String currentHostId = session.getHostID();
 
-        // We have a list of UIDs. We need to fetch names from Firestore for each.
-        // This is async. For simplicity, we create placeholders and update them.
+        if (participants == null) return;
+
         for (String uid : participants.keySet()) {
-            ParticipantAdapter.Participant p = new ParticipantAdapter.Participant(uid, "Loading...", uid.equals(currentHostId));
+            // Create placeholder with default data
+            ParticipantAdapter.Participant p = new ParticipantAdapter.Participant(
+                    uid,
+                    "Loading...",
+                    null, // No URL yet
+                    uid.equals(currentHostId)
+            );
             list.add(p);
 
-            // Fetch Name
+            // Fetch User Details from Firestore
             firestore.collection("users").document(uid).get().addOnSuccessListener(doc -> {
                 if (doc.exists()) {
-                    String name = doc.getString("name"); // Adjust field name
-                    if(name == null) name = doc.getString("username");
-                    if (name != null) {
-                        p.name = name;
-                        adapter.notifyDataSetChanged();
-                    }
+                    // 1. Get Name
+                    String name = doc.getString("name");
+                    if (name == null) name = doc.getString("username");
+
+                    // 2. Get Profile URL
+                    String profileUrl = doc.getString("profileURL");
+
+                    // 3. Update the Participant object
+                    if (name != null) p.name = name;
+                    p.profileUrl = profileUrl;
+
+                    // 4. Refresh List
+                    adapter.notifyDataSetChanged();
                 }
             });
         }

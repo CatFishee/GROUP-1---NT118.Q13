@@ -3,9 +3,12 @@ package com.example.metube.ui.home;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.metube.R;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,11 +18,13 @@ public class ParticipantAdapter extends RecyclerView.Adapter<ParticipantAdapter.
     public static class Participant {
         public String uid;
         public String name;
+        public String profileUrl; // Added field
         public boolean isHost;
 
-        public Participant(String uid, String name, boolean isHost) {
+        public Participant(String uid, String name, String profileUrl, boolean isHost) {
             this.uid = uid;
             this.name = name;
+            this.profileUrl = profileUrl;
             this.isHost = isHost;
         }
     }
@@ -34,7 +39,6 @@ public class ParticipantAdapter extends RecyclerView.Adapter<ParticipantAdapter.
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // Using the new item_participant.xml
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_participant, parent, false);
         return new ViewHolder(view);
     }
@@ -44,10 +48,24 @@ public class ParticipantAdapter extends RecyclerView.Adapter<ParticipantAdapter.
         Participant p = userList.get(position);
         holder.tvUserName.setText(p.name);
 
+        // Host Badge
         if (p.isHost) {
             holder.tvHostBadge.setVisibility(View.VISIBLE);
         } else {
             holder.tvHostBadge.setVisibility(View.GONE);
+        }
+
+        // Load Avatar
+        if (p.profileUrl != null && !p.profileUrl.isEmpty()) {
+            Glide.with(holder.itemView.getContext())
+                    .load(p.profileUrl)
+                    .apply(RequestOptions.circleCropTransform()) // Makes image circular
+                    .placeholder(R.drawable.circle_shape)
+                    .error(android.R.drawable.sym_def_app_icon)
+                    .into(holder.ivAvatar);
+        } else {
+            // Default placeholder
+            holder.ivAvatar.setImageResource(android.R.drawable.sym_def_app_icon);
         }
     }
 
@@ -58,10 +76,13 @@ public class ParticipantAdapter extends RecyclerView.Adapter<ParticipantAdapter.
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView tvUserName, tvHostBadge;
+        ImageView ivAvatar; // Added ImageView
+
         ViewHolder(View itemView) {
             super(itemView);
             tvUserName = itemView.findViewById(R.id.tvUserName);
             tvHostBadge = itemView.findViewById(R.id.tvHostBadge);
+            ivAvatar = itemView.findViewById(R.id.ivAvatar);
         }
     }
 }
