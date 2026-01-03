@@ -204,5 +204,19 @@ public class HistoryAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             if (count < 1000000) return String.format(Locale.getDefault(), "%.1fK views", count / 1000.0);
             return String.format(Locale.getDefault(), "%.1fM views", count / 1000000.0);
         }
+        public String formatDuration(long durationMs) {
+            // QUAN TRỌNG: Phải đổi từ Mili-giây sang Giây trước khi tính toán
+            long totalSeconds = durationMs / 1000;
+
+            long hours = totalSeconds / 3600;
+            long minutes = (totalSeconds % 3600) / 60;
+            long seconds = totalSeconds % 60;
+
+            if (hours > 0) {
+                return String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds);
+            } else {
+                return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
+            }
+        }
     }
 }

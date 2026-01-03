@@ -27,6 +27,9 @@ import com.example.metube.R;
 import com.example.metube.model.QueueItem;
 import com.example.metube.model.Video;
 import com.example.metube.model.WatchTogetherSession;
+import com.example.metube.watchtogether.ParticipantAdapter;
+import com.example.metube.watchtogether.QueueAdapter;
+import com.example.metube.watchtogether.VideoPickerAdapter;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.PlaybackParameters;
@@ -40,7 +43,6 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 

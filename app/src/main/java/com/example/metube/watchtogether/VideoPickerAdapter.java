@@ -1,4 +1,4 @@
-package com.example.metube.ui.home;
+package com.example.metube.watchtogether;
 
 import android.view.LayoutInflater;
 import android.view.View;

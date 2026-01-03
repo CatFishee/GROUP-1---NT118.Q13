@@ -2,23 +2,17 @@ package com.example.metube.utils;
 import java.util.Locale;
 public class TimeUtil {
     // Dành cho Database lưu GIÂY (Seconds)
-    public static String formatDuration(long durationSeconds) {
-        if (durationSeconds <= 0) return "0:00";
+    // Trong file TimeUtil.java
+    public static String formatDuration(long durationMs) {
+        long totalSeconds = durationMs / 1000; // QUAN TRỌNG: Chia 1000 trước
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
 
-        // KHÔNG CHIA CHO 1000 NỮA
-        long seconds = durationSeconds;
-
-        long minutes = seconds / 60;
-        long hours = minutes / 60;
-
-        long remainingMinutes = minutes % 60;
-        long remainingSeconds = seconds % 60;
-
-        // Nên dùng Locale.US để đảm bảo số hiển thị chuẩn 0-9 (tránh lỗi font số Ả Rập)
         if (hours > 0) {
-            return String.format(Locale.US, "%d:%02d:%02d", hours, remainingMinutes, remainingSeconds);
+            return String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds);
         } else {
-            return String.format(Locale.US, "%d:%02d", minutes, remainingSeconds);
+            return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
         }
     }
 }

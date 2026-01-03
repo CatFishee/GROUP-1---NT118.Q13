@@ -14,6 +14,7 @@ import com.example.metube.model.User;
 import com.example.metube.utils.TimeUtil;
 
 import java.util.List;
+import java.util.Locale;
 
 public class HistoryPreviewAdapter extends RecyclerView.Adapter<HistoryPreviewAdapter.ViewHolder> {
 
@@ -117,6 +118,20 @@ public class HistoryPreviewAdapter extends RecyclerView.Adapter<HistoryPreviewAd
                     listener.onMoreClick(video, getBindingAdapterPosition());
                 }
             });
+        }
+    }
+    public String formatDuration(long durationMs) {
+        // QUAN TRỌNG: Phải đổi từ Mili-giây sang Giây trước khi tính toán
+        long totalSeconds = durationMs / 1000;
+
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+
+        if (hours > 0) {
+            return String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds);
+        } else {
+            return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
         }
     }
 }
