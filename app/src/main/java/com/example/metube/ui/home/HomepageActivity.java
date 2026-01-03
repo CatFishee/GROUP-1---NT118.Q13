@@ -2,9 +2,14 @@ package com.example.metube.ui.home;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -26,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.example.metube.ui.settings.SettingsActivity;
 import com.example.metube.ui.upload.UploadActivity;
 import com.example.metube.ui.search.SearchActivity;
 import com.example.metube.ui.video.VideoActivity;
@@ -91,6 +97,14 @@ public class HomepageActivity extends AppCompatActivity {
 
         // Default view
         showHomeContent();
+
+        SharedPreferences prefs = getSharedPreferences("theme_prefs", Context.MODE_PRIVATE);
+        int themeOption = prefs.getInt("selected_theme", 0);
+        switch (themeOption) {
+            case 0: AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM); break;
+            case 1: AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO); break;
+            case 2: AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES); break;
+        }
     }
 
     private void setupRecyclerView() {
@@ -264,8 +278,7 @@ public class HomepageActivity extends AppCompatActivity {
         View settingsButton = topBar.findViewById(R.id.btnSettings);
         if (settingsButton != null) {
             settingsButton.setOnClickListener(v -> {
-                // Mở activity UserStatisticsActivity (là file UserStatisticsActivity.java bạn gửi lúc đầu)
-                Intent intent = new Intent(HomepageActivity.this, com.example.metube.ui.userstat.UserStatisticsActivity.class);
+                Intent intent = new Intent(HomepageActivity.this, SettingsActivity.class);
                 startActivity(intent);
             });
         }
@@ -319,36 +332,39 @@ public class HomepageActivity extends AppCompatActivity {
     }
 
     private void updateTabSelection(View selectedImageView) {
+        // 1. Reset tất cả về trạng thái chưa chọn
+        ivHome.setSelected(false);
+        tvHome.setSelected(false);
+        ivHome.setImageResource(R.drawable.ic_home);
+
+        ivCreator.setSelected(false);
+        tvCreator.setSelected(false);
+        ivCreator.setImageResource(R.drawable.ic_creator);
+
+        ivSubs.setSelected(false);
+        tvSubs.setSelected(false);
+        ivSubs.setImageResource(R.drawable.ic_subscriptions);
+
+        ivProfile.setSelected(false);
+        tvProfile.setSelected(false);
+        ivProfile.setImageResource(R.drawable.ic_person);
+
         if (selectedImageView == ivHome) {
+            ivHome.setSelected(true);
+            tvHome.setSelected(true);
             ivHome.setImageResource(R.drawable.ic_home_filled);
-            tvHome.setTextColor(ContextCompat.getColor(this, R.color.app_main_color));
-        } else {
-            ivHome.setImageResource(R.drawable.ic_home);
-            tvHome.setTextColor(ContextCompat.getColor(this, android.R.color.black));
-        }
-
-        if (selectedImageView == ivCreator) {
+        } else if (selectedImageView == ivCreator) {
+            ivCreator.setSelected(true);
+            tvCreator.setSelected(true);
             ivCreator.setImageResource(R.drawable.ic_creator_filled);
-            tvCreator.setTextColor(ContextCompat.getColor(this, R.color.app_main_color));
-        } else {
-            ivCreator.setImageResource(R.drawable.ic_creator);
-            tvCreator.setTextColor(ContextCompat.getColor(this, android.R.color.black));
-        }
-
-        if (selectedImageView == ivSubs) {
+        } else if (selectedImageView == ivSubs) {
+            ivSubs.setSelected(true);
+            tvSubs.setSelected(true);
             ivSubs.setImageResource(R.drawable.ic_subscriptions_filled);
-            tvSubs.setTextColor(ContextCompat.getColor(this, R.color.app_main_color));
-        } else {
-            ivSubs.setImageResource(R.drawable.ic_subscriptions);
-            tvSubs.setTextColor(ContextCompat.getColor(this, android.R.color.black));
-        }
-
-        if (selectedImageView == ivProfile) {
+        } else if (selectedImageView == ivProfile) {
+            ivProfile.setSelected(true);
+            tvProfile.setSelected(true);
             ivProfile.setImageResource(R.drawable.ic_person_filled);
-            tvProfile.setTextColor(ContextCompat.getColor(this, R.color.app_main_color));
-        } else {
-            ivProfile.setImageResource(R.drawable.ic_person);
-            tvProfile.setTextColor(ContextCompat.getColor(this, android.R.color.black));
         }
     }
 
@@ -388,6 +404,7 @@ public class HomepageActivity extends AppCompatActivity {
     }
 
     private void setupTopicFilters(List<String> topicList) {
+        topicContainer.setBackgroundResource(R.color.bg_main);
         topicContainer.removeAllViews();
         currentlySelectedTopic = null;
 
@@ -407,6 +424,10 @@ public class HomepageActivity extends AppCompatActivity {
     private Button createTopicButton(String text) {
         Button button = new Button(this, null, 0, R.style.Widget_App_TopicButton);
         button.setText(text);
+
+        // Gán bộ Selector cho màu chữ và màu nền
+        button.setTextColor(ContextCompat.getColorStateList(this, R.color.selector_topic_button_text));
+        button.setBackgroundTintList(ContextCompat.getColorStateList(this, R.color.selector_topic_button_background));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -419,8 +440,16 @@ public class HomepageActivity extends AppCompatActivity {
             }
             v.setSelected(true);
             currentlySelectedTopic = v;
+
+
             filterVideosByTopic(text);
         });
+
+        // Mặc định nút All được chọn
+        if (text.equals("All")) {
+            button.setSelected(true);
+            currentlySelectedTopic = button;
+        }
         return button;
     }
 

@@ -7,7 +7,7 @@
     android:paddingHorizontal="12dp"
     android:gravity="center_vertical"
     android:paddingTop="20dp"
-    android:background="@color/white">
+    android:background="@color/bg_main">
 
     <!-- PHẦN CỦA TRANG THÔNG BÁO (ẨN LÚC ĐẦU) -->
     <LinearLayout

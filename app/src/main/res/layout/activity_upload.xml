@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
+    android:background="@color/bg_main"
     tools:context=".ui.upload.UploadActivity">
 
     <FrameLayout
@@ -63,10 +63,10 @@
                     android:paddingStart="30dp"
                     android:paddingEnd="30dp"
                     android:layout_gravity="center"
-                    android:backgroundTint="@color/app_main_color"
+                    android:backgroundTint="@color/button_bg"
                     android:text="Select Thumbnail"
                     android:textSize="18dp"
-                    android:textColor="@color/white"/>
+                    android:textColor="@color/button_text"/>
             </FrameLayout>
 
             <EditText
@@ -123,9 +123,9 @@
                 android:layout_height="60dp"
                 android:layout_marginTop="24dp"
                 android:layout_marginBottom="15dp"
-                android:backgroundTint="@color/app_main_color"
+                android:backgroundTint="@color/button_bg"
                 android:text="Select Video"
-                android:textColor="@color/white"
+                android:textColor="@color/button_text"
                 android:textSize="20dp"/>
 
             <TextView
@@ -134,6 +134,7 @@
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="No video selected"
+                android:textColor="@color/app_main_color"
                 android:layout_marginTop="4dp"
                 android:textSize="18dp"/>
 
@@ -142,9 +143,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
                 android:layout_marginTop="32dp"
-                android:backgroundTint="@color/app_main_color"
+                android:backgroundTint="@color/button_bg"
                 android:text="Upload Video"
-                android:textColor="@color/white"
+                android:textColor="@color/button_text"
                 android:textSize="20dp"/>
 
         </LinearLayout>
