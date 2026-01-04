@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/bottom_sheet_queue"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_main"
+    app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
+    app:behavior_peekHeight="0dp"
+    app:behavior_hideable="true">
+
+    <!-- Drag Handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="8dp"
+        android:background="@drawable/bottom_sheet_handle"
+        android:backgroundTint="#808080"/>
+
+    <!-- Header: Title + Playlist Info -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="12dp">
+
+        <!-- Queue Title Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_queue_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="BÀI HỌC"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/app_main_color"/>
+
+            <ImageButton
+                android:id="@+id/btn_close_queue"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_close"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close"
+                app:tint="@color/icon_tint" />
+
+        </LinearLayout>
+
+        <!-- Playlist Metadata -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_playlist_owner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Gia Hannn"
+                android:textSize="14sp"
+                android:textColor="@color/text_secondary"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" • "
+                android:textColor="#AAAAAA"/>
+
+            <TextView
+                android:id="@+id/tv_queue_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1/6"
+                android:textSize="14sp"
+                android:textColor="#AAAAAA"/>
+
+            <ImageView
+                android:id="@+id/iv_playlist_lock"
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_lock"
+                app:tint="@color/icon_tint" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Action Buttons: Repeat + Shuffle -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="16dp"
+        android:gravity="center_horizontal">
+
+        <ImageButton
+            android:id="@+id/btn_repeat_queue"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_repeat"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_marginEnd="24dp"
+            android:contentDescription="Repeat"
+            app:tint="@color/icon_tint" />
+
+        <ImageButton
+            android:id="@+id/btn_shuffle_queue"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_shuffle"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Shuffle"
+            app:tint="@color/icon_tint"/>
+
+    </LinearLayout>
+
+    <!-- Queue List -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_queue"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:paddingTop="8dp"
+        android:clipToPadding="false"
+        android:scrollbars="vertical"/>
+
+    <!-- Empty State -->
+    <LinearLayout
+        android:id="@+id/layout_empty_queue"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/ic_queue_emtpy"
+            android:alpha="0.5"
+            app:tint="#555555" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Your queue is empty"
+            android:textSize="16sp"
+            android:textColor="#AAAAAA"/>
+
+    </LinearLayout>
+
+    <!-- Mini Player at Bottom (Like YouTube) -->
+    <LinearLayout
+        android:id="@+id/mini_player_next"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="#2A2A2A"
+        android:padding="12dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/ic_play"
+            android:layout_marginEnd="12dp"
+            app:tint="#FFFFFF" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Next:"
+                android:textSize="11sp"
+                android:textColor="#AAAAAA"/>
+
+            <TextView
+                android:id="@+id/tv_next_video_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Video title..."
+                android:textSize="13sp"
+                android:textColor="#FFFFFF"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+            <TextView
+                android:id="@+id/tv_next_video_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="BÀI HỌC • 1/6"
+                android:textSize="11sp"
+                android:textColor="#AAAAAA"
+                android:maxLines="1"
+                android:ellipsize="end"/>
+
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btn_collapse_queue"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@drawable/ic_expand"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Collapse"
+            app:tint="#FFFFFF" />
+
+    </LinearLayout>
+
+</LinearLayout>

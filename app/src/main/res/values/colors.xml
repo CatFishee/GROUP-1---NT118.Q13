@@ -13,7 +13,7 @@
     <color name="accent_neon">#00FFC5</color>
     <color name="accent_neon_dark">#00B88E</color>
     <color name="surface_dark">#F0F0F0</color>
-    <color name="text_on_neon">#000000</color>
+    <color name="text_secondary">@android:color/darker_gray</color>
     <color name="icon_color">#000000</color>
     <color name="divider_color">#CCCCCC</color>
 
@@ -40,6 +40,8 @@
     <color name="chart_line_color">#63A361</color> <!-- Đường kẻ xanh lá -->
     <!-- Màu số liệu trên biểu đồ -->
     <color name="chart_value_text">#63A361</color>
+    <color name="icon_tint">#63A361</color>
+
 
 
 </resources>

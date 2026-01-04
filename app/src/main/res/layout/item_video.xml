@@ -91,4 +91,15 @@
         app:layout_constraintEnd_toEndOf="@id/video_title"
         tools:text="Tên kênh • 2 days ago" />
 
+    <ImageButton
+        android:id="@+id/btn_video_options"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="8dp"
+        android:src="@drawable/ic_more_vert"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="More options"
+        app:layout_constraintTop_toTopOf="@id/channel_avatar"
+        app:layout_constraintEnd_toEndOf="parent"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

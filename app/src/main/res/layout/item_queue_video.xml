@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="?attr/selectableItemBackground"
+    android:paddingVertical="8dp"
+    android:paddingHorizontal="16dp">
+
+    <!-- Drag Handle Icon -->
+    <ImageView
+        android:id="@+id/iv_drag_handle"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_gravity="center_vertical"
+        android:src="@drawable/ic_drag_handle"
+        android:layout_marginEnd="12dp"
+        android:contentDescription="Drag to reorder"
+        app:tint="#808080" />
+
+    <!-- Thumbnail Container with Overlays -->
+    <FrameLayout
+        android:layout_width="120dp"
+        android:layout_height="68dp"
+        android:layout_marginEnd="12dp">
+
+        <!-- Thumbnail Image -->
+        <ImageView
+            android:id="@+id/iv_queue_thumbnail"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:background="#2A2A2A"
+            android:contentDescription="Video thumbnail"/>
+
+        <!-- Now Playing Indicator (Red Border) -->
+        <View
+            android:id="@+id/view_now_playing_border"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/now_playing_border"
+            android:visibility="gone"/>
+
+        <!-- Duration Badge (Bottom Right) -->
+        <TextView
+            android:id="@+id/tv_video_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="4dp"
+            android:background="#DD000000"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="2dp"
+            android:text="22:20"
+            android:textSize="11sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:visibility="gone"/>
+
+        <!-- "Next up" Badge (Top Left) -->
+        <TextView
+            android:id="@+id/tv_next_up_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="4dp"
+            android:background="#DD000000"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:text="Next up"
+            android:textSize="10sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:visibility="gone"/>
+
+    </FrameLayout>
+
+    <!-- Video Info Column -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_gravity="center_vertical"
+        android:orientation="vertical"
+        android:layout_marginEnd="8dp">
+
+        <!-- Video Title -->
+        <TextView
+            android:id="@+id/tv_queue_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Video Title in Queue"
+            android:textSize="14sp"
+            android:textColor="@color/app_main_color"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:lineSpacingExtra="2dp"/>
+
+        <!-- Channel Name -->
+        <TextView
+            android:id="@+id/tv_queue_channel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="Channel Name"
+            android:textSize="12sp"
+            android:textColor="#AAAAAA"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+        <!-- Video Stats (Views + Upload Time) -->
+        <TextView
+            android:id="@+id/tv_queue_stats"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="9.4K views • 10 years ago"
+            android:textSize="12sp"
+            android:textColor="#AAAAAA"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+    </LinearLayout>
+
+    <!-- More Options Button -->
+    <ImageButton
+        android:id="@+id/btn_queue_more"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_gravity="center_vertical"
+        android:src="@drawable/ic_more_vert"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="More options"
+        app:tint="#AAAAAA" />
+
+</LinearLayout>

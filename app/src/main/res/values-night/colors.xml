@@ -11,6 +11,7 @@
 
     <!-- Màu chữ phụ/mô tả (Xám nhạt) -->
     <color name="surface_dark" tools:ignore="MissingDefaultResource">#121212</color>
+    <color name="text_secondary">@color/white</color>
 
     <color name="app_main_color">#FFFFFF</color>
 
@@ -45,5 +46,6 @@
     <!-- Biểu đồ -->
     <color name="chart_line_color">#364335</color> <!-- Đường kẻ xanh lá -->
     <color name="chart_value_text">#364335</color>
+    <color name="icon_tint">#63A361</color>
 
 </resources>

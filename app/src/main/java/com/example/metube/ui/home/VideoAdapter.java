@@ -1,13 +1,16 @@
 package com.example.metube.ui.home;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -15,6 +18,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.example.metube.ui.video.VideoActivity;
+import com.example.metube.utils.DownloadUtil;
+import com.example.metube.utils.ShareUtil;
+import com.example.metube.utils.VideoQueueManager;
 import com.google.android.exoplayer2.DefaultLoadControl;
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
@@ -47,6 +54,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     private Player.Listener currentVideoListener;
     private int currentPlayingPos = -1;
     private boolean isAutoplayEnabled = false;
+    private boolean isHistoryMode = false;
 
 
     public VideoAdapter(Context context, List<Video> videoList, OnVideoClickListener clickListener) {
@@ -55,48 +63,47 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         this.clickListener = clickListener;
     }
 
+    // Constructor với history mode
+    public VideoAdapter(Context context, List<Video> videoList, OnVideoClickListener clickListener, boolean isHistoryMode) {
+        this.context = context;
+        this.videoList = videoList;
+        this.clickListener = clickListener;
+        this.isHistoryMode = isHistoryMode;
+    }
+
     @NonNull
     @Override
     public VideoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_video, parent, false);
         return new VideoViewHolder(view);
     }
+
     // 1. Khởi tạo Player tối ưu (Mute + Low Buffer)
     private void initPlayer(Context context) {
         if (sharedPlayer == null) {
-            // ✅ Giảm buffer để start nhanh hơn
-            // minBuffer: 1.5s, maxBuffer: 3s, playback: 500ms, rebuffer: 1s
             DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(
-                            1500,  // minBufferMs - tối thiểu buffer trước khi play
-                            3000,  // maxBufferMs - tối đa buffer
-                            500,   // bufferForPlaybackMs - buffer để bắt đầu phát
-                            1000   // bufferForPlaybackAfterRebufferMs - buffer sau khi rebuffer
-                    )
+                    .setBufferDurationsMs(1500, 3000, 500, 1000)
                     .build();
 
             sharedPlayer = new ExoPlayer.Builder(context)
                     .setLoadControl(loadControl)
                     .build();
 
-            sharedPlayer.setVolume(0f); // MUTE
-            sharedPlayer.setRepeatMode(Player.REPEAT_MODE_ONE); // Loop
+            sharedPlayer.setVolume(0f);
+            sharedPlayer.setRepeatMode(Player.REPEAT_MODE_ONE);
         }
     }
 
     // 2. Hàm điều khiển phát từ Activity
     public void playVideoAt(int position) {
-        // ✅ 1. Kiểm tra nếu đang phát video này rồi thì bỏ qua
         if (position == currentPlayingPos && sharedPlayer != null && sharedPlayer.isPlaying()) {
             return;
         }
 
-        // ✅ 2. Validate
         if (position < 0 || position >= videoList.size() || !isAutoplayEnabled) {
             return;
         }
 
-        // ✅ 3. Dừng video cũ (nếu có)
         int lastPos = currentPlayingPos;
         currentPlayingPos = position;
 
@@ -104,15 +111,12 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             notifyItemChanged(lastPos, "DETACH_PLAYER");
         }
 
-        // ✅ 4. Init player nếu chưa có
         initPlayer(context);
 
-        // ✅ 5. Gỡ listener cũ
         if (currentVideoListener != null) {
             sharedPlayer.removeListener(currentVideoListener);
         }
 
-        // ✅ 6. Tạo listener mới để ẩn thumbnail khi video render xong
         currentVideoListener = new Player.Listener() {
             @Override
             public void onRenderedFirstFrame() {
@@ -121,15 +125,11 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         };
         sharedPlayer.addListener(currentVideoListener);
 
-        // ✅ 7. Set MediaItem và prepare
         Video video = videoList.get(position);
         sharedPlayer.setMediaItem(MediaItem.fromUri(video.getVideoURL()));
-
-        // ✅ 8. Prepare + Play ngay
         sharedPlayer.prepare();
-        sharedPlayer.setPlayWhenReady(true); // Play ngay khi prepare xong
+        sharedPlayer.setPlayWhenReady(true);
 
-        // ✅ 9. Attach player vào view
         notifyItemChanged(currentPlayingPos, "ATTACH_PLAYER");
     }
 
@@ -161,39 +161,105 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         Video currentVideo = videoList.get(position);
         holder.bind(currentVideo, context, clickListener);
 
-        // ✅ Logic hiển thị PlayerView
+        // Logic hiển thị PlayerView
         if (position == currentPlayingPos && sharedPlayer != null) {
             holder.playerView.setVisibility(View.VISIBLE);
             holder.playerView.setPlayer(sharedPlayer);
-            // Không ẩn thumbnail ở đây, để listener tự ẩn khi ready
         } else {
             holder.playerView.setVisibility(View.GONE);
             holder.playerView.setPlayer(null);
             holder.thumbnail.setVisibility(View.VISIBLE);
         }
+
+        // ✅ SỬA LỖI: Dùng currentVideo thay vì video
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(context, VideoActivity.class);
+            intent.putExtra("video_id", currentVideo.getVideoID());
+            context.startActivity(intent);
+        });
+
+        // Click vào nút 3 chấm
+        holder.btnOptions.setOnClickListener(v -> {
+            showVideoOptions(currentVideo, position);
+        });
     }
+
     @Override
     public void onBindViewHolder(@NonNull VideoViewHolder holder, int position, @NonNull List<Object> payloads) {
         if (!payloads.isEmpty()) {
             for (Object payload : payloads) {
                 if (payload.equals("ATTACH_PLAYER")) {
-                    // Chỉ hiện PlayerView và gắn Player, tuyệt đối không chạm vào info text
                     holder.playerView.setVisibility(View.VISIBLE);
                     holder.playerView.setPlayer(sharedPlayer);
                 } else if (payload.equals("HIDE_THUMBNAIL")) {
-                    // Chỉ ẩn thumbnail khi video đã chạy
                     holder.thumbnail.setVisibility(View.INVISIBLE);
                 } else if (payload.equals("DETACH_PLAYER")) {
-                    // Trả về trạng thái thumbnail bình thường cho bài cũ
                     holder.playerView.setVisibility(View.GONE);
                     holder.playerView.setPlayer(null);
                     holder.thumbnail.setVisibility(View.VISIBLE);
                 }
             }
         } else {
-            // Chỉ khi trượt tới item mới hoàn toàn (chưa có data) mới gọi bind()
             onBindViewHolder(holder, position);
         }
+    }
+
+    private void showVideoOptions(Video video, int position) {
+        VideoOptionsBottomSheet.show(
+                context,
+                video,
+                isHistoryMode,
+                new VideoOptionsBottomSheet.OnOptionSelectedListener() {
+                    @Override
+                    public void onPlayNext(Video video) {
+                        VideoQueueManager.getInstance().playNext(video);
+                        Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onSaveToPlaylist(Video video) {
+                        Toast.makeText(context, "Save to playlist feature coming soon", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onDownload(Video video) {
+                        // ✅ SỬ DỤNG DownloadUtil
+                        if (video.getVideoURL() != null && !video.getVideoURL().isEmpty()) {
+                            DownloadUtil.downloadVideo(
+                                    context,
+                                    video.getVideoURL(),
+                                    video.getTitle() != null ? video.getTitle() : "video"
+                            );
+                        } else {
+                            Toast.makeText(context, "Video URL not available", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onShare(Video video) {
+                        // ✅ SỬ DỤNG ShareUtil
+                        String videoUrl = "https://metube.com/watch?v=" + video.getVideoID();
+                        ShareUtil.shareVideo(
+                                context,
+                                video.getTitle() != null ? video.getTitle() : "Check this video",
+                                videoUrl
+                        );
+                    }
+
+                    @Override
+                    public void onDontRecommend(Video video) {
+                        Toast.makeText(context, "Channel will not be recommended", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onRemoveFromHistory(Video video) {
+                        videoList.remove(position);
+                        notifyItemRemoved(position);
+                        notifyItemRangeChanged(position, videoList.size());
+                        Toast.makeText(context, "Removed from watch history", Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
     }
 
     @Override
@@ -211,16 +277,16 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         CircleImageView avatar;
         TextView title, tvDurationOverlay;
         TextView info;
+        PlayerView playerView;
+        ImageButton btnOptions; // ✅ THÊM DÒNG NÀY
 
         private DatabaseReference videoStatRef;
         private ValueEventListener viewListener;
 
-        // Cache data để build info text
         private String channelName = "";
         private long viewCount = 0;
         private String timeAgo = "";
-        private String currentBoundVideoId = ""; // Để kiểm tra tránh nạp lại dữ liệu cũ
-        PlayerView playerView;
+        private String currentBoundVideoId = "";
 
         public VideoViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -230,20 +296,17 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             info = itemView.findViewById(R.id.video_info);
             playerView = itemView.findViewById(R.id.player_view_autoplay);
             tvDurationOverlay = itemView.findViewById(R.id.tv_duration_overlay);
+            btnOptions = itemView.findViewById(R.id.btn_video_options); // ✅ THÊM DÒNG NÀY
         }
 
         public void bind(final Video video, Context context, final OnVideoClickListener listener) {
-            // Reset cache
-            // Kiểm tra nếu videoId giống video đang hiện thì không reset chữ (Tránh nhảy chữ)
             if (currentBoundVideoId.equals(video.getVideoID())) {
-                // Chỉ cập nhật listener click (phòng trường hợp listener thay đổi)
                 itemView.setOnClickListener(v -> {
                     if (listener != null) listener.onVideoClick(video);
                 });
                 return;
             }
 
-            // Nếu là video mới hoàn toàn thì mới reset
             currentBoundVideoId = video.getVideoID();
             channelName = "";
             viewCount = 0;
@@ -260,27 +323,18 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                 tvDurationOverlay.setVisibility(View.GONE);
             }
 
-
-            // Load uploader info from Firestore
             loadChannelInfo(video);
-
-            // Load view count from Realtime Database
             listenToViewCount(video);
-
-            // Format time ago
             timeAgo = formatTimeAgo(video.getCreatedAt());
 
-            // Load thumbnail
             Glide.with(context)
                     .load(video.getThumbnailURL())
                     .placeholder(R.color.light_green_background)
                     .error(R.drawable.logo_metube)
                     .into(thumbnail);
 
-            // Load avatar
             loadChannelAvatar(video.getUploaderID(), context);
 
-            // Set click listener
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onVideoClick(video);
             });
@@ -356,7 +410,6 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         private void listenToViewCount(Video video) {
             if (video.getVideoID() == null) return;
 
-            // Remove old listener if any
             if (videoStatRef != null && viewListener != null) {
                 videoStatRef.removeEventListener(viewListener);
             }
@@ -366,7 +419,6 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                     .child(video.getVideoID())
                     .child("viewCount");
 
-            // Listen for realtime updates
             viewListener = new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
@@ -377,7 +429,6 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
 
                 @Override
                 public void onCancelled(@NonNull DatabaseError error) {
-                    // If Realtime DB fails, try Firestore
                     loadViewCountFromFirestore(video.getVideoID());
                 }
             };
@@ -399,31 +450,27 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                     });
         }
 
-        // ✅ Build info text với format: Channel • Views • Time
         private void updateInfoText() {
             StringBuilder infoBuilder = new StringBuilder();
 
-            // Add channel name
             if (!channelName.isEmpty()) {
                 infoBuilder.append(channelName);
             }
 
-            // Add view count
             if (viewCount > 0 || !channelName.isEmpty()) {
                 if (infoBuilder.length() > 0) infoBuilder.append(" • ");
                 infoBuilder.append(formatViewCount(viewCount));
             }
 
-            // Add time ago
             if (!timeAgo.isEmpty()) {
                 if (infoBuilder.length() > 0) infoBuilder.append(" • ");
                 infoBuilder.append(timeAgo);
             }
 
-            // Update TextView
             String finalText = infoBuilder.length() > 0 ? infoBuilder.toString() : "Loading...";
             info.setText(finalText);
         }
+
         private String formatDuration(long durationMs) {
             long seconds = durationMs / 1000;
             long h = seconds / 3600;
