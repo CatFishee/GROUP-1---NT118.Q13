@@ -471,6 +471,8 @@ public class VideoActivity extends AppCompatActivity {
         scrollView = findViewById(R.id.scroll_view_content);
         ivChannelAvatar = findViewById(R.id.iv_channel_avatar);
         tvUploader = findViewById(R.id.tv_video_uploader);
+        ImageButton btnBack = findViewById(R.id.btn_back_video);
+
 
         btnLike.setOnClickListener(v -> onLikeClicked());
         btnDislike.setOnClickListener(v -> onDislikeClicked());
@@ -507,6 +509,10 @@ public class VideoActivity extends AppCompatActivity {
         });
         ivChannelAvatar.setOnClickListener(openProfileListener);
         tvUploader.setOnClickListener(openProfileListener);
+        btnBack.setOnClickListener(v -> {
+            // Thực hiện thoát Activity
+            onBackPressed();
+        });
     }
 
     private void onShareClicked() {

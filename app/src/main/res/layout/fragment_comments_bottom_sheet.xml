@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:background="#1E1E1E">
+    android:background="@color/bg_main">
 
     <!-- Header / Drag Handle -->
     <TextView
@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:padding="16dp"
         android:text="Comments"
-        android:textColor="@color/white"
+        android:textColor="@color/app_main_color"
         android:textSize="18sp"
         android:textStyle="bold" />
 
@@ -35,7 +35,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="#2C2C2C"
+        android:background="@color/bg_main"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="8dp">
@@ -57,8 +57,8 @@
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="3"
             android:padding="8dp"
-            android:textColor="@color/white"
-            android:textColorHint="#80FFFFFF" />
+            android:textColor="@color/app_main_color"
+            android:textColorHint="@color/text_secondary" />
 
         <ImageButton
             android:id="@+id/btn_send_comment"
@@ -67,7 +67,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Send"
             android:src="@android:drawable/ic_menu_send"
-            app:tint="@color/white"
+            app:tint="@color/icon_tint"
             tools:ignore="TouchTargetSizeCheck" />
     </LinearLayout>
 </LinearLayout>

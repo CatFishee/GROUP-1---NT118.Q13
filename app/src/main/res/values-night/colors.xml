@@ -53,5 +53,6 @@
     <!-- Khi đã Sub: Nền xám cực tối (nổi trên nền đen), chữ trắng xám -->
     <color name="sub_btn_inactive_bg">#333333</color>
     <color name="sub_btn_inactive_text">#E0E0E0</color>
+    <color name="cmt_text">#FFFFFF</color>
 
 </resources>

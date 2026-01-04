@@ -25,6 +25,20 @@
             app:layout_constraintTop_toTopOf="parent"
             app:use_controller="true" />
 
+        <ImageButton
+            android:id="@+id/btn_back_video"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:padding="12dp"
+            android:src="@drawable/ic_arrow_back"
+            android:elevation="10dp"
+            app:tint="@color/icon_tint"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <!-- Scrollable Content Below Video -->
         <ScrollView
             android:id="@+id/scroll_view_content"
