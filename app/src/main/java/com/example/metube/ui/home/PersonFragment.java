@@ -194,9 +194,17 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         });
 
         // Gắn sự kiện tạm thời cho các nút chưa có chức năng
-        View.OnClickListener notImplementedListener = v ->
-                Toast.makeText(getContext(), "Feature not implemented yet", Toast.LENGTH_SHORT).show();
-        btnViewChannel.setOnClickListener(notImplementedListener);
+        btnViewChannel.setOnClickListener(v -> {
+            if (mUser != null && mUser.getUserID() != null) {
+                // Mở CreatorProfileActivity
+                Intent intent = new Intent(requireContext(), com.example.metube.ui.contentcreator.CreatorProfileActivity.class);
+                // Truyền ID của chính người dùng hiện tại sang
+                intent.putExtra("creator_id", mUser.getUserID());
+                startActivity(intent);
+            } else {
+                Toast.makeText(getContext(), "User data is still loading...", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         btnDownloads.setOnClickListener(v -> {
             Intent intent = new Intent(requireContext(), com.example.metube.ui.downloads.DownloadsActivity.class);

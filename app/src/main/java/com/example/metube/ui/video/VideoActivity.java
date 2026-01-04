@@ -485,7 +485,11 @@ public class VideoActivity extends AppCompatActivity {
         cardComments = findViewById(R.id.card_comments_preview);
         cardComments.setOnClickListener(v -> {
             if (currentVideoId != null) {
-                CommentsBottomSheet bottomSheet = CommentsBottomSheet.newInstance(currentVideoId);
+                CommentsBottomSheet bottomSheet = CommentsBottomSheet.newInstance(
+                        currentVideoId,
+                        currentUploaderID,
+                        currentVideoObject.getThumbnailURL()
+                );
                 bottomSheet.show(getSupportFragmentManager(), "CommentsBottomSheet");
             } else {
                 Toast.makeText(this, "Video loading...", Toast.LENGTH_SHORT).show();

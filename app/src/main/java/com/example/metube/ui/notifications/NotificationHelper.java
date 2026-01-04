@@ -91,11 +91,28 @@ public class NotificationHelper {
     /**
      * 4. Thông báo cho chủ kênh khi có bình luận mới
      */
-    public static void notifyOwnerAboutNewComment(String uploaderID, String videoID, String userName, String commentText, String thumb) {
+    public static void notifyOwnerAboutNewComment(String uploaderID, String videoID, String userName, String commentText, String videoThumb) {
         String currentUid = FirebaseAuth.getInstance().getUid();
-        checkSettingsAndCreate(uploaderID, currentUid, videoID, "key_comments",
-                "NEW_COMMENT", "New Comment",
-                userName + " commented: " + commentText, thumb);
+        if (currentUid == null) return;
+
+        // ✅ ĐIỀU KIỆN: Nếu chủ kênh tự comment trên video của mình thì KHÔNG gửi thông báo
+        if (currentUid.equals(uploaderID)) {
+            Log.d(TAG, "Owner commented on their own video - No notification sent.");
+            return;
+        }
+
+        // Gửi thông báo và kiểm tra cài đặt "key_comments" của người nhận
+        // senderID là currentUid (người comment) để Adapter lấy được avatar của người đó
+        checkSettingsAndCreate(
+                uploaderID,    // recipientID: Chủ kênh
+                currentUid,    // senderID: Người comment (để hiện avatar)
+                videoID,       // videoID: Để nhấn vào mở video
+                "key_comments",
+                "NEW_COMMENT",
+                "New comment on your video",
+                userName + ": " + commentText,
+                videoThumb
+        );
     }
 
     private static void checkSettingsAndCreate(String recipientID, String senderID, String videoID,

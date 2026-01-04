@@ -18,6 +18,7 @@ import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Comment;
 import com.example.metube.model.User;
+import com.example.metube.ui.notifications.NotificationHelper;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -34,6 +35,8 @@ import de.hdodenhof.circleimageview.CircleImageView;
 public class CommentsBottomSheet extends BottomSheetDialogFragment {
 
     private String videoId;
+    private String uploaderID; // THÊM BIẾN NÀY
+    private String videoThumb;
     private RecyclerView recyclerView;
     private EditText etInput;
     private ImageButton btnSend;
@@ -45,10 +48,12 @@ public class CommentsBottomSheet extends BottomSheetDialogFragment {
     private FirebaseFirestore firestore;
     private FirebaseAuth auth;
 
-    public static CommentsBottomSheet newInstance(String videoId) {
+    public static CommentsBottomSheet newInstance(String videoId, String uploaderID, String videoThumb) {
         CommentsBottomSheet fragment = new CommentsBottomSheet();
         Bundle args = new Bundle();
         args.putString("VIDEO_ID", videoId);
+        args.putString("UPLOADER_ID", uploaderID); // Lưu uploaderID
+        args.putString("VIDEO_THUMB", videoThumb); // Lưu videoThumb
         fragment.setArguments(args);
         return fragment;
     }
@@ -61,6 +66,8 @@ public class CommentsBottomSheet extends BottomSheetDialogFragment {
 
         if (getArguments() != null) {
             videoId = getArguments().getString("VIDEO_ID");
+            uploaderID = getArguments().getString("UPLOADER_ID");
+            videoThumb = getArguments().getString("VIDEO_THUMB");
         }
 
         firestore = FirebaseFirestore.getInstance();
@@ -156,11 +163,25 @@ public class CommentsBottomSheet extends BottomSheetDialogFragment {
                 .addOnSuccessListener(aVoid -> {
                     etInput.setText("");
                     btnSend.setEnabled(true);
+
+                    // ✅ GỬI THÔNG BÁO CHO CHỦ KÊNH
+                    // Lấy tên người comment (nếu không có displayName thì lấy email hoặc "Someone")
+                    String senderName = (user.getDisplayName() != null && !user.getDisplayName().isEmpty())
+                            ? user.getDisplayName() : "Someone";
+
+                    NotificationHelper.notifyOwnerAboutNewComment(
+                            uploaderID,   // ID chủ kênh (nhận từ VideoActivity)
+                            videoId,      // ID video hiện tại
+                            senderName,   // Tên người gửi comment
+                            text,         // Nội dung comment
+                            videoThumb    // Ảnh video
+                    );
+
                     Toast.makeText(getContext(), "Comment posted", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
                     btnSend.setEnabled(true);
-                    Toast.makeText(getContext(), "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 }

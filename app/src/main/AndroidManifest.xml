@@ -20,12 +20,6 @@
         android:theme="@style/Theme.MeTube"
         tools:replace="android:theme">
 
-        <!-- Facebook SDK initialization -->
-        <provider
-            android:name="com.facebook.internal.FacebookInitProvider"
-            android:authorities="com.facebook.app.FacebookContentProvider846187834526871"
-            android:exported="false"
-            tools:replace="android:authorities" />
 
         <!-- Facebook configuration -->
         <meta-data
@@ -45,7 +39,8 @@
         <!-- Facebook Custom Tabs -->
         <activity
             android:name="com.facebook.CustomTabActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -57,7 +52,8 @@
         <!-- LOGIN activity launches first -->
         <activity
             android:name=".ui.login.LoginActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -65,7 +61,10 @@
         </activity>
 
         <!-- MAIN app activity -->
-        <activity android:name=".ui.home.HomepageActivity" android:exported="true" />
+        <activity
+            android:name=".ui.home.HomepageActivity"
+            android:exported="true"
+            android:launchMode="singleTask" />
         <activity android:name=".ui.upload.UploadActivity" android:exported="true" android:windowSoftInputMode="adjustResize"/>
         <activity android:name=".ui.search.SearchActivity" android:exported="true" />
         <!-- Video playback activity -->
