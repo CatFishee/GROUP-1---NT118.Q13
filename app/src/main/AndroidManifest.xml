@@ -97,6 +97,13 @@
         <activity
             android:name=".ui.settings.GeneralSettingsActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.settings.NotificationSettingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.contentcreator.CreatorProfileActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
 
         <service
             android:name=".service.MyFirebaseMessagingService"

@@ -44,6 +44,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
 
     public interface OnVideoClickListener {
         void onVideoClick(Video video);
+        void onAvatarClick(String uploaderId);
     }
 
     private List<Video> videoList;
@@ -171,6 +172,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             holder.thumbnail.setVisibility(View.VISIBLE);
         }
 
+
         // ✅ SỬA LỖI: Dùng currentVideo thay vì video
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(context, VideoActivity.class);
@@ -182,6 +184,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         holder.btnOptions.setOnClickListener(v -> {
             showVideoOptions(currentVideo, position);
         });
+
     }
 
     @Override
@@ -334,6 +337,11 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                     .into(thumbnail);
 
             loadChannelAvatar(video.getUploaderID(), context);
+            avatar.setOnClickListener(v -> {
+                if (listener != null && video.getUploaderID() != null) {
+                    listener.onAvatarClick(video.getUploaderID());
+                }
+            });
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onVideoClick(video);

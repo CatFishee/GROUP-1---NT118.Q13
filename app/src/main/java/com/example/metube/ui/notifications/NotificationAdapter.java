@@ -1,4 +1,4 @@
-package com.example.metube.ui.home;
+package com.example.metube.ui.notifications;
 
 import android.content.Context;
 import android.content.Intent;

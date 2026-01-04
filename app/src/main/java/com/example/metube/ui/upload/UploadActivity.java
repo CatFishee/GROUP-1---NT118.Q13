@@ -29,7 +29,7 @@ import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.example.metube.R;
 import com.example.metube.model.Video;
-import com.example.metube.utils.NotificationHelper;
+import com.example.metube.ui.notifications.NotificationHelper;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;

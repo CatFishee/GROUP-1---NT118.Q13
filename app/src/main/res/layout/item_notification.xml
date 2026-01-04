@@ -17,8 +17,8 @@
         android:layout_height="8dp"
         android:background="@drawable/circle_blue"
         android:visibility="visible"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@id/channel_avatar" />
+        app:layout_constraintTop_toTopOf="@id/channel_avatar"
+        app:layout_constraintBottom_toBottomOf="@id/channel_avatar" />
 
     <!-- Channel Avatar -->
     <de.hdodenhof.circleimageview.CircleImageView
@@ -69,7 +69,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:text="2 hours ago"
-        android:textColor="@color/surface_dark"
+        android:textColor="@color/text_secondary"
         android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="@id/notification_message"
         app:layout_constraintStart_toStartOf="@id/notification_message"

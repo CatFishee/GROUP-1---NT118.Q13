@@ -1,5 +1,6 @@
 package com.example.metube.ui.video;
 
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
 import android.os.Bundle;
@@ -32,6 +33,7 @@ import de.hdodenhof.circleimageview.CircleImageView;
 import com.example.metube.model.Subscription;
 import com.example.metube.model.User;
 import com.example.metube.model.UserWatchStat;
+import com.example.metube.ui.notifications.NotificationHelper;
 import com.example.metube.ui.video.QueueAdapter;
 import com.example.metube.utils.DownloadUtil;
 import com.example.metube.utils.ShareUtil;
@@ -476,9 +478,12 @@ public class VideoActivity extends AppCompatActivity {
         btnDislike = findViewById(R.id.btn_dislike);
         tvVideoStats = findViewById(R.id.tv_video_stats);
         ivChannelAvatar = findViewById(R.id.iv_channel_avatar);
+        LinearLayout layoutChannelInfo = findViewById(R.id.layout_channel_info);
         btnSubscribe = findViewById(R.id.btn_subscribe);
         cardDescription = findViewById(R.id.card_description);
         scrollView = findViewById(R.id.scroll_view_content);
+        ivChannelAvatar = findViewById(R.id.iv_channel_avatar);
+        tvUploader = findViewById(R.id.tv_video_uploader);
 
         btnLike.setOnClickListener(v -> onLikeClicked());
         btnDislike.setOnClickListener(v -> onDislikeClicked());
@@ -487,6 +492,24 @@ public class VideoActivity extends AppCompatActivity {
         btnDownload = findViewById(R.id.btn_download);
         btnShare.setOnClickListener(v -> onShareClicked());
         btnDownload.setOnClickListener(v -> onDownloadClicked());
+        View.OnClickListener openProfileListener = v -> {
+            if (currentUploaderID != null && !currentUploaderID.isEmpty()) {
+                Intent intent = new Intent(VideoActivity.this, com.example.metube.ui.contentcreator.CreatorProfileActivity.class);
+                intent.putExtra("creator_id", currentUploaderID);
+                startActivity(intent);
+            } else {
+                Toast.makeText(this, "Channel info is loading...", Toast.LENGTH_SHORT).show();
+            }
+        };
+        layoutChannelInfo.setOnClickListener(v -> {
+            if (currentUploaderID != null && !currentUploaderID.isEmpty()) {
+                Intent intent = new Intent(VideoActivity.this, com.example.metube.ui.contentcreator.CreatorProfileActivity.class);
+                intent.putExtra("creator_id", currentUploaderID);
+                startActivity(intent);
+            }
+        });
+        ivChannelAvatar.setOnClickListener(openProfileListener);
+        tvUploader.setOnClickListener(openProfileListener);
     }
     private void onShareClicked() {
         if (currentVideoObject == null) {
@@ -636,6 +659,14 @@ public class VideoActivity extends AppCompatActivity {
 
             player.addListener(new Player.Listener() {
                 @Override
+                public void onPlaybackStateChanged(int state) {
+                    // Trường hợp 1: Video đầu tiên nạp xong và chuẩn bị phát
+                    if (state == Player.STATE_READY && player.getPlayWhenReady() && !hasViewCountBeenIncremented) {
+                        incrementViewCount();
+                        hasViewCountBeenIncremented = true;
+                    }
+                }
+                @Override
                 public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
                     // KIỂM TRA CHẶN CRASH: Chỉ chạy nếu MediaItem có gắn Video object
                     if (mediaItem != null && mediaItem.localConfiguration != null &&
@@ -644,12 +675,17 @@ public class VideoActivity extends AppCompatActivity {
                         Video nextVideo = (Video) mediaItem.localConfiguration.tag;
                         hasViewCountBeenIncremented = false;
                         currentVideoId = nextVideo.getVideoID();
+                        updateUIForCurrentVideo(nextVideo);
+
+                        incrementViewCount();
+                        hasViewCountBeenIncremented = true;
 
                         // Cập nhật vị trí trong Manager
                         int newIndex = player.getCurrentMediaItemIndex();
                         VideoQueueManager.getInstance().setCurrentPosition(newIndex);
-
-                        updateUIForCurrentVideo(nextVideo);
+                        if (queueBottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+                            updateQueueUI();
+                        }
                         updateMiniPlayer();
                     }
                 }
@@ -1116,10 +1152,16 @@ public class VideoActivity extends AppCompatActivity {
     private void updateSubscribeButton() {
         if (isSubscribed) {
             btnSubscribe.setText("Subscribed");
-            btnSubscribe.setBackgroundColor(getResources().getColor(android.R.color.darker_gray));
+            btnSubscribe.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    androidx.core.content.ContextCompat.getColor(this, R.color.sub_btn_inactive_bg)));
+            btnSubscribe.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.sub_btn_inactive_text));
         } else {
             btnSubscribe.setText("Subscribe");
-            btnSubscribe.setBackgroundColor(getResources().getColor(android.R.color.holo_red_dark));
+            btnSubscribe.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                    androidx.core.content.ContextCompat.getColor(this, R.color.sub_btn_active_bg)));
+
+            // Đổi màu chữ
+            btnSubscribe.setTextColor(androidx.core.content.ContextCompat.getColor(this, R.color.sub_btn_active_text));
         }
     }
 
@@ -1193,12 +1235,14 @@ public class VideoActivity extends AppCompatActivity {
                     .set(subscription)
                     .addOnSuccessListener(aVoid -> {
                         Toast.makeText(this, "Subscribed!", Toast.LENGTH_SHORT).show();
+                        NotificationHelper.notifyOwnerAboutNewSubscriber(currentUploaderID, currentUser.getUid());
                     })
                     .addOnFailureListener(e -> {
                         Log.e(TAG, "Failed to subscribe: ", e);
                         Toast.makeText(this, "Failed to subscribe", Toast.LENGTH_SHORT).show();
                     });
         }
+
     }
 
     private void onLikeClicked() {
@@ -1269,19 +1313,59 @@ public class VideoActivity extends AppCompatActivity {
 
     private void incrementViewCount() {
         if (videoStatRef == null) return;
+
+        // Lưu lại ID và Object vào biến cục bộ để đảm bảo không bị đổi khi chuyển bài
+        final String targetVideoId = currentVideoId;
+        final String targetUploaderId = currentUploaderID;
+        final Video targetVideoObj = currentVideoObject;
+
         videoStatRef.child("viewCount")
                 .runTransaction(new Transaction.Handler() {
                     @NonNull
                     @Override
                     public Transaction.Result doTransaction(@NonNull MutableData currentData) {
                         Integer current = currentData.getValue(Integer.class);
-                        currentData.setValue(current == null ? 1 : current + 1);
+                        if (current == null) current = 0;
+                        currentData.setValue(current + 1);
                         return Transaction.success(currentData);
                     }
+
                     @Override
-                    public void onComplete(@Nullable DatabaseError error, boolean committed, @Nullable DataSnapshot currentData) {
+                    public void onComplete(@Nullable DatabaseError error, boolean committed, @Nullable DataSnapshot snapshot) {
+                        if (committed && snapshot != null) {
+                            Long views = snapshot.getValue(Long.class);
+                            if (views != null && targetVideoObj != null) {
+                                // ✅ LOGIC MỚI: Kiểm tra các mốc quan trọng
+                                if (shouldTriggerMilestone(views)) {
+                                    NotificationHelper.notifyOwnerAboutViewMilestone(
+                                            targetUploaderId,
+                                            targetVideoId,
+                                            targetVideoObj.getTitle(),
+                                            views,
+                                            targetVideoObj.getThumbnailURL()
+                                    );
+                                    Log.d(TAG, "✅ Milestone triggered: " + views + " views");
+                                }
+                            }
+                        }
                     }
                 });
+    }
+    private boolean shouldTriggerMilestone(long views) {
+        // Các mốc quan trọng
+        long[] milestones = {
+                5, 10, 25, 50, 100,           // Mốc nhỏ
+                250, 500, 1000,               // Mốc trung bình
+                5000, 10000, 25000, 50000,    // Mốc lớn
+                100000, 500000, 1000000       // Mốc viral
+        };
+
+        for (long milestone : milestones) {
+            if (views == milestone) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void incrementLike() {

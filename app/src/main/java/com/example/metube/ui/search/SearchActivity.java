@@ -220,13 +220,29 @@ public class SearchActivity extends AppCompatActivity implements SearchHistoryAd
     }
 
     private void setupResultsView() {
-        resultsAdapter = new VideoAdapter(this, new ArrayList<>(), video -> {
-            if (video != null && video.getVideoID() != null) {
-                Intent intent = new Intent(SearchActivity.this, VideoActivity.class);
-                intent.putExtra("video_id", video.getVideoID());
-                startActivity(intent);
+        // Chuyển từ Lambda sang Anonymous Inner Class để xử lý 2 phương thức click
+        resultsAdapter = new VideoAdapter(this, new ArrayList<>(), new VideoAdapter.OnVideoClickListener() {
+            @Override
+            public void onVideoClick(Video video) {
+                // Logic khi nhấn vào xem video
+                if (video != null && video.getVideoID() != null) {
+                    Intent intent = new Intent(SearchActivity.this, VideoActivity.class);
+                    intent.putExtra("video_id", video.getVideoID());
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onAvatarClick(String uploaderId) {
+                // ✅ LOGIC MỚI: Mở Creator Profile từ kết quả tìm kiếm
+                if (uploaderId != null && !uploaderId.isEmpty()) {
+                    Intent intent = new Intent(SearchActivity.this, com.example.metube.ui.contentcreator.CreatorProfileActivity.class);
+                    intent.putExtra("creator_id", uploaderId);
+                    startActivity(intent);
+                }
             }
         });
+
         rvSearchResults.setLayoutManager(new LinearLayoutManager(this));
         rvSearchResults.setAdapter(resultsAdapter);
     }

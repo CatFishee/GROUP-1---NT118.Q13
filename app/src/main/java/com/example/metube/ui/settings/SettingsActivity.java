@@ -90,7 +90,10 @@ public class SettingsActivity extends AppCompatActivity {
             startActivity(intent);
         });
         findViewById(R.id.item_languages).setOnClickListener(v -> showToast("Languages"));
-        findViewById(R.id.item_notifications).setOnClickListener(v -> showToast("Notifications"));
+        findViewById(R.id.item_notifications).setOnClickListener(v -> {
+            Intent intent = new Intent(SettingsActivity.this, NotificationSettingActivity.class);
+            startActivity(intent);
+        });
         findViewById(R.id.item_playback).setOnClickListener(v -> showToast("Playback"));
         findViewById(R.id.item_captions).setOnClickListener(v -> showToast("Captions"));
         findViewById(R.id.item_privacy).setOnClickListener(v -> showToast("Privacy"));

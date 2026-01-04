@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.metube.R;
 import com.example.metube.model.Notification;
+import com.example.metube.ui.notifications.NotificationAdapter;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -31,7 +32,7 @@ public class NotificationsFragment extends Fragment {
     private RecyclerView rvNotifications;
     private LinearLayout emptyStateLayout;
 
-    private com.example.metube.ui.home.NotificationAdapter notificationAdapter;
+    private NotificationAdapter notificationAdapter;
     private List<Notification> notificationList = new ArrayList<>();
 
     private FirebaseFirestore db;
@@ -64,7 +65,7 @@ public class NotificationsFragment extends Fragment {
     }
 
     private void setupRecyclerView() {
-        notificationAdapter = new com.example.metube.ui.home.NotificationAdapter(requireContext(), notificationList);
+        notificationAdapter = new NotificationAdapter(requireContext(), notificationList);
         rvNotifications.setLayoutManager(new LinearLayoutManager(requireContext()));
         rvNotifications.setAdapter(notificationAdapter);
     }

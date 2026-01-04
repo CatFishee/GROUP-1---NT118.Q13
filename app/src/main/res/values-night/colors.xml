@@ -47,5 +47,11 @@
     <color name="chart_line_color">#364335</color> <!-- Đường kẻ xanh lá -->
     <color name="chart_value_text">#364335</color>
     <color name="icon_tint">#63A361</color>
+    <!-- Khi chưa Sub: Nền xanh Neon, chữ đen -->
+    <color name="sub_btn_active_bg">@color/accent_neon</color>
+    <color name="sub_btn_active_text">#000000</color>
+    <!-- Khi đã Sub: Nền xám cực tối (nổi trên nền đen), chữ trắng xám -->
+    <color name="sub_btn_inactive_bg">#333333</color>
+    <color name="sub_btn_inactive_text">#E0E0E0</color>
 
 </resources>

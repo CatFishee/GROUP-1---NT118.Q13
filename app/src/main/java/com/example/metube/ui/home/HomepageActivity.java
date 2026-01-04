@@ -130,10 +130,22 @@ public class HomepageActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         videoList = new ArrayList<>();
         allVideoList = new ArrayList<>();
-        videoAdapter = new VideoAdapter(this, videoList, video -> {
-            if (video != null && video.getVideoID() != null) {
-                Intent intent = new Intent(HomepageActivity.this, VideoActivity.class);
-                intent.putExtra("video_id", video.getVideoID());
+        videoAdapter = new VideoAdapter(this, videoList, new VideoAdapter.OnVideoClickListener() {
+            @Override
+            public void onVideoClick(Video video) {
+                // Logic mở VideoActivity cũ của bạn
+                if (video != null && video.getVideoID() != null) {
+                    Intent intent = new Intent(HomepageActivity.this, VideoActivity.class);
+                    intent.putExtra("video_id", video.getVideoID());
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onAvatarClick(String uploaderId) {
+                // ✅ LOGIC MỚI: Mở Creator Profile
+                Intent intent = new Intent(HomepageActivity.this, com.example.metube.ui.contentcreator.CreatorProfileActivity.class);
+                intent.putExtra("creator_id", uploaderId);
                 startActivity(intent);
             }
         });
