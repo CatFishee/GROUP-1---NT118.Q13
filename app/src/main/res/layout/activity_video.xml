@@ -139,7 +139,7 @@
                                 app:backgroundTint="@color/like_button_background_selector"/>
                         </com.google.android.material.button.MaterialButtonToggleGroup>
 
-                        <!-- Queue Button (NEW) -->
+                        <!-- Queue Button -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_queue"
                             style="?attr/materialButtonOutlinedStyle"
@@ -198,7 +198,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Video Description"
+                            android:text="Description"
                             android:textColor="@color/black"
                             android:textStyle="bold" />
 
@@ -210,12 +210,64 @@
                             android:lineSpacingExtra="4dp"
                             android:ellipsize="end"
                             android:maxLines="3"
-                            tools:text="Đây là phần mô tả chi tiết của video..."
+                            tools:text="Video description text..."
                             android:textColor="@color/black"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- ================= NEW: COMMENTS PREVIEW CARD ================= -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_comments_preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    app:cardBackgroundColor="#F1F1F1"
+                    app:cardCornerRadius="12dp"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Comments"
+                                android:textColor="@color/black"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_comment_count_preview"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:text="• Tap to view all"
+                                android:textColor="@android:color/darker_gray"/>
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_comment_preview_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:text="Add a comment..."
+                            android:textColor="@android:color/darker_gray"
+                            android:textSize="14sp"/>
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <!-- ============================================================== -->
+
             </LinearLayout>
+
         </ScrollView>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

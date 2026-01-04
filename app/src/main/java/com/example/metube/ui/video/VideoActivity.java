@@ -7,18 +7,18 @@ import android.text.format.DateUtils;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
-import androidx.appcompat.widget.PopupMenu;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.activity.OnBackPressedCallback;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -27,37 +27,41 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import de.hdodenhof.circleimageview.CircleImageView;
-
+import com.bumptech.glide.Glide;
+import com.example.metube.R;
 import com.example.metube.model.Subscription;
 import com.example.metube.model.User;
 import com.example.metube.model.UserWatchStat;
-import com.example.metube.ui.video.QueueAdapter;
+import com.example.metube.model.Video;
 import com.example.metube.utils.DownloadUtil;
 import com.example.metube.utils.ShareUtil;
 import com.example.metube.utils.VideoQueueManager;
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
-import com.google.android.material.card.MaterialCardView;
-
-import com.bumptech.glide.Glide;
-import com.example.metube.R;
-import com.example.metube.model.Video;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackParameters;
+import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
 import com.google.android.exoplayer2.trackselection.TrackSelectionParameters;
-import com.google.firebase.database.*;
+import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
+import com.google.firebase.Timestamp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.MutableData;
+import com.google.firebase.database.ServerValue;
+import com.google.firebase.database.Transaction;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.android.exoplayer2.ExoPlayer;
-import com.google.android.exoplayer2.MediaItem;
-import com.google.android.exoplayer2.PlaybackParameters;
-import com.google.android.exoplayer2.ui.PlayerView;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.exoplayer2.Player;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.SetOptions;
 
 import java.text.SimpleDateFormat;
@@ -70,13 +74,15 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import de.hdodenhof.circleimageview.CircleImageView;
+
 public class VideoActivity extends AppCompatActivity {
 
     private static final String TAG = "VideoActivity_Debug";
 
     private PlayerView playerView;
     private ExoPlayer player;
-    private TextView tvTitle, tvUploader, tvDescription, tvQuality, tvSpeed;
+    private TextView tvTitle, tvUploader, tvDescription;
     private MaterialButton btnLike, btnDislike;
     private String currentVideoId;
     private boolean hasViewCountBeenIncremented = false;
@@ -105,8 +111,8 @@ public class VideoActivity extends AppCompatActivity {
     private int currentQualityIndex = 0;
     private long startPosition = 0;
     private boolean isHistoryRecordingEnabled = true;
-    private com.google.firebase.firestore.ListenerRegistration userSettingsListener;
-    private com.google.firebase.firestore.ListenerRegistration subscriptionListener;
+    private ListenerRegistration userSettingsListener;
+    private ListenerRegistration subscriptionListener;
     private List<String> qualities = Arrays.asList("480p", "720p", "1080p");
     private long sessionStartTime = 0;
 
@@ -120,6 +126,8 @@ public class VideoActivity extends AppCompatActivity {
     private TextView tvNextVideoTitle, tvNextVideoInfo;
     private ImageButton btnCollapseQueue;
     private MaterialButton btnShare, btnDownload;
+
+    private MaterialCardView cardComments;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,15 +164,13 @@ public class VideoActivity extends AppCompatActivity {
             finish();
         }
     }
+
     private void initQueueBottomSheet() {
         bottomSheetQueue = findViewById(R.id.bottom_sheet_queue);
         queueBottomSheetBehavior = BottomSheetBehavior.from(bottomSheetQueue);
         queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
-
-        // Đặt peek height = 0 để ẩn hoàn toàn khi hidden
         queueBottomSheetBehavior.setPeekHeight(0);
 
-        // Initialize views
         rvQueue = findViewById(R.id.rv_queue);
         tvQueueTitle = findViewById(R.id.tv_queue_title);
         tvQueueCount = findViewById(R.id.tv_queue_count);
@@ -178,8 +184,6 @@ public class VideoActivity extends AppCompatActivity {
         tvNextVideoInfo = findViewById(R.id.tv_next_video_info);
         btnCollapseQueue = findViewById(R.id.btn_collapse_queue);
 
-
-        // Setup RecyclerView
         rvQueue.setLayoutManager(new LinearLayoutManager(this));
 
         queueAdapter = new QueueAdapter(new ArrayList<>(), new QueueAdapter.OnQueueItemClickListener() {
@@ -192,25 +196,18 @@ public class VideoActivity extends AppCompatActivity {
                     // CẬP NHẬT currentVideoId TRƯỚC KHI SEEK
                     currentVideoId = selectedVideo.getVideoID();
 
-                    // Hủy listener cũ
                     if (videoStatRef != null && statListener != null) {
                         videoStatRef.removeEventListener(statListener);
                         videoStatRef = null;
                         statListener = null;
                     }
 
-                    // Reset view count flag
                     hasViewCountBeenIncremented = false;
-
-                    // Seek đến video được chọn
                     player.seekTo(position, 0);
                     VideoQueueManager.getInstance().setCurrentPosition(position);
 
-                    // Cập nhật UI
                     updateUIForCurrentVideo(selectedVideo);
                     updateQueueUI();
-
-                    // Đóng bottom sheet
                     queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
                 }
             }
@@ -228,7 +225,6 @@ public class VideoActivity extends AppCompatActivity {
                     queue.add(toPosition, movedVideo);
                     player.moveMediaItem(fromPosition, toPosition);
 
-                    // Cập nhật current position nếu bị ảnh hưởng
                     int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
                     if (fromPosition == currentPos) {
                         VideoQueueManager.getInstance().setCurrentPosition(toPosition);
@@ -243,7 +239,6 @@ public class VideoActivity extends AppCompatActivity {
 
         rvQueue.setAdapter(queueAdapter);
 
-        // Enable drag & drop for reordering
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
                 ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
             @Override
@@ -260,28 +255,16 @@ public class VideoActivity extends AppCompatActivity {
         });
         itemTouchHelper.attachToRecyclerView(rvQueue);
 
-        // Button click listeners
         MaterialButton btnQueue = findViewById(R.id.btn_queue);
         if (btnQueue != null) {
             btnQueue.setOnClickListener(v -> openQueueBottomSheet());
         }
 
-        btnCloseQueue.setOnClickListener(v -> {
-            queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
-        });
-
-        btnCollapseQueue.setOnClickListener(v -> {
-            queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-        });
-
+        btnCloseQueue.setOnClickListener(v -> queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN));
+        btnCollapseQueue.setOnClickListener(v -> queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED));
         btnShuffleQueue.setOnClickListener(v -> shuffleQueue());
+        btnRepeatQueue.setOnClickListener(v -> Toast.makeText(this, "Repeat toggled", Toast.LENGTH_SHORT).show());
 
-        btnRepeatQueue.setOnClickListener(v -> {
-            // Toggle repeat mode
-            Toast.makeText(this, "Repeat toggled", Toast.LENGTH_SHORT).show();
-        });
-
-        // Listen to bottom sheet state changes
         queueBottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
             public void onStateChanged(@NonNull View bottomSheet, int newState) {
@@ -296,6 +279,7 @@ public class VideoActivity extends AppCompatActivity {
             public void onSlide(@NonNull View bottomSheet, float slideOffset) {}
         });
     }
+
     private void openQueueBottomSheet() {
         updateQueueUI();
         queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
@@ -314,17 +298,12 @@ public class VideoActivity extends AppCompatActivity {
 
         layoutEmptyQueue.setVisibility(View.GONE);
         rvQueue.setVisibility(View.VISIBLE);
-
-        // Update header info
         tvQueueCount.setText((currentPos + 1) + "/" + fullQueue.size());
 
-        // Load playlist/channel owner if available
         if (currentPos < fullQueue.size()) {
             Video currentVideo = fullQueue.get(currentPos);
             loadChannelName(currentVideo.getUploaderID(), tvPlaylistOwner);
         }
-
-        // Show all videos in queue with current one highlighted
         queueAdapter.updateQueue(new ArrayList<>(fullQueue), currentPos);
     }
 
@@ -332,7 +311,6 @@ public class VideoActivity extends AppCompatActivity {
         List<Video> queue = VideoQueueManager.getInstance().getQueue();
         int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
 
-        // Show mini player if there's a next video
         if (currentPos + 1 < queue.size()) {
             Video nextVideo = queue.get(currentPos + 1);
             tvNextVideoTitle.setText(nextVideo.getTitle());
@@ -342,6 +320,7 @@ public class VideoActivity extends AppCompatActivity {
             miniPlayerNext.setVisibility(View.GONE);
         }
     }
+
     private void shuffleQueue() {
         List<Video> queue = VideoQueueManager.getInstance().getQueue();
         int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
@@ -351,18 +330,14 @@ public class VideoActivity extends AppCompatActivity {
             return;
         }
 
-        // Shuffle only upcoming videos
         List<Video> upcomingVideos = new ArrayList<>(queue.subList(currentPos + 1, queue.size()));
         Collections.shuffle(upcomingVideos);
 
-        // Replace in main queue
         for (int i = 0; i < upcomingVideos.size(); i++) {
             queue.set(currentPos + 1 + i, upcomingVideos.get(i));
         }
 
-        // Rebuild player playlist
         rebuildPlayerPlaylist(queue, currentPos);
-
         updateQueueUI();
         Toast.makeText(this, "Queue shuffled", Toast.LENGTH_SHORT).show();
     }
@@ -378,8 +353,6 @@ public class VideoActivity extends AppCompatActivity {
                     .build();
             player.addMediaItem(mediaItem);
         }
-
-        // Restore playback position
         player.seekTo(currentPos, currentPosition);
     }
 
@@ -416,7 +389,6 @@ public class VideoActivity extends AppCompatActivity {
         queue.remove(position);
         player.removeMediaItem(position);
 
-        // Adjust current position if needed
         if (position < currentPos) {
             VideoQueueManager.getInstance().setCurrentPosition(currentPos - 1);
         }
@@ -438,10 +410,10 @@ public class VideoActivity extends AppCompatActivity {
         queue.add(toPosition, video);
 
         player.moveMediaItem(fromPosition, toPosition);
-
         updateQueueUI();
         Toast.makeText(this, "Will play next", Toast.LENGTH_SHORT).show();
     }
+
     private void loadChannelName(String uploaderID, TextView textView) {
         if (uploaderID == null || uploaderID.isEmpty()) return;
 
@@ -487,16 +459,24 @@ public class VideoActivity extends AppCompatActivity {
         btnDownload = findViewById(R.id.btn_download);
         btnShare.setOnClickListener(v -> onShareClicked());
         btnDownload.setOnClickListener(v -> onDownloadClicked());
+
+        cardComments = findViewById(R.id.card_comments_preview);
+        cardComments.setOnClickListener(v -> {
+            if (currentVideoId != null) {
+                CommentsBottomSheet bottomSheet = CommentsBottomSheet.newInstance(currentVideoId);
+                bottomSheet.show(getSupportFragmentManager(), "CommentsBottomSheet");
+            } else {
+                Toast.makeText(this, "Video loading...", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
+
     private void onShareClicked() {
         if (currentVideoObject == null) {
             Toast.makeText(this, "Video information not available", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        // Tạo URL giả định cho video (bạn có thể thay bằng deep link thực tế)
         String videoUrl = "https://metube.com/watch?v=" + currentVideoId;
-
         ShareUtil.shareVideo(
                 this,
                 currentVideoObject.getTitle() != null ? currentVideoObject.getTitle() : "Check out this video",
@@ -517,9 +497,6 @@ public class VideoActivity extends AppCompatActivity {
             Toast.makeText(this, "Video URL not available for download", Toast.LENGTH_SHORT).show();
             return;
         }
-
-        // Kiểm tra quyền WRITE_EXTERNAL_STORAGE nếu cần (Android 10 trở xuống)
-        // Với Android 11+ thì không cần vì dùng MediaStore
 
         DownloadUtil.downloadVideo(
                 this,
@@ -560,14 +537,9 @@ public class VideoActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         long sessionDuration = System.currentTimeMillis() - sessionStartTime;
-        // Nếu xem > 5 giây thì mới tính là có xem để update thống kê
         if (sessionDuration > 5000 && currentVideoId != null) {
-            // Để lấy được object Video đầy đủ (có topics), bạn nên lưu biến 'currentVideo' toàn cục
-            // ở hàm updateUIForCurrentVideo.
             if (currentVideoObject != null) {
                 updateUserStatistics(currentVideoObject, sessionDuration);
-            } else {
-                Log.e(TAG, "Cannot update stats: currentVideoObject is NULL"); // Thêm log này để kiểm tra
             }
         }
 
@@ -621,7 +593,6 @@ public class VideoActivity extends AppCompatActivity {
                         User user = documentSnapshot.toObject(User.class);
                         if (user != null) {
                             isHistoryRecordingEnabled = !user.isHistoryPaused();
-                            Log.d(TAG, "History Status Updated: " + isHistoryRecordingEnabled);
                         }
                     }
                 });
@@ -637,7 +608,6 @@ public class VideoActivity extends AppCompatActivity {
             player.addListener(new Player.Listener() {
                 @Override
                 public void onMediaItemTransition(@Nullable MediaItem mediaItem, int reason) {
-                    // KIỂM TRA CHẶN CRASH: Chỉ chạy nếu MediaItem có gắn Video object
                     if (mediaItem != null && mediaItem.localConfiguration != null &&
                             mediaItem.localConfiguration.tag instanceof Video) {
 
@@ -645,7 +615,6 @@ public class VideoActivity extends AppCompatActivity {
                         hasViewCountBeenIncremented = false;
                         currentVideoId = nextVideo.getVideoID();
 
-                        // Cập nhật vị trí trong Manager
                         int newIndex = player.getCurrentMediaItemIndex();
                         VideoQueueManager.getInstance().setCurrentPosition(newIndex);
 
@@ -656,34 +625,29 @@ public class VideoActivity extends AppCompatActivity {
             });
         }
 
-        // --- LOGIC PHÂN ĐỊNH KHÔNG GÂY CRASH ---
         if (currentVideoId != null) {
-            // Nếu click xem video cụ thể -> Luôn vào đây để nạp dữ liệu trước
             addVideoToQueueAndPlay(currentVideoId);
         } else {
-            // Nếu quay lại từ background mà không có video mới, kiểm tra queue cũ
             List<Video> currentQueue = VideoQueueManager.getInstance().getQueue();
             if (currentQueue != null && !currentQueue.isEmpty()) {
                 playFromQueue();
             } else {
-                finish(); // Không có gì để phát thì thoát
+                finish();
             }
         }
     }
+
     private void playFromQueue() {
         List<Video> queue = VideoQueueManager.getInstance().getQueue();
         int startIndex = VideoQueueManager.getInstance().getCurrentPosition();
 
-        // ✅ KIỂM TRA AN TOÀN
         if (queue == null || queue.isEmpty()) {
-            Log.e(TAG, "playFromQueue: Queue is empty!");
             Toast.makeText(this, "No videos in queue", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
         if (startIndex < 0 || startIndex >= queue.size()) {
-            Log.w(TAG, "Invalid startIndex: " + startIndex + ", resetting to 0");
             startIndex = 0;
             VideoQueueManager.getInstance().setCurrentPosition(0);
         }
@@ -692,18 +656,16 @@ public class VideoActivity extends AppCompatActivity {
 
         for (Video v : queue) {
             if (v.getVideoURL() == null || v.getVideoURL().isEmpty()) {
-                Log.w(TAG, "Skipping video with no URL: " + v.getVideoID());
                 continue;
             }
 
             MediaItem mediaItem = MediaItem.fromUri(Uri.parse(v.getVideoURL()))
                     .buildUpon()
-                    .setTag(v)  // ✅ GẮN TAG để listener lấy được
+                    .setTag(v)
                     .build();
             player.addMediaItem(mediaItem);
         }
 
-        // ✅ KIỂM TRA LẠI SAU KHI THÊM MEDIA ITEMS
         if (player.getMediaItemCount() == 0) {
             Toast.makeText(this, "No valid videos to play", Toast.LENGTH_SHORT).show();
             finish();
@@ -714,39 +676,12 @@ public class VideoActivity extends AppCompatActivity {
         player.prepare();
         player.play();
 
-        // Cập nhật UI
         Video currentVideo = queue.get(startIndex);
         updateUIForCurrentVideo(currentVideo);
         updateQueueUI();
     }
-    // Hàm phát video lẻ (Logic cũ nhưng tách ra)
-//    private void loadSingleVideoAndPlay(String videoId) {
-//        firestore.collection("videos").document(videoId).get()
-//                .addOnSuccessListener(snapshot -> {
-//                    if (!snapshot.exists()) return;
-//                    Video video = snapshot.toObject(Video.class);
-//                    if (video == null) return;
-//                    video.setVideoID(snapshot.getId());
-//
-//                    MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()))
-//                            .buildUpon()
-//                            .setTag(video)
-//                            .build();
-//
-//                    player.setMediaItem(mediaItem);
-//                    if (startPosition > 0) {
-//                        player.seekTo(startPosition);
-//                        Toast.makeText(this, "Resuming...", Toast.LENGTH_SHORT).show();
-//                    }
-//                    player.prepare();
-//                    player.play();
-//
-//                    updateUIForCurrentVideo(video);
-//                });
-//    }
 
     private void addVideoToQueueAndPlay(String videoId) {
-        // Hiển thị loading
         playerView.setVisibility(View.INVISIBLE);
 
         firestore.collection("videos").document(videoId).get()
@@ -765,10 +700,8 @@ public class VideoActivity extends AppCompatActivity {
                     }
 
                     video.setVideoID(snapshot.getId());
-
                     VideoQueueManager manager = VideoQueueManager.getInstance();
 
-                    // ✅ LOGIC MỚI: Kiểm tra trùng lặp ĐÚNG CÁCH
                     int existPos = -1;
                     List<Video> currentQueue = manager.getQueue();
 
@@ -780,20 +713,17 @@ public class VideoActivity extends AppCompatActivity {
                     }
 
                     if (existPos == -1) {
-                        // Video chưa có trong queue -> Thêm mới
                         manager.addVideo(video);
                         manager.setCurrentPosition(manager.getQueue().size() - 1);
                     } else {
-                        // Video đã có trong queue -> Chỉ cần chuyển đến vị trí đó
                         manager.setCurrentPosition(existPos);
                     }
 
-                    // Phát từ queue
                     playFromQueue();
                     playerView.setVisibility(View.VISIBLE);
 
-                    // Reset để không bị lặp lại
-                    currentVideoId = null;
+                    // FIXED: Do NOT nullify currentVideoId here, otherwise comment button fails
+                    // currentVideoId = null;  <-- REMOVED
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "Failed to load video", e);
@@ -802,14 +732,12 @@ public class VideoActivity extends AppCompatActivity {
                 });
     }
 
-    // --- HÀM CẬP NHẬT GIAO DIỆN KHI ĐỔI VIDEO ---
     private void updateUIForCurrentVideo(Video video) {
         if (video == null) {
             Log.e(TAG, "updateUIForCurrentVideo: video is NULL!");
             return;
         }
 
-        // Gỡ bỏ listener cũ
         if (videoStatRef != null && statListener != null) {
             videoStatRef.removeEventListener(statListener);
             videoStatRef = null;
@@ -820,7 +748,7 @@ public class VideoActivity extends AppCompatActivity {
             subscriptionListener = null;
         }
 
-        // Cập nhật thông tin cơ bản
+        // IMPORTANT: Ensure ID is kept updated for buttons (like Comments)
         currentVideoId = video.getVideoID();
         currentVideoObject = video;
         currentUploaderID = video.getUploaderID();
@@ -832,10 +760,8 @@ public class VideoActivity extends AppCompatActivity {
             currentRelativeTime = getRelativeTime(video.getCreatedAt());
         }
 
-        // ✅ GỌI NGAY ĐỂ TRÁNH CRASH KHI LOAD USER LÂU
         fetchAndListenToVideoStats(currentVideoId);
 
-        // Load thông tin user (có thể lâu)
         if (currentUploaderID != null && !currentUploaderID.isEmpty()) {
             firestore.collection("users").document(currentUploaderID).get()
                     .addOnSuccessListener(doc -> {
@@ -851,7 +777,6 @@ public class VideoActivity extends AppCompatActivity {
                         listenToSubscriptionStatus();
                     })
                     .addOnFailureListener(e -> {
-                        Log.e(TAG, "Failed to load user info", e);
                         currentUploaderName = "Unknown";
                         tvUploader.setText("Unknown");
                     });
@@ -964,74 +889,7 @@ public class VideoActivity extends AppCompatActivity {
                     formatViewCount(viewCount),
                     currentRelativeTime);
             tvVideoStats.setText(stats);
-            Log.d(TAG, "Stats updated: " + stats);
-        } else {
-            Log.d(TAG, "updateStatsUI: uploaderName chưa sẵn sàng");
         }
-    }
-
-    private void loadVideoDetails(String videoId) {
-        firestore.collection("videos").document(videoId).get()
-                .addOnSuccessListener(snapshot -> {
-                    if (!snapshot.exists()) {
-                        Toast.makeText(this, "Video not found", Toast.LENGTH_SHORT).show();
-                        finish();
-                        return;
-                    }
-
-                    Video video = snapshot.toObject(Video.class);
-                    if (video == null || video.getVideoURL() == null || video.getVideoURL().isEmpty()) {
-                        Toast.makeText(this, "Video source not available.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    currentVideoObject = video;
-
-                    tvTitle.setText(video.getTitle());
-                    if (video.getDescription() != null) {
-                        tvDescription.setText(video.getDescription());
-                    } else {
-                        tvDescription.setText("");
-                    }
-                    if (video.getCreatedAt() != null) {
-                        currentRelativeTime = getRelativeTime(video.getCreatedAt());
-                    }
-
-                    currentUploaderID = video.getUploaderID();
-
-                    firestore.collection("users").document(video.getUploaderID()).get()
-                            .addOnSuccessListener(doc -> {
-                                String uploaderName = doc.exists() ? doc.getString("name") : "Unknown Channel";
-                                tvUploader.setText(uploaderName);
-                                currentUploaderName = uploaderName;
-
-                                Log.d(TAG, "Uploader loaded: " + currentUploaderName + " (value assigned)");
-                                String avatarUrl = doc.getString("profileURL");
-                                if (avatarUrl != null && !avatarUrl.isEmpty()) {
-                                    Glide.with(this).load(avatarUrl).into(ivChannelAvatar);
-                                }
-                                Log.d(TAG, "Calling fetchAndListenToVideoStats...");
-                                fetchAndListenToVideoStats(videoId);
-                                listenToSubscriptionStatus();
-                            })
-                            .addOnFailureListener(e -> {
-                                tvUploader.setText("Unknown Channel");
-                                currentUploaderName = "Unknown Channel";
-                                fetchAndListenToVideoStats(videoId);
-                            });
-
-                    MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()));
-                    player.setMediaItem(mediaItem);
-                    if (startPosition > 0) {
-                        player.seekTo(startPosition);
-                        Toast.makeText(this, "Resuming from where you left off", Toast.LENGTH_SHORT).show();
-                    }
-                    player.prepare();
-                    player.play();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to load video: ", e);
-                    Toast.makeText(this, "Error loading video", Toast.LENGTH_SHORT).show();
-                });
     }
 
     private void fetchAndListenToVideoStats(String videoId) {
@@ -1053,7 +911,6 @@ public class VideoActivity extends AppCompatActivity {
                 btnLike.setText(String.valueOf(likeCount));
                 btnDislike.setText(String.valueOf(dislikeCount));
                 Long viewCount = snapshot.child("viewCount").getValue(Long.class);
-                Log.d(TAG, "Calling updateStatsUI with viewCount: " + viewCount + ", uploaderName: " + currentUploaderName);
                 updateStatsUI(viewCount);
 
                 if (currentUser != null) {
@@ -1072,14 +929,12 @@ public class VideoActivity extends AppCompatActivity {
         videoStatRef.addValueEventListener(statListener);
     }
 
-    // NEW: Listen to subscription status and count
     private void listenToSubscriptionStatus() {
         if (currentUser == null || currentUploaderID == null || currentUploaderID.isEmpty()) {
             btnSubscribe.setEnabled(false);
             return;
         }
 
-        // Don't allow subscribing to yourself
         if (currentUser.getUid().equals(currentUploaderID)) {
             btnSubscribe.setVisibility(View.GONE);
             return;
@@ -1090,10 +945,7 @@ public class VideoActivity extends AppCompatActivity {
         subscriptionListener = firestore.collection("subscriptions")
                 .document(subscriptionDocId)
                 .addSnapshotListener((snapshot, error) -> {
-                    if (error != null) {
-                        Log.e(TAG, "Subscription listener error: ", error);
-                        return;
-                    }
+                    if (error != null) return;
 
                     if (snapshot != null && snapshot.exists()) {
                         Subscription subscription = snapshot.toObject(Subscription.class);
@@ -1112,7 +964,6 @@ public class VideoActivity extends AppCompatActivity {
                 });
     }
 
-    // NEW: Update subscribe button appearance
     private void updateSubscribeButton() {
         if (isSubscribed) {
             btnSubscribe.setText("Subscribed");
@@ -1123,7 +974,6 @@ public class VideoActivity extends AppCompatActivity {
         }
     }
 
-    // NEW: Update subscriber count display
     private void updateSubscriberCount() {
         if (currentUploaderID == null || currentUploaderID.isEmpty()) return;
 
@@ -1136,20 +986,14 @@ public class VideoActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     long count = querySnapshot.size();
-                    String currentText = btnSubscribe.getText().toString();
-
                     if (isSubscribed) {
                         btnSubscribe.setText("Subscribed (" + formatSubscriberCount(count) + ")");
                     } else {
                         btnSubscribe.setText("Subscribe (" + formatSubscriberCount(count) + ")");
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to get subscriber count: ", e);
                 });
     }
 
-    // NEW: Handle subscribe button click
     private void onSubscribeClicked() {
         if (currentUser == null) {
             Toast.makeText(this, "Please login to subscribe", Toast.LENGTH_SHORT).show();
@@ -1164,22 +1008,14 @@ public class VideoActivity extends AppCompatActivity {
         String subscriptionDocId = currentUser.getUid() + "_" + currentUploaderID;
 
         if (isSubscribed) {
-            // Unsubscribe
             Map<String, Object> updateData = new HashMap<>();
             updateData.put("status", Subscription.Status.UNSUBSCRIBED.name());
 
             firestore.collection("subscriptions")
                     .document(subscriptionDocId)
                     .update(updateData)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Unsubscribed", Toast.LENGTH_SHORT).show();
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e(TAG, "Failed to unsubscribe: ", e);
-                        Toast.makeText(this, "Failed to unsubscribe", Toast.LENGTH_SHORT).show();
-                    });
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Unsubscribed", Toast.LENGTH_SHORT).show());
         } else {
-            // Subscribe
             Subscription subscription = new Subscription(
                     subscriptionDocId,
                     currentUploaderID,
@@ -1191,13 +1027,7 @@ public class VideoActivity extends AppCompatActivity {
             firestore.collection("subscriptions")
                     .document(subscriptionDocId)
                     .set(subscription)
-                    .addOnSuccessListener(aVoid -> {
-                        Toast.makeText(this, "Subscribed!", Toast.LENGTH_SHORT).show();
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.e(TAG, "Failed to subscribe: ", e);
-                        Toast.makeText(this, "Failed to subscribe", Toast.LENGTH_SHORT).show();
-                    });
+                    .addOnSuccessListener(aVoid -> Toast.makeText(this, "Subscribed!", Toast.LENGTH_SHORT).show());
         }
     }
 
@@ -1245,57 +1075,6 @@ public class VideoActivity extends AppCompatActivity {
         }
     }
 
-    private void updateCountTransaction(DatabaseReference ref, int amount) {
-        ref.runTransaction(new Transaction.Handler() {
-            @NonNull @Override
-            public Transaction.Result doTransaction(@NonNull MutableData currentData) {
-                Integer current = currentData.getValue(Integer.class);
-                if (current == null) {
-                    currentData.setValue(amount > 0 ? amount : 0);
-                } else {
-                    currentData.setValue(Math.max(0, current + amount));
-                }
-                return Transaction.success(currentData);
-            }
-
-            @Override
-            public void onComplete(@Nullable DatabaseError error, boolean committed, @Nullable DataSnapshot currentData) {
-                if (!committed) {
-                    Log.e(TAG, "Transaction failed: ", error.toException());
-                }
-            }
-        });
-    }
-
-    private void incrementViewCount() {
-        if (videoStatRef == null) return;
-        videoStatRef.child("viewCount")
-                .runTransaction(new Transaction.Handler() {
-                    @NonNull
-                    @Override
-                    public Transaction.Result doTransaction(@NonNull MutableData currentData) {
-                        Integer current = currentData.getValue(Integer.class);
-                        currentData.setValue(current == null ? 1 : current + 1);
-                        return Transaction.success(currentData);
-                    }
-                    @Override
-                    public void onComplete(@Nullable DatabaseError error, boolean committed, @Nullable DataSnapshot currentData) {
-                    }
-                });
-    }
-
-    private void incrementLike() {
-        if (videoStatRef == null) return;
-        videoStatRef.child("likeCount")
-                .setValue(ServerValue.increment(1));
-    }
-
-    private void incrementDislike() {
-        if (videoStatRef == null) return;
-        videoStatRef.child("dislikeCount")
-                .setValue(ServerValue.increment(1));
-    }
-
     @Override
     protected void onStop() {
         super.onStop();
@@ -1336,93 +1115,64 @@ public class VideoActivity extends AppCompatActivity {
 
     private String getRelativeTime(Timestamp timestamp) {
         if (timestamp == null) return "";
-
         long timeInMillis = timestamp.toDate().getTime();
         long now = System.currentTimeMillis();
-
-        return DateUtils.getRelativeTimeSpanString(
-                timeInMillis,
-                now,
-                DateUtils.MINUTE_IN_MILLIS
-        ).toString();
+        return DateUtils.getRelativeTimeSpanString(timeInMillis, now, DateUtils.MINUTE_IN_MILLIS).toString();
     }
+
     private void updateUserStatistics(Video video, long watchDuration) {
         if (currentUser == null || watchDuration <= 0) return;
 
         String userId = currentUser.getUid();
-
         String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
 
-
-        // 1. Tìm xem User này đã có thống kê chưa
         firestore.collection("userWatchStats")
                 .whereEqualTo("userID", userId)
                 .limit(1)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     if (!querySnapshot.isEmpty()) {
-                        // --- TRƯỜNG HỢP A: ĐÃ CÓ DỮ LIỆU -> UPDATE ---
                         DocumentSnapshot doc = querySnapshot.getDocuments().get(0);
                         DocumentReference docRef = doc.getReference();
-
                         Map<String, Object> updates = new HashMap<>();
-
-                        // Cộng dồn thời gian xem (Tính bằng mili-giây)
                         updates.put("totalWatchTime", FieldValue.increment(watchDuration));
-
-                        // Thêm Video ID vào danh sách (arrayUnion tự động lọc trùng)
                         updates.put("videosWatched", FieldValue.arrayUnion(video.getVideoID()));
-
-                        // Thêm Topics vào danh sách
                         if (video.getTopics() != null) {
                             for (String topic : video.getTopics()) {
-                                // Lưu dạng: topicCounts.Gaming = increment(1)
-                                // Lưu ý: Topic không được chứa ký tự đặc biệt như dấu chấm (.)
                                 String cleanTopic = topic.trim().replaceAll("\\.", "");
                                 updates.put("topicCounts." + cleanTopic, FieldValue.increment(1));
                             }
                         }
                         updates.put("dailyWatchTime." + todayDate, FieldValue.increment(watchDuration));
-
-                        docRef.update(updates)
-                                .addOnSuccessListener(aVoid -> Log.d(TAG, "Stats updated successfully"))
-                                .addOnFailureListener(e -> Log.e(TAG, "Failed to update stats", e));
+                        docRef.update(updates);
 
                     } else {
-                        // --- TRƯỜNG HỢP B: CHƯA CÓ DỮ LIỆU -> TẠO MỚI ---
                         String newDocId = firestore.collection("userWatchStats").document().getId();
-
                         UserWatchStat newStat = new UserWatchStat();
                         newStat.setUserWatchStatID(newDocId);
                         newStat.setUserID(userId);
                         newStat.setTotalWatchTime(watchDuration);
                         newStat.setCreatedAt(Timestamp.now());
 
-                        // Tạo Map ngày
                         Map<String, Long> dailyMap = new HashMap<>();
                         dailyMap.put(todayDate, watchDuration);
                         newStat.setDailyWatchTime(dailyMap);
 
-                        // Tạo list video đã xem
                         List<String> videoList = new ArrayList<>();
                         videoList.add(video.getVideoID());
                         newStat.setVideosWatched(videoList);
 
-                        // Tạo list topic đã xem
                         Map<String, Long> initialTopics = new HashMap<>();
                         if (video.getTopics() != null) {
                             for (String topic : video.getTopics()) {
                                 String cleanTopic = topic.trim().replaceAll("\\.", "");
-                                initialTopics.put(cleanTopic, 1L); // Lần đầu xem là 1 view
+                                initialTopics.put(cleanTopic, 1L);
                             }
                         }
                         newStat.setTopicCounts(initialTopics);
 
-                        firestore.collection("userWatchStats").document(newDocId).set(newStat)
-                                .addOnSuccessListener(aVoid -> Log.d(TAG, "New stats created"))
-                                .addOnFailureListener(e -> Log.e(TAG, "Failed to create stats", e));
+                        firestore.collection("userWatchStats").document(newDocId).set(newStat);
                     }
-                })
-                .addOnFailureListener(e -> Log.e(TAG, "Error checking user stats", e));
+                });
     }
 }
