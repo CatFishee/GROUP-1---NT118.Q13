@@ -168,7 +168,7 @@ public class EditYourVideoActivity extends AppCompatActivity {
 
             // Edit Comments
             findViewById(R.id.layout_comments).setOnClickListener(v -> {
-                CommentsBottomSheet sheet = new CommentsBottomSheet(allowed -> {
+                CommentSettingsBottomSheet sheet = new CommentSettingsBottomSheet(allowed -> {
                     this.allowComments = allowed;
                     tvCommentStatus.setText(allowed ? "On" : "Off");
                 });
