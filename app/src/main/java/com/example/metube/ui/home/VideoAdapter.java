@@ -29,6 +29,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.Timestamp;
 
 import java.util.List;
+import java.util.Locale;
 
 import de.hdodenhof.circleimageview.CircleImageView;
 
@@ -47,6 +48,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     private int currentPlayingPos = -1;
     private boolean isAutoplayEnabled = false;
 
+
     public VideoAdapter(Context context, List<Video> videoList, OnVideoClickListener clickListener) {
         this.context = context;
         this.videoList = videoList;
@@ -62,28 +64,39 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     // 1. Khởi tạo Player tối ưu (Mute + Low Buffer)
     private void initPlayer(Context context) {
         if (sharedPlayer == null) {
-            // Giảm buffer: min 2s, max 5s, buffer để phát 1s
+            // ✅ Giảm buffer để start nhanh hơn
+            // minBuffer: 1.5s, maxBuffer: 3s, playback: 500ms, rebuffer: 1s
             DefaultLoadControl loadControl = new DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(2000, 5000, 1000, 1500)
+                    .setBufferDurationsMs(
+                            1500,  // minBufferMs - tối thiểu buffer trước khi play
+                            3000,  // maxBufferMs - tối đa buffer
+                            500,   // bufferForPlaybackMs - buffer để bắt đầu phát
+                            1000   // bufferForPlaybackAfterRebufferMs - buffer sau khi rebuffer
+                    )
                     .build();
 
             sharedPlayer = new ExoPlayer.Builder(context)
                     .setLoadControl(loadControl)
                     .build();
 
-            sharedPlayer.setVolume(0f); // MUTE hoàn toàn
-            sharedPlayer.setRepeatMode(Player.REPEAT_MODE_ONE); // Phát lặp lại ở Feed
+            sharedPlayer.setVolume(0f); // MUTE
+            sharedPlayer.setRepeatMode(Player.REPEAT_MODE_ONE); // Loop
         }
     }
 
     // 2. Hàm điều khiển phát từ Activity
     public void playVideoAt(int position) {
+        // ✅ 1. Kiểm tra nếu đang phát video này rồi thì bỏ qua
         if (position == currentPlayingPos && sharedPlayer != null && sharedPlayer.isPlaying()) {
             return;
         }
 
-        if (position < 0 || position >= videoList.size() || !isAutoplayEnabled) return;
+        // ✅ 2. Validate
+        if (position < 0 || position >= videoList.size() || !isAutoplayEnabled) {
+            return;
+        }
 
+        // ✅ 3. Dừng video cũ (nếu có)
         int lastPos = currentPlayingPos;
         currentPlayingPos = position;
 
@@ -91,31 +104,32 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             notifyItemChanged(lastPos, "DETACH_PLAYER");
         }
 
+        // ✅ 4. Init player nếu chưa có
         initPlayer(context);
 
-        // --- SỬA ĐOẠN NÀY ---
-        // 1. Nếu đã có listener cũ, hãy gỡ nó ra khỏi player
+        // ✅ 5. Gỡ listener cũ
         if (currentVideoListener != null) {
             sharedPlayer.removeListener(currentVideoListener);
         }
 
-        // 2. Khởi tạo listener mới và lưu vào biến để lần sau có thể gỡ
+        // ✅ 6. Tạo listener mới để ẩn thumbnail khi video render xong
         currentVideoListener = new Player.Listener() {
             @Override
             public void onRenderedFirstFrame() {
                 notifyItemChanged(currentPlayingPos, "HIDE_THUMBNAIL");
             }
         };
-
-        // 3. Thêm listener mới vào player
         sharedPlayer.addListener(currentVideoListener);
-        // --------------------
 
+        // ✅ 7. Set MediaItem và prepare
         Video video = videoList.get(position);
         sharedPlayer.setMediaItem(MediaItem.fromUri(video.getVideoURL()));
-        sharedPlayer.prepare();
-        sharedPlayer.play();
 
+        // ✅ 8. Prepare + Play ngay
+        sharedPlayer.prepare();
+        sharedPlayer.setPlayWhenReady(true); // Play ngay khi prepare xong
+
+        // ✅ 9. Attach player vào view
         notifyItemChanged(currentPlayingPos, "ATTACH_PLAYER");
     }
 
@@ -147,15 +161,15 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
         Video currentVideo = videoList.get(position);
         holder.bind(currentVideo, context, clickListener);
 
-        // 3. Logic hiển thị PlayerView
+        // ✅ Logic hiển thị PlayerView
         if (position == currentPlayingPos && sharedPlayer != null) {
             holder.playerView.setVisibility(View.VISIBLE);
             holder.playerView.setPlayer(sharedPlayer);
-            // QUAN TRỌNG: Không set thumbnail GONE ở đây nữa để tránh màn hình đen
+            // Không ẩn thumbnail ở đây, để listener tự ẩn khi ready
         } else {
             holder.playerView.setVisibility(View.GONE);
             holder.playerView.setPlayer(null);
-            holder.thumbnail.setVisibility(View.VISIBLE); // Hiện lại thumbnail cho các bài khác
+            holder.thumbnail.setVisibility(View.VISIBLE);
         }
     }
     @Override
@@ -195,7 +209,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     public static class VideoViewHolder extends RecyclerView.ViewHolder {
         ImageView thumbnail;
         CircleImageView avatar;
-        TextView title;
+        TextView title, tvDurationOverlay;
         TextView info;
 
         private DatabaseReference videoStatRef;
@@ -215,6 +229,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             title = itemView.findViewById(R.id.video_title);
             info = itemView.findViewById(R.id.video_info);
             playerView = itemView.findViewById(R.id.player_view_autoplay);
+            tvDurationOverlay = itemView.findViewById(R.id.tv_duration_overlay);
         }
 
         public void bind(final Video video, Context context, final OnVideoClickListener listener) {
@@ -237,6 +252,12 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             title.setText(video.getTitle());
             if (info.getText().toString().isEmpty() || info.getText().equals("Loading...")) {
                 info.setText("Loading...");
+            }
+            if (video.getDuration() > 0) {
+                tvDurationOverlay.setVisibility(View.VISIBLE);
+                tvDurationOverlay.setText(formatDuration(video.getDuration()));
+            } else {
+                tvDurationOverlay.setVisibility(View.GONE);
             }
 
 
@@ -402,6 +423,14 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
             // Update TextView
             String finalText = infoBuilder.length() > 0 ? infoBuilder.toString() : "Loading...";
             info.setText(finalText);
+        }
+        private String formatDuration(long durationMs) {
+            long seconds = durationMs / 1000;
+            long h = seconds / 3600;
+            long m = (seconds % 3600) / 60;
+            long s = seconds % 60;
+            if (h > 0) return String.format(Locale.getDefault(), "%d:%02d:%02d", h, m, s);
+            return String.format(Locale.getDefault(), "%02d:%02d", m, s);
         }
     }
 }

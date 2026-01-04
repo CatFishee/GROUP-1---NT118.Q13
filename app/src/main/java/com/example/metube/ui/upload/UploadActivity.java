@@ -29,6 +29,7 @@ import com.cloudinary.android.callback.ErrorInfo;
 import com.cloudinary.android.callback.UploadCallback;
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.example.metube.utils.NotificationHelper;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -296,12 +297,32 @@ public class UploadActivity extends AppCompatActivity {
                 .addOnSuccessListener(aVoid -> {
                     Log.d(TAG, "✅ Video saved to Firestore successfully");
                     createVideoStatInRealtimeDB(videoId);
+                    sendNotificationToSubscribers(video);
                     Toast.makeText(UploadActivity.this, "Upload successful!", Toast.LENGTH_SHORT).show();
                     finish();
                 })
                 .addOnFailureListener(e -> {
                     Log.e(TAG, "❌ Failed to save video to Firestore", e);
                     showUploadError(e);
+                });
+    }
+    private void sendNotificationToSubscribers(Video video) {
+        // Lấy tên của uploader để hiển thị trong notification
+        firestore.collection("users").document(mAuth.getCurrentUser().getUid())
+                .get()
+                .addOnSuccessListener(doc -> {
+                    String uploaderName = "Unknown";
+                    if (doc.exists() && doc.getString("name") != null) {
+                        uploaderName = doc.getString("name");
+                    }
+
+                    Log.d(TAG, "📢 Sending notifications to subscribers...");
+                    NotificationHelper.notifySubscribersAboutNewVideo(video, uploaderName);
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to get uploader name for notification", e);
+                    // Vẫn gửi notification với tên mặc định
+                    NotificationHelper.notifySubscribersAboutNewVideo(video, "A channel you subscribed");
                 });
     }
 

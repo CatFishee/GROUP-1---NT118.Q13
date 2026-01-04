@@ -33,7 +33,20 @@
             android:scaleType="centerCrop"
             tools:src="@drawable/logo_metube" />
 
-
+        <TextView
+            android:id="@+id/tv_duration_overlay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="8dp"
+            android:background="@drawable/background_duration_badge"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="2dp"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:elevation="5dp"
+            tools:text="10:05" />
     </FrameLayout>
 
 

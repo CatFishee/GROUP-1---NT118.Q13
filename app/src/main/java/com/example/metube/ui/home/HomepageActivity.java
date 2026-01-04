@@ -6,6 +6,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
 
@@ -21,21 +23,27 @@ import android.widget.FrameLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.content.Intent;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.example.metube.R;
+import com.example.metube.model.Subscription;
 import com.example.metube.model.Video;
 import com.example.metube.ui.settings.SettingsActivity;
 import com.example.metube.ui.upload.UploadActivity;
 import com.example.metube.ui.search.SearchActivity;
 import com.example.metube.ui.video.VideoActivity;
 import com.example.metube.utils.NetworkUtil;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -59,7 +67,6 @@ public class HomepageActivity extends AppCompatActivity {
     private FirebaseFirestore db;
     private ListenerRegistration firestoreListener;
     private FrameLayout fragmentContainer;
-//    private ScrollView homeContentContainer;
     private LinearLayout homeContentContainer;
     private List<ImageView> tabImageViews;
     private List<TextView> tabTextViews;
@@ -68,6 +75,11 @@ public class HomepageActivity extends AppCompatActivity {
     private View topBar;
     private LinearLayout homeTitleLayout;
     private LinearLayout notificationsTitleLayout;
+    private FirebaseAuth auth;
+    private FirebaseUser currentUser;
+    private List<String> subscribedChannelIDs = new ArrayList<>();
+    private Handler autoplayHandler = new Handler(Looper.getMainLooper());
+    private Runnable autoplayRunnable;
 
     private static final String TAG = "HomepageActivity_Debug";
 
@@ -87,10 +99,14 @@ public class HomepageActivity extends AppCompatActivity {
             notificationsTitleLayout = topBar.findViewById(R.id.layout_notifications_title);
         }
 
+        auth = FirebaseAuth.getInstance();
+        currentUser = auth.getCurrentUser();
+
         db = FirebaseFirestore.getInstance();
 
-        setupTopicFilters(createDummyTopics());
+        setupTopicFilters(new ArrayList<>());
         setupRecyclerView();
+        loadSubscribedChannels();
         fetchVideosFromFirestore();
         listenForVideoUpdates();
 
@@ -233,7 +249,79 @@ public class HomepageActivity extends AppCompatActivity {
             Video v = allVideoList.get(i);
             Log.d(TAG, "  " + (i+1) + ". " + v.getTitle() + " - Views: " + v.getViewCount());
         }
+        updateTopicsFromVideos();
         filterVideosByTopic(currentSelectedTopic);
+    }
+    private void loadSubscribedChannels() {
+        if (currentUser == null) {
+            Log.d(TAG, "User not logged in - cannot load subscriptions");
+            return;
+        }
+
+        db.collection("subscriptions")
+                .whereEqualTo("viewerID", currentUser.getUid())
+                .addSnapshotListener((querySnapshot, error) -> {
+                    if (error != null) {
+                        Log.e(TAG, "❌ Lỗi load subscriptions", error);
+                        return;
+                    }
+
+                    subscribedChannelIDs.clear();
+
+                    if (querySnapshot != null) {
+                        for (QueryDocumentSnapshot doc : querySnapshot) {
+                            // Lấy status dưới dạng String
+                            String statusStr = doc.getString("status");
+                            // ✅ SỬA: uploaderID thay vì channelID
+                            String uploaderID = doc.getString("uploaderID");
+
+                            Log.d(TAG, "📄 Doc: " + doc.getId() +
+                                    " | uploaderID: " + uploaderID +
+                                    " | status: " + statusStr);
+
+                            // ✅ CHỈ LẤY SUBSCRIBED hoặc MEMBERSHIP
+                            if (uploaderID != null &&
+                                    (statusStr != null &&
+                                            (statusStr.equals("SUBSCRIBED") ||
+                                                    statusStr.equals("MEMBERSHIP")))) {
+                                subscribedChannelIDs.add(uploaderID);
+                                Log.d(TAG, "✅ Thêm uploaderID: " + uploaderID);
+                            }
+                        }
+                    }
+
+                    Log.d(TAG, "✅ Tổng số channels đã subscribe: " + subscribedChannelIDs.size());
+                    Log.d(TAG, "📋 Danh sách: " + subscribedChannelIDs);
+
+                    // Nếu đang ở tab "Subscribed", refresh ngay
+                    if (currentSelectedTopic.equals("Subscribed")) {
+                        filterVideosByTopic("Subscribed");
+                    }
+                });
+    }
+    private void updateTopicsFromVideos() {
+        Set<String> uniqueTopics = new HashSet<>();
+
+        // Duyệt qua tất cả videos và lấy topics
+        for (Video video : allVideoList) {
+            if (video.getTopics() != null && !video.getTopics().isEmpty()) {
+                uniqueTopics.addAll(video.getTopics());
+            }
+        }
+
+        // Chuyển Set thành List và sort theo alphabet
+        List<String> topicList = new ArrayList<>(uniqueTopics);
+        Collections.sort(topicList);
+
+        if (currentUser != null) {
+            topicList.add(0, "Subscribed");
+        }
+
+
+        Log.d(TAG, "✅ Found " + topicList.size() + " unique topics: " + topicList);
+
+        // Cập nhật UI
+        setupTopicFilters(topicList);
     }
 
     private void filterVideosByTopic(String topic) {
@@ -243,7 +331,39 @@ public class HomepageActivity extends AppCompatActivity {
         if (topic.equals("All")) {
             // Hiển thị tất cả video
             videoList.addAll(allVideoList);
-        } else {
+        }
+        else if (topic.equals("Subscribed")) {
+            if (currentUser == null) {
+                Toast.makeText(this, "Vui lòng đăng nhập để xem video đã subscribe",
+                        Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "❌ Chưa đăng nhập");
+            }
+            else if (subscribedChannelIDs.isEmpty()) {
+                Toast.makeText(this, "Bạn chưa subscribe channel nào",
+                        Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "❌ Danh sách subscribe trống");
+            }
+            else {
+                // ✅ LỌC VIDEO
+                Log.d(TAG, "🔍 Bắt đầu lọc trong " + allVideoList.size() + " videos");
+                Log.d(TAG, "📋 Subscribed channels: " + subscribedChannelIDs);
+
+                int count = 0;
+                for (Video video : allVideoList) {
+                    String uploaderID = video.getUploaderID();
+
+                    if (uploaderID != null && subscribedChannelIDs.contains(uploaderID)) {
+                        videoList.add(video);
+                        count++;
+                        Log.d(TAG, "✅ Video #" + count + ": " + video.getTitle() +
+                                " (uploader: " + uploaderID + ")");
+                    }
+                }
+
+                Log.d(TAG, "✅ Tìm thấy " + count + " videos từ subscribed channels");
+            }
+        }
+        else {
             // Lọc video theo topics (List<String>)
             for (Video video : allVideoList) {
                 if (video.getTopics() != null && !video.getTopics().isEmpty()) {
@@ -400,13 +520,6 @@ public class HomepageActivity extends AppCompatActivity {
         }
     }
 
-    private List<String> createDummyTopics() {
-        List<String> dummyTopics = new ArrayList<>();
-        dummyTopics.add("Gaming");
-        dummyTopics.add("Music");
-        return dummyTopics;
-    }
-
     private void setupTopicFilters(List<String> topicList) {
         topicContainer.setBackgroundResource(R.color.bg_main);
         topicContainer.removeAllViews();
@@ -460,23 +573,28 @@ public class HomepageActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-//        if (firestoreListener != null) firestoreListener.remove();
-        if (videoAdapter != null) videoAdapter.releasePlayer();
+        if (autoplayHandler != null && autoplayRunnable != null) {
+            autoplayHandler.removeCallbacks(autoplayRunnable);
+        }
+
+        if (videoAdapter != null) {
+            videoAdapter.releasePlayer();
+        }
     }
     @Override
     protected void onResume() {
         super.onResume();
+        if (currentUser != null) {
+            loadSubscribedChannels();
+        }
         if (videoAdapter != null) {
             boolean canAutoplay = shouldAutoplay();
             videoAdapter.setAutoplayEnabled(canAutoplay);
 
             // Nếu được phép phát, hãy thử phát video đang hiển thị ngay lập tức
             if (canAutoplay) {
-                recyclerViewVideos.postDelayed(() -> {
-                    if (videoList != null && !videoList.isEmpty()) {
-                        videoAdapter.playVideoAt(0);
-                    }
-                }, 800); // Tăng delay lên một chút để chắc chắn RV đã load xong
+                // ✅ Play ngay khi vào màn hình
+                scheduleAutoplay(300); // 300ms delay cho RecyclerView render xong
             }
         }
     }
@@ -493,47 +611,84 @@ public class HomepageActivity extends AppCompatActivity {
                 super.onScrollStateChanged(recyclerView, newState);
 
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
-                    if (layoutManager == null) return;
+                    // ✅ Scroll dừng → Play ngay với delay nhỏ
+                    scheduleAutoplay(200); // 200ms delay
+                }
+            }
 
-                    int firstVisible = layoutManager.findFirstVisibleItemPosition();
-                    int lastVisible = layoutManager.findLastVisibleItemPosition();
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
 
-                    int targetPos = -1;
-
-                    // TRƯỜNG HỢP ĐẶC BIỆT 1: ĐANG Ở ĐỈNH (Hiện video đầu tiên)
-                    if (firstVisible == 0) {
-                        targetPos = 0;
-                    }
-                    // TRƯỜNG HỢP ĐẶC BIỆT 2: ĐANG Ở ĐÁY (Hiện video cuối cùng)
-                    else if (lastVisible == videoList.size() - 1) {
-                        targetPos = lastVisible;
-                    }
-                    // TRƯỜNG HỢP Ở GIỮA: Tìm item gần tâm màn hình nhất
-                    else {
-                        float closestToCenter = Float.MAX_VALUE;
-                        int screenCenter = recyclerView.getHeight() / 2;
-
-                        for (int i = firstVisible; i <= lastVisible; i++) {
-                            View itemView = layoutManager.findViewByPosition(i);
-                            if (itemView == null) continue;
-
-                            int itemCenter = (itemView.getTop() + itemView.getBottom()) / 2;
-                            int distance = Math.abs(screenCenter - itemCenter);
-
-                            if (distance < closestToCenter) {
-                                closestToCenter = distance;
-                                targetPos = i;
-                            }
-                        }
-                    }
-
-                    if (targetPos != -1 && shouldAutoplay()) {
-                        videoAdapter.playVideoAt(targetPos);
-                    }
+                // ✅ Đang scroll bằng tay → Throttle để tránh gọi quá nhiều
+                if (recyclerView.getScrollState() == RecyclerView.SCROLL_STATE_DRAGGING) {
+                    scheduleAutoplay(500); // 500ms throttle khi đang scroll
                 }
             }
         });
+    }
+    private void scheduleAutoplay(long delayMs) {
+        // Cancel job cũ nếu có
+        if (autoplayRunnable != null) {
+            autoplayHandler.removeCallbacks(autoplayRunnable);
+        }
+
+        // Tạo job mới
+        autoplayRunnable = () -> playMostVisibleVideo();
+
+        // Chạy sau delay
+        autoplayHandler.postDelayed(autoplayRunnable, delayMs);
+    }
+    private void playMostVisibleVideo() {
+        if (!shouldAutoplay()) return;
+
+        LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerViewVideos.getLayoutManager();
+        if (layoutManager == null) return;
+
+        int firstVisible = layoutManager.findFirstVisibleItemPosition();
+        int lastVisible = layoutManager.findLastVisibleItemPosition();
+
+        if (firstVisible == RecyclerView.NO_POSITION) return;
+
+        int targetPos = -1;
+        float maxVisiblePercentage = 0f;
+
+        // ✅ Duyệt qua các item đang hiển thị
+        for (int i = firstVisible; i <= lastVisible; i++) {
+            View itemView = layoutManager.findViewByPosition(i);
+            if (itemView == null) continue;
+
+            // Tính % hiển thị của video này
+            float visiblePercentage = getVisiblePercentage(itemView, recyclerViewVideos);
+
+            // Lấy video có % hiển thị cao nhất
+            if (visiblePercentage > maxVisiblePercentage) {
+                maxVisiblePercentage = visiblePercentage;
+                targetPos = i;
+            }
+        }
+
+        // ✅ Chỉ phát nếu video chiếm >= 60% màn hình (tăng từ 50% để chính xác hơn)
+        if (targetPos != -1 && maxVisiblePercentage >= 60f) {
+            Log.d(TAG, "▶️ Autoplay video #" + targetPos + " (" + maxVisiblePercentage + "% visible)");
+            videoAdapter.playVideoAt(targetPos);
+        }
+    }
+    private float getVisiblePercentage(View itemView, RecyclerView recyclerView) {
+        int itemTop = itemView.getTop();
+        int itemBottom = itemView.getBottom();
+        int itemHeight = itemView.getHeight();
+
+        int recyclerTop = recyclerView.getPaddingTop();
+        int recyclerBottom = recyclerView.getHeight() - recyclerView.getPaddingBottom();
+
+        // Tính phần visible của item
+        int visibleTop = Math.max(itemTop, recyclerTop);
+        int visibleBottom = Math.min(itemBottom, recyclerBottom);
+        int visibleHeight = Math.max(0, visibleBottom - visibleTop);
+
+        // Trả về % (0-100)
+        return itemHeight > 0 ? (visibleHeight * 100f / itemHeight) : 0f;
     }
 
     private boolean shouldAutoplay() {

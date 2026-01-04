@@ -102,8 +102,12 @@ dependencies {
     // --- MPAndroidChart ---
     implementation(libs.mpandroidchart)
 
+    implementation("com.google.firebase:firebase-messaging:23.4.1")
+
     // --- Testing ---
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+
+
 }
