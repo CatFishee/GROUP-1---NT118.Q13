@@ -37,6 +37,7 @@ import com.example.metube.ui.history.HistoryMenuBottomSheet;
 import com.example.metube.ui.video.MakeShareableDialog;
 import com.example.metube.ui.video.VideoActivity;
 import com.example.metube.utils.DownloadUtil;
+import com.example.metube.utils.ShareUtil;
 import com.example.metube.utils.VideoQueueManager;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldPath;
@@ -108,8 +109,7 @@ public class PlaylistDetailActivity extends AppCompatActivity implements History
             public void onShareVideo(Video video) {
                 com.example.metube.utils.ShareUtil.shareVideo(
                         PlaylistDetailActivity.this,
-                        video.getTitle(),
-                        video.getVideoURL()
+                        video.getVideoURL() // Chỉ truyền link Cloudinary
                 );
             }
         });
@@ -274,9 +274,11 @@ public class PlaylistDetailActivity extends AppCompatActivity implements History
                 });
     }
     private void sharePlaylist() {
-        String link = "https://metube.app/playlist/" + playlistId;
+        // Xóa dòng tạo link metube.app ảo đi
         String title = tvTitle.getText().toString();
-        com.example.metube.utils.ShareUtil.sharePlaylist(this, title, link);
+
+        // Gọi hàm share mới (chỉ truyền Context và Title)
+        com.example.metube.utils.ShareUtil.sharePlaylist(this, title);
     }
 
     private void showDownloadConfirmationDialog() {
@@ -561,11 +563,10 @@ public class PlaylistDetailActivity extends AppCompatActivity implements History
 
     @Override
     public void onShare(Video video) {
-        com.example.metube.utils.ShareUtil.shareVideo(
-                this,
-                video.getTitle(),
-                video.getVideoURL()
-        );
+        if (video != null && video.getVideoURL() != null) {
+            // Sửa getContext() thành this hoặc PlaylistDetailActivity.this
+            ShareUtil.shareVideo(PlaylistDetailActivity.this, video.getVideoURL());
+        }
     }
 
     @Override

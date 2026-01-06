@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/bg_main">
 
     <!-- Top Bar -->
     <ImageView
@@ -14,17 +14,16 @@
         android:layout_marginTop="20dp"
         android:src="@drawable/ic_arrow_back"
         android:padding="5dp"
-        app:tint="@color/app_main_color"
+        app:tint="@color/icon_tint"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/et_search_input" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Ô EditText -->
     <EditText
         android:id="@+id/et_search_input"
         android:layout_width="0dp"
         android:layout_height="48dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="12dp"
         android:layout_marginEnd="12dp"
         android:background="@drawable/edittext_search_background"
         android:hint="Search MeTube"
@@ -32,8 +31,8 @@
         android:inputType="text"
         android:paddingStart="16dp"
         android:paddingEnd="90dp"
-        android:textColor="@color/app_main_color"
-        android:textColorHint="@color/app_main_color"
+        android:textColor="@color/creator_card_text"
+        android:textColorHint="@color/creator_card_text"
         app:layout_constraintStart_toEndOf="@id/iv_back"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -55,7 +54,7 @@
             android:padding="6dp"
             android:src="@drawable/ic_clear"
             android:visibility="gone"
-            app:tint="@color/app_main_color" />
+            app:tint="@color/icon_tint" />
 
         <ImageView
             android:id="@+id/iv_voice_search"
@@ -64,29 +63,80 @@
             android:padding="8dp"
             android:src="@drawable/ic_mic"
             android:visibility="visible"
-            app:tint="@color/app_main_color" />
+            app:tint="@color/icon_tint" />
     </LinearLayout>
 
-    <!-- Danh sách lịch sử/kết quả -->
+    <!-- ======= THÀNH PHẦN CÒN THIẾU: RECYCLERVIEW LỊCH SỬ TÌM KIẾM ======= -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_search_history"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="8dp"
+        android:visibility="visible"
         app:layout_constraintTop_toBottomOf="@id/et_search_input"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_search_results"
-        android:layout_width="0dp"
+    <!-- Container Kết quả tìm kiếm (NestedScrollView) -->
+    <!-- Lưu ý: layout_height nên để 0dp để match constraint bottom -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/rv_search_results_container"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="8dp"
         android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/et_search_input"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"/>
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- KẾT QUẢ NGƯỜI DÙNG -->
+            <TextView
+                android:id="@+id/tv_label_users"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Creators"
+                android:textColor="@color/app_main_color"
+                android:textSize="18dp"
+                android:padding="16dp"
+                android:textStyle="bold"
+                android:visibility="gone"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_user_results"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+            <View
+                android:id="@+id/divider_search"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#E0E0E0"
+                android:layout_marginVertical="8dp"
+                android:visibility="gone"/>
+
+            <!-- KẾT QUẢ VIDEO -->
+            <TextView
+                android:id="@+id/tv_label_videos"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Videos"
+                android:textColor="@color/app_main_color"
+                android:textSize="18dp"
+                android:padding="16dp"
+                android:textStyle="bold"
+                android:visibility="gone"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_search_results"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

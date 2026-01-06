@@ -14,6 +14,7 @@ import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -30,6 +31,7 @@ import com.cloudinary.android.callback.UploadCallback;
 import com.example.metube.R;
 import com.example.metube.model.Video;
 import com.example.metube.ui.notifications.NotificationHelper;
+import com.example.metube.ui.playlist.VisibilityBottomSheet;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
@@ -64,7 +66,10 @@ public class UploadActivity extends AppCompatActivity {
     private TextView tvSelectedVideoName;
     private EditText etVideoTitle, etVideoDescription;
     private ProgressBar progressBar;
-
+    private String currentVisibility = "Public"; // Mặc định là Public
+    private TextView tvVisibilityStatus;
+    private ImageView ivVisibilityIcon;
+    private LinearLayout layoutSelectVisibility;
     // URIs
     private Uri thumbnailUri;
     private Uri videoUri;
@@ -112,6 +117,9 @@ public class UploadActivity extends AppCompatActivity {
         progressBar = findViewById(R.id.progress_bar_upload);
         chipGroupTopics = findViewById(R.id.chip_group_topics);
         acAddTopic = findViewById(R.id.actv_add_topic);
+        tvVisibilityStatus = findViewById(R.id.tv_visibility_status);
+        ivVisibilityIcon = findViewById(R.id.iv_visibility_icon);
+        layoutSelectVisibility = findViewById(R.id.layout_select_visibility);
         setupTopicInput();
         ImageView ivClose = findViewById(R.id.iv_close_upload);
         ivClose.setOnClickListener(v -> {
@@ -125,6 +133,21 @@ public class UploadActivity extends AppCompatActivity {
         btnSelectThumbnail.setOnClickListener(v -> openPicker("image/*", thumbnailPickerLauncher));
         btnSelectVideo.setOnClickListener(v -> openPicker("video/*", videoPickerLauncher));
         btnUploadVideo.setOnClickListener(v -> uploadFiles());
+        layoutSelectVisibility.setOnClickListener(v -> {
+            VisibilityBottomSheet bottomSheet = new VisibilityBottomSheet(visibility -> {
+                // Cập nhật biến và giao diện sau khi chọn
+                currentVisibility = visibility;
+                tvVisibilityStatus.setText(visibility);
+
+                // Thay đổi icon tương ứng (Tùy chọn)
+                switch (visibility) {
+                    case "Public": ivVisibilityIcon.setImageResource(R.drawable.ic_public); break;
+                    case "Unlisted": ivVisibilityIcon.setImageResource(R.drawable.ic_link); break;
+                    case "Private": ivVisibilityIcon.setImageResource(R.drawable.ic_lock); break;
+                }
+            });
+            bottomSheet.show(getSupportFragmentManager(), "VisibilityBottomSheet");
+        });
     }
 
     private void openPicker(String type, ActivityResultLauncher<Intent> launcher) {
@@ -285,6 +308,7 @@ public class UploadActivity extends AppCompatActivity {
         video.setVideoURL(videoUrl);
         video.setSearchKeywords(new ArrayList<>(keywords));
         // createdAt sẽ được tự động thêm bởi @ServerTimestamp
+        video.setVisibility(currentVisibility);
 
         video.setDuration(duration);
 

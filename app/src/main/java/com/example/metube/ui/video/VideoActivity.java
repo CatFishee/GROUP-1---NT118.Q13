@@ -485,10 +485,19 @@ public class VideoActivity extends AppCompatActivity {
         cardComments = findViewById(R.id.card_comments_preview);
         cardComments.setOnClickListener(v -> {
             if (currentVideoId != null) {
+                Log.d(TAG, "🔍 Opening CommentsBottomSheet");
+                Log.d(TAG, "currentVideoId: " + currentVideoId);
+                Log.d(TAG, "currentUploaderID: " + currentUploaderID);
+                Log.d(TAG, "currentVideoObject: " + (currentVideoObject != null ? "EXISTS" : "NULL"));
+
+                if (currentVideoObject != null) {
+                    Log.d(TAG, "thumbnailURL: " + currentVideoObject.getThumbnailURL());
+                }
+
                 CommentsBottomSheet bottomSheet = CommentsBottomSheet.newInstance(
                         currentVideoId,
-                        currentUploaderID,
-                        currentVideoObject.getThumbnailURL()
+                        currentUploaderID,  // ✅ Kiểm tra biến này
+                        currentVideoObject.getThumbnailURL()  // ✅ Kiểm tra biến này
                 );
                 bottomSheet.show(getSupportFragmentManager(), "CommentsBottomSheet");
             } else {
@@ -520,16 +529,16 @@ public class VideoActivity extends AppCompatActivity {
     }
 
     private void onShareClicked() {
-        if (currentVideoObject == null) {
+        if (currentVideoObject == null || currentVideoObject.getVideoURL() == null) {
             Toast.makeText(this, "Video information not available", Toast.LENGTH_SHORT).show();
             return;
         }
-        String videoUrl = "https://metube.com/watch?v=" + currentVideoId;
-        ShareUtil.shareVideo(
-                this,
-                currentVideoObject.getTitle() != null ? currentVideoObject.getTitle() : "Check out this video",
-                videoUrl
-        );
+
+        // ✅ CHUẨN: Lấy link Cloudinary thật từ object video
+        String videoUrl = currentVideoObject.getVideoURL();
+
+        // ✅ CHUẨN: Chỉ truyền 2 tham số khớp với ShareUtil mới
+        ShareUtil.shareVideo(this, videoUrl);
     }
 
     private void onDownloadClicked() {

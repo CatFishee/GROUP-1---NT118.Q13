@@ -30,6 +30,7 @@ import com.example.metube.ui.login.SwitchAccountDialog;
 import com.example.metube.ui.playlist.CreatePlaylistBottomSheet;
 import com.example.metube.ui.playlist.PlaylistsActivity;
 import com.example.metube.ui.playlist.PlaylistPreviewAdapter;
+import com.example.metube.ui.profile.EditProfileActivity;
 import com.example.metube.ui.video.YourVideosActivity;
 import com.example.metube.utils.AccountUtil;
 import com.example.metube.utils.ShareUtil;
@@ -60,7 +61,7 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
     // --- Khai báo các thành phần Giao diện ---
     private CircleImageView ivAvatar;
     private TextView tvUserName, tvChannelName, btnViewChannel, btnViewAllPlaylists;
-    private ImageView btnAddPlaylist;
+    private ImageView btnAddPlaylist, ivEditProfile;
     private View btnSwitchAccount, btnShareChannel;
     private TextView btnViewAllHistory, btnDownloads, btnYourVideos, btnStats;
     private RecyclerView rvHistory;
@@ -127,6 +128,7 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         btnAddPlaylist = view.findViewById(R.id.btn_add_playlist);
         btnViewAllPlaylists = view.findViewById(R.id.btn_view_all_playlists);
         rvPlaylistsPreview = view.findViewById(R.id.rv_playlists_preview);
+        ivEditProfile = view.findViewById(R.id.iv_edit_profile);
     }
 
     /**
@@ -177,15 +179,12 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         });
         btnShareChannel.setOnClickListener(v -> {
             if (mUser != null) {
-                // Tạo link giả lập (hoặc link thật nếu bạn có web)
-                String channelLink = "https://metube.app/channel/" + mUser.getUserID();
-
-                // Gọi hàm tiện ích
-                ShareUtil.shareChannel(requireContext(), mUser.getName(), channelLink);
+                ShareUtil.shareChannel(requireContext(), mUser.getName());
             } else {
                 Toast.makeText(getContext(), "Loading profile...", Toast.LENGTH_SHORT).show();
             }
         });
+
         btnSwitchAccount.setOnClickListener(v -> {
             if (mUser != null) {
                 SwitchAccountDialog dialog = new SwitchAccountDialog(mUser);
@@ -217,6 +216,19 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         btnStats.setOnClickListener(v -> {
             Intent intent = new Intent(requireContext(), com.example.metube.ui.userstat.UserStatisticsActivity.class);
             startActivity(intent);
+        });
+        ivEditProfile.setOnClickListener(v -> {
+            if (mUser != null) {
+                // Giả sử bạn đặt tên activity là EditProfileActivity
+                Intent intent = new Intent(requireContext(), EditProfileActivity.class);
+
+                // Bạn nên truyền thông tin user hiện tại sang để đỡ phải load lại bên kia
+                intent.putExtra("user_data", mUser);
+
+                startActivity(intent);
+            } else {
+                Toast.makeText(getContext(), "User data not ready", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 
@@ -441,6 +453,7 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
         super.onResume();
         // Gọi hàm load history tại đây
         // Để mỗi khi quay lại màn hình này, nó sẽ tự tải lại dữ liệu mới nhất
+        loadUserInfo();
         loadHistoryPreview();
         loadPlaylistsPreview();
     }
@@ -474,7 +487,7 @@ public class PersonFragment extends Fragment implements HistoryMenuBottomSheet.H
 
     @Override
     public void onShare(Video video) {
-        com.example.metube.utils.ShareUtil.shareVideo(getContext(), video.getTitle(), video.getVideoURL());
+        com.example.metube.utils.ShareUtil.shareVideo(getContext(), video.getVideoURL());
     }
     @Override
     public void onPlayNextInQueue(Video video) {

@@ -60,16 +60,16 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
 
     public VideoAdapter(Context context, List<Video> videoList, OnVideoClickListener clickListener) {
         this.context = context;
-        this.videoList = videoList;
+        this.videoList = filterVideos(videoList, false);
         this.clickListener = clickListener;
     }
 
     // Constructor với history mode
     public VideoAdapter(Context context, List<Video> videoList, OnVideoClickListener clickListener, boolean isHistoryMode) {
         this.context = context;
-        this.videoList = videoList;
         this.clickListener = clickListener;
         this.isHistoryMode = isHistoryMode;
+        this.videoList = filterVideos(videoList, isHistoryMode);
     }
 
     @NonNull
@@ -240,13 +240,9 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
 
                     @Override
                     public void onShare(Video video) {
-                        // ✅ SỬ DỤNG ShareUtil
-                        String videoUrl = "https://metube.com/watch?v=" + video.getVideoID();
-                        ShareUtil.shareVideo(
-                                context,
-                                video.getTitle() != null ? video.getTitle() : "Check this video",
-                                videoUrl
-                        );
+                        if (video != null && video.getVideoURL() != null) {
+                            ShareUtil.shareVideo(context, video.getVideoURL());
+                        }
                     }
 
                     @Override
@@ -271,8 +267,25 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
     }
 
     public void setVideos(List<Video> videos) {
-        this.videoList = videos;
+        this.videoList = filterVideos(videos, this.isHistoryMode);
         notifyDataSetChanged();
+    }
+    private List<Video> filterVideos(List<Video> originalList, boolean historyMode) {
+        if (originalList == null) return new java.util.ArrayList<>();
+
+        // Nếu đang ở màn hình Lịch sử (historyMode = true), hiển thị tất cả
+        if (historyMode) {
+            return originalList;
+        }
+
+        // Nếu ở Homepage (historyMode = false), chỉ lấy video "Public"
+        List<Video> filteredList = new java.util.ArrayList<>();
+        for (Video v : originalList) {
+            if (v.getVisibility() != null && v.getVisibility().equalsIgnoreCase("Public")) {
+                filteredList.add(v);
+            }
+        }
+        return filteredList;
     }
 
     public static class VideoViewHolder extends RecyclerView.ViewHolder {

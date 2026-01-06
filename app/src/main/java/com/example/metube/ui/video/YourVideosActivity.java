@@ -274,13 +274,13 @@ public class YourVideosActivity extends AppCompatActivity implements YourVideoMe
                 // Callback sau khi user chọn
                 updateVideoVisibility(video, newVisibility, () -> {
                     // Sau khi update xong mới share
-                    ShareUtil.shareVideo(this, video.getTitle(), video.getVideoURL());
+                    ShareUtil.shareVideo(this, video.getVideoURL());
                 });
             });
             dialog.show();
         } else {
             // Video đã public/unlisted rồi, share luôn
-            ShareUtil.shareVideo(this, video.getTitle(), video.getVideoURL());
+            ShareUtil.shareVideo(this, video.getVideoURL());
         }
     }
 

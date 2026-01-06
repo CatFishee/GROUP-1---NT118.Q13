@@ -21,6 +21,8 @@ import com.example.metube.model.HistoryItem;
 import com.example.metube.model.User;
 import com.example.metube.model.Video;
 import com.example.metube.ui.playlist.AddToPlaylistBottomSheet;
+import com.example.metube.ui.playlist.PlaylistDetailActivity;
+import com.example.metube.utils.ShareUtil;
 import com.example.metube.utils.VideoQueueManager;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
@@ -589,11 +591,10 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
 
     @Override
     public void onShare(Video video) {
-        com.example.metube.utils.ShareUtil.shareVideo(
-                this,
-                video.getTitle(),
-                video.getVideoURL()
-        );
+        if (video != null && video.getVideoURL() != null) {
+            // SỬA: Dùng HistoryActivity.this thay vì PlaylistDetailActivity.this
+            ShareUtil.shareVideo(HistoryActivity.this, video.getVideoURL());
+        }
     }
     @Override
     public void onPlayNextInQueue(Video video) {

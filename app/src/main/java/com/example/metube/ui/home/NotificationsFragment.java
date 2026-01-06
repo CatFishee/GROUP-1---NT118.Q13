@@ -27,8 +27,8 @@ import java.util.List;
 public class NotificationsFragment extends Fragment {
     private static final String TAG = "NotificationsFragment";
 
-    private View currentlySelectedButton = null;
-    private LinearLayout filterContainer;
+//    private View currentlySelectedButton = null;
+//    private LinearLayout filterContainer;
     private RecyclerView rvNotifications;
     private LinearLayout emptyStateLayout;
 
@@ -52,12 +52,12 @@ public class NotificationsFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         currentUser = FirebaseAuth.getInstance().getCurrentUser();
 
-        filterContainer = view.findViewById(R.id.filter_container);
+//        filterContainer = view.findViewById(R.id.filter_container);
         rvNotifications = view.findViewById(R.id.rv_notifications);
         emptyStateLayout = view.findViewById(R.id.empty_state_layout);
 
         setupRecyclerView();
-        setupFilters();
+//        setupFilters();
 
         if (currentUser != null) {
             loadNotifications();
@@ -70,47 +70,47 @@ public class NotificationsFragment extends Fragment {
         rvNotifications.setAdapter(notificationAdapter);
     }
 
-    private void setupFilters() {
-        filterContainer.removeAllViews();
+//    private void setupFilters() {
+//        filterContainer.removeAllViews();
+//
+//        Button btnAll = createFilterButton("All");
+//        Button btnMentions = createFilterButton("Mentions");
+//
+//        filterContainer.addView(btnAll);
+//        filterContainer.addView(btnMentions);
+//
+//        // Mặc định chọn nút "All"
+//        btnAll.setSelected(true);
+//        currentlySelectedButton = btnAll;
+//    }
 
-        Button btnAll = createFilterButton("All");
-        Button btnMentions = createFilterButton("Mentions");
-
-        filterContainer.addView(btnAll);
-        filterContainer.addView(btnMentions);
-
-        // Mặc định chọn nút "All"
-        btnAll.setSelected(true);
-        currentlySelectedButton = btnAll;
-    }
-
-    private Button createFilterButton(String text) {
-        Button button = new Button(requireContext(), null, 0, R.style.Widget_App_TopicButton);
-        button.setText(text);
-
-        button.setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.selector_topic_button_text));
-        button.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.selector_topic_button_background));
-
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        params.setMarginEnd(20);
-        button.setLayoutParams(params);
-
-        button.setOnClickListener(v -> {
-            if (currentlySelectedButton != null) {
-                currentlySelectedButton.setSelected(false);
-            }
-            v.setSelected(true);
-            currentlySelectedButton = v;
-
-            currentFilter = text;
-            loadNotifications();
-        });
-
-        return button;
-    }
+//    private Button createFilterButton(String text) {
+//        Button button = new Button(requireContext(), null, 0, R.style.Widget_App_TopicButton);
+//        button.setText(text);
+//
+//        button.setTextColor(ContextCompat.getColorStateList(requireContext(), R.color.selector_topic_button_text));
+//        button.setBackgroundTintList(ContextCompat.getColorStateList(requireContext(), R.color.selector_topic_button_background));
+//
+//        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+//                LinearLayout.LayoutParams.WRAP_CONTENT,
+//                LinearLayout.LayoutParams.WRAP_CONTENT
+//        );
+//        params.setMarginEnd(20);
+//        button.setLayoutParams(params);
+//
+//        button.setOnClickListener(v -> {
+//            if (currentlySelectedButton != null) {
+//                currentlySelectedButton.setSelected(false);
+//            }
+//            v.setSelected(true);
+//            currentlySelectedButton = v;
+//
+//            currentFilter = text;
+//            loadNotifications();
+//        });
+//
+//        return button;
+//    }
 
     private void loadNotifications() {
         if (currentUser == null) {

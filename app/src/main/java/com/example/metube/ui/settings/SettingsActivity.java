@@ -41,11 +41,7 @@ public class SettingsActivity extends AppCompatActivity {
         // Thiết lập từng mục
         setupItem(R.id.item_general, R.drawable.ic_settings, "General");
         setupItem(R.id.item_switch_account, R.drawable.ic_switch_account, "Switch account");
-        setupItem(R.id.item_languages, R.drawable.ic_language, "Languages");
         setupItem(R.id.item_notifications, R.drawable.ic_notifications, "Notifications");
-        setupItem(R.id.item_playback, R.drawable.ic_play, "Playback");
-        setupItem(R.id.item_captions, R.drawable.ic_closed_caption, "Captions");
-        setupItem(R.id.item_privacy, R.drawable.ic_privacy, "Privacy");
     }
 
     private void setupItem(int viewId, int iconRes, String title) {
@@ -89,14 +85,10 @@ public class SettingsActivity extends AppCompatActivity {
             Intent intent = new Intent(SettingsActivity.this, GeneralSettingsActivity.class);
             startActivity(intent);
         });
-        findViewById(R.id.item_languages).setOnClickListener(v -> showToast("Languages"));
         findViewById(R.id.item_notifications).setOnClickListener(v -> {
             Intent intent = new Intent(SettingsActivity.this, NotificationSettingActivity.class);
             startActivity(intent);
         });
-        findViewById(R.id.item_playback).setOnClickListener(v -> showToast("Playback"));
-        findViewById(R.id.item_captions).setOnClickListener(v -> showToast("Captions"));
-        findViewById(R.id.item_privacy).setOnClickListener(v -> showToast("Privacy"));
     }
     private void showToast(String message) {
         Toast.makeText(this, message + " settings coming soon!", Toast.LENGTH_SHORT).show();

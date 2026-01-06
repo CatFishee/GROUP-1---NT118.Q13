@@ -1,6 +1,7 @@
 package com.example.metube.ui.video;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -137,51 +138,77 @@ public class CommentsBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void postComment() {
-        String text = etInput.getText().toString().trim();
-        FirebaseUser user = auth.getCurrentUser();
+        final String text = etInput.getText().toString().trim();
+        final FirebaseUser user = auth.getCurrentUser();
 
-        if (text.isEmpty()) return;
-        if (user == null) {
-            Toast.makeText(getContext(), "Please login to comment", Toast.LENGTH_SHORT).show();
+        Log.d("CommentsBottomSheet", "════════════════════════════════════════");
+        Log.d("CommentsBottomSheet", "💬 postComment() CALLED");
+        Log.d("CommentsBottomSheet", "text: " + text);
+        Log.d("CommentsBottomSheet", "user: " + (user != null ? user.getUid() : "NULL"));
+        Log.d("CommentsBottomSheet", "videoId: " + videoId);
+        Log.d("CommentsBottomSheet", "uploaderID: " + uploaderID);
+        Log.d("CommentsBottomSheet", "videoThumb: " + videoThumb);
+        Log.d("CommentsBottomSheet", "════════════════════════════════════════");
+
+        if (text.isEmpty() || user == null) {
+            Log.e("CommentsBottomSheet", "❌ Cannot post: text is empty or user is null");
             return;
         }
 
-        // Disable button to prevent double-click
         btnSend.setEnabled(false);
 
-        String newCommentId = firestore.collection("comments").document().getId();
-        Comment comment = new Comment(
-                newCommentId,
-                videoId,
-                user.getUid(),
-                null,
-                text,
-                Timestamp.now()
-        );
+        firestore.collection("users").document(user.getUid()).get()
+                .addOnSuccessListener(userDoc -> {
+                    String realName = "Someone";
+                    if (userDoc.exists()) {
+                        realName = userDoc.getString("name");
+                    }
 
-        firestore.collection("comments").document(newCommentId).set(comment)
-                .addOnSuccessListener(aVoid -> {
-                    etInput.setText("");
-                    btnSend.setEnabled(true);
+                    final String senderName = realName;
+                    Log.d("CommentsBottomSheet", "✅ Got sender name: " + senderName);
 
-                    // ✅ GỬI THÔNG BÁO CHO CHỦ KÊNH
-                    // Lấy tên người comment (nếu không có displayName thì lấy email hoặc "Someone")
-                    String senderName = (user.getDisplayName() != null && !user.getDisplayName().isEmpty())
-                            ? user.getDisplayName() : "Someone";
+                    String newCommentId = firestore.collection("comments").document().getId();
+                    Comment comment = new Comment(newCommentId, videoId, user.getUid(), null, text, Timestamp.now());
 
-                    NotificationHelper.notifyOwnerAboutNewComment(
-                            uploaderID,   // ID chủ kênh (nhận từ VideoActivity)
-                            videoId,      // ID video hiện tại
-                            senderName,   // Tên người gửi comment
-                            text,         // Nội dung comment
-                            videoThumb    // Ảnh video
-                    );
+                    Log.d("CommentsBottomSheet", "💾 Saving comment to Firestore...");
 
-                    Toast.makeText(getContext(), "Comment posted", Toast.LENGTH_SHORT).show();
+                    firestore.collection("comments").document(newCommentId).set(comment)
+                            .addOnSuccessListener(aVoid -> {
+                                Log.d("CommentsBottomSheet", "✅ Comment saved successfully");
+                                etInput.setText("");
+                                btnSend.setEnabled(true);
+
+                                Log.d("CommentsBottomSheet", "🔔 About to call NotificationHelper...");
+                                Log.d("CommentsBottomSheet", "  - uploaderID: " + uploaderID);
+                                Log.d("CommentsBottomSheet", "  - videoId: " + videoId);
+                                Log.d("CommentsBottomSheet", "  - senderName: " + senderName);
+                                Log.d("CommentsBottomSheet", "  - text: " + text);
+                                Log.d("CommentsBottomSheet", "  - videoThumb: " + videoThumb);
+
+                                if (uploaderID != null && !uploaderID.isEmpty()) {
+                                    Log.d("CommentsBottomSheet", "✅ uploaderID is valid, calling NotificationHelper");
+                                    NotificationHelper.notifyOwnerAboutNewComment(
+                                            uploaderID,
+                                            videoId,
+                                            senderName,
+                                            text,
+                                            videoThumb
+                                    );
+                                } else {
+                                    Log.e("CommentsBottomSheet", "❌ uploaderID is NULL or EMPTY - Cannot send notification");
+                                }
+
+                                Toast.makeText(getContext(), "Comment posted", Toast.LENGTH_SHORT).show();
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("CommentsBottomSheet", "❌ Failed to save comment", e);
+                                btnSend.setEnabled(true);
+                                Toast.makeText(getContext(), "Failed to post comment", Toast.LENGTH_SHORT).show();
+                            });
                 })
                 .addOnFailureListener(e -> {
+                    Log.e("CommentsBottomSheet", "❌ Failed to get user info", e);
                     btnSend.setEnabled(true);
-                    Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 }

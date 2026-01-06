@@ -2,7 +2,13 @@ package com.example.metube.model;
 
 import com.google.firebase.firestore.PropertyName;
 
-public class User {
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class User implements Serializable {
     private String userID;
     private String name;
     private String email;
@@ -10,6 +16,8 @@ public class User {
     private boolean isPremium;
     private String profileURL;
     private boolean isHistoryPaused = false;
+    private List<String> searchKeywords = new ArrayList<>();
+    private Map<String, Boolean> notificationSettings = new HashMap<>();
 
     public User() {
         // Needed for Firebase deserialization
@@ -22,6 +30,22 @@ public class User {
         this.isAdmin = isAdmin;
         this.isPremium = isPremium;
         this.profileURL = profileURL;
+        this.searchKeywords = generateKeywords(name);
+
+    }
+    public List<String> getSearchKeywords() { return searchKeywords; }
+    public void setSearchKeywords(List<String> searchKeywords) { this.searchKeywords = searchKeywords; }
+
+    // 4. Hàm hỗ trợ cắt chữ thành mảng keywords (Helper Method)
+    public static List<String> generateKeywords(String name) {
+        List<String> keywords = new ArrayList<>();
+        if (name == null || name.isEmpty()) return keywords;
+
+        String[] words = name.toLowerCase().split("\\s+");
+        for (String word : words) {
+            if (!word.isEmpty()) keywords.add(word);
+        }
+        return keywords;
     }
 
     public String getUserID() { return userID; }
@@ -48,5 +72,12 @@ public class User {
     @PropertyName("isHistoryPaused")
     public void setHistoryPaused(boolean historyPaused) {
         isHistoryPaused = historyPaused;
+    }
+    public Map<String, Boolean> getNotificationSettings() {
+        return notificationSettings;
+    }
+
+    public void setNotificationSettings(Map<String, Boolean> notificationSettings) {
+        this.notificationSettings = notificationSettings;
     }
 }

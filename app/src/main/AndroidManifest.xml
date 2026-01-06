@@ -103,6 +103,9 @@
             android:name=".ui.contentcreator.CreatorProfileActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.profile.EditProfileActivity"
+            android:exported="false" />
 
         <service
             android:name=".service.MyFirebaseMessagingService"

@@ -46,6 +46,18 @@
                     app:layout_constraintStart_toEndOf="@id/iv_avatar"
                     app:layout_constraintTop_toTopOf="@id/iv_avatar"
                     tools:text="Phương Giang" />
+                <ImageView
+                    android:id="@+id/iv_edit_profile"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_marginStart="8dp"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_edit"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="@color/icon_tint"
+                    app:layout_constraintBottom_toBottomOf="@id/tv_user_name"
+                    app:layout_constraintStart_toEndOf="@id/tv_user_name"
+                    app:layout_constraintTop_toTopOf="@id/tv_user_name" />
 
                 <TextView
                     android:id="@+id/tv_channel_name"
@@ -223,24 +235,28 @@
                     android:id="@+id/btn_your_videos"
                     style="@style/PersonMenuItem"
                     android:text="Your videos"
+                    android:textColor="@color/app_main_color"
                     app:drawableStartCompat="@drawable/ic_your_videos" />
 
                 <TextView
                     android:id="@+id/btn_downloads"
                     style="@style/PersonMenuItem"
                     android:text="Downloads"
+                    android:textColor="@color/app_main_color"
                     app:drawableStartCompat="@drawable/ic_download" />
 
                 <TextView
                     android:id="@+id/btn_statistics"
                     style="@style/PersonMenuItem"
                     android:text="Statistics"
+                    android:textColor="@color/app_main_color"
                     app:drawableStartCompat="@drawable/ic_statistics" />
 
                 <TextView
                     android:id="@+id/btn_get_premium"
                     style="@style/PersonMenuItem"
                     android:text="Get MeTube Premium"
+                    android:textColor="@color/app_main_color"
                     app:drawableStartCompat="@drawable/ic_premium" />
 
             </LinearLayout>

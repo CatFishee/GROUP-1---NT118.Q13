@@ -128,6 +128,7 @@ public class LoginActivity extends AppCompatActivity {
         });
 
         findViewById(R.id.btnFacebookSignIn).setOnClickListener(v -> {
+            LoginManager.getInstance().logOut();
             LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("email", "public_profile"));
         });
     }
@@ -262,15 +263,34 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void handleFacebookAccessToken(com.facebook.AccessToken token) {
+        // Lấy link ảnh kèm token để không bị ảnh xám
+        String photoUrl = "https://graph.facebook.com/" + token.getUserId()
+                + "/picture?type=large&access_token=" + token.getToken();
+
+        Log.d(TAG, "Facebook Photo URL: " + photoUrl);
+
         AuthCredential credential = FacebookAuthProvider.getCredential(token.getToken());
         mAuth.signInWithCredential(credential).addOnCompleteListener(this, task -> {
             if (task.isSuccessful()) {
-                Log.d(TAG, "Facebook auth successful. Navigating to Home.");
-                createUserIfNew(() -> startHomeActivity());
-            } else {
-                Log.w(TAG, "Facebook auth failed", task.getException());
+                // Khi lưu vào Firestore, hãy dùng cái photoUrl vừa tạo ở trên
+                updateUserPhotoInFirestore(photoUrl);
             }
         });
+    }
+    private void updateUserPhotoInFirestore(String photoUrl) {
+        FirebaseUser firebaseUser = mAuth.getCurrentUser();
+        if (firebaseUser != null) {
+            FirebaseFirestore db = FirebaseFirestore.getInstance();
+            db.collection("users").document(firebaseUser.getUid())
+                    .update("profileURL", photoUrl)
+                    .addOnSuccessListener(aVoid -> {
+                        Log.d(TAG, "Photo updated!");
+                        startHomeActivity(); // Chuyển màn hình sau khi lưu xong
+                    })
+                    .addOnFailureListener(e -> {
+                        startHomeActivity(); // Vẫn chuyển màn hình kể cả khi lỗi lưu ảnh
+                    });
+        }
     }
 
     private void createUserIfNew(Runnable onComplete) {

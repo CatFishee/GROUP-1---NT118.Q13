@@ -121,6 +121,23 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                 context.startActivity(intent);
             });
         }
+        private void handleNotificationClick(Notification notification, Context context) {
+            String type = notification.getType();
+
+            if ("NEW_SUBSCRIBER".equals(type)) {
+                // ✅ Mở profile của subscriber
+                if (notification.getSenderID() != null && !notification.getSenderID().isEmpty()) {
+                    Intent intent = new Intent(context, com.example.metube.ui.contentcreator.CreatorProfileActivity.class);
+                    intent.putExtra("creator_id", notification.getSenderID());
+                    context.startActivity(intent);
+                }
+            } else if (notification.getVideoID() != null && !notification.getVideoID().isEmpty()) {
+                // ✅ Mở video cho các loại thông báo khác (NEW_VIDEO, NEW_COMMENT, VIEW_MILESTONE)
+                Intent intent = new Intent(context, VideoActivity.class);
+                intent.putExtra("video_id", notification.getVideoID());
+                context.startActivity(intent);
+            }
+        }
 
         private void markAsRead(Notification notification) {
             if (!notification.isRead()) {

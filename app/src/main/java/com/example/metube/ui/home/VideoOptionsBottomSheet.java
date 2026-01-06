@@ -35,7 +35,6 @@ public class VideoOptionsBottomSheet {
         View optionSavePlaylist = view.findViewById(R.id.option_save_playlist);
         View optionDownload = view.findViewById(R.id.option_download);
         View optionShare = view.findViewById(R.id.option_share);
-        View optionDontRecommend = view.findViewById(R.id.option_dont_recommend);
         View optionRemoveHistory = view.findViewById(R.id.option_remove_history);
 
         // Hiển thị/ẩn option Remove from history
@@ -62,10 +61,6 @@ public class VideoOptionsBottomSheet {
             bottomSheetDialog.dismiss();
         });
 
-        optionDontRecommend.setOnClickListener(v -> {
-            if (listener != null) listener.onDontRecommend(video);
-            bottomSheetDialog.dismiss();
-        });
 
         optionRemoveHistory.setOnClickListener(v -> {
             if (listener != null) listener.onRemoveFromHistory(video);

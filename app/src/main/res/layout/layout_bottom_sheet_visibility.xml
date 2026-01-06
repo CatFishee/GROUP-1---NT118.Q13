@@ -48,7 +48,7 @@
                 android:layout_height="wrap_content"
                 android:text="Public"
                 android:textSize="16sp"
-                android:textColor="@color/black"/>
+                android:textColor="@color/blwhite_text"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -86,7 +86,7 @@
                 android:layout_height="wrap_content"
                 android:text="Unlisted"
                 android:textSize="16sp"
-                android:textColor="@color/black"/>
+                android:textColor="@color/blwhite_text"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -124,7 +124,7 @@
                 android:layout_height="wrap_content"
                 android:text="Private"
                 android:textSize="16sp"
-                android:textColor="@color/black"/>
+                android:textColor="@color/blwhite_text"/>
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

@@ -159,6 +159,7 @@ public class HomepageActivity extends AppCompatActivity {
         }
 
         firestoreListener = db.collection("videos")
+                .whereEqualTo("visibility", "Public")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, e) -> {
                     if (e != null) {
@@ -192,6 +193,7 @@ public class HomepageActivity extends AppCompatActivity {
 
     private void fetchVideosFromFirestore() {
         db.collection("videos")
+                .whereEqualTo("visibility", "Public")
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {

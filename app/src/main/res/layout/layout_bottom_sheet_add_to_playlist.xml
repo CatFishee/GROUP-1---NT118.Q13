@@ -23,7 +23,7 @@
             android:text="Save to..."
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/black"/>
+            android:textColor="@color/blwhite_text"/>
 
         <!-- Nút + New Playlist ở góc trên (hoặc để dưới đáy tùy bạn) -->
         <Button
@@ -31,7 +31,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="+ New playlist"
-            android:textColor="@color/app_main_color"
+            android:textColor="@color/button_text"
             style="@style/Widget.MaterialComponents.Button.TextButton"/>
     </LinearLayout>
 

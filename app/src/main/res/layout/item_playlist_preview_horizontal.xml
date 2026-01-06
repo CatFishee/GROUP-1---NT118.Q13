@@ -77,7 +77,7 @@
         android:layout_marginTop="6dp"
         android:layout_marginLeft="6dp"
         android:text="Playlist Name"
-        android:textColor="@color/black"
+        android:textColor="@color/blwhite_text"
         android:textSize="14sp"
         android:textStyle="bold"
         android:maxLines="2"
