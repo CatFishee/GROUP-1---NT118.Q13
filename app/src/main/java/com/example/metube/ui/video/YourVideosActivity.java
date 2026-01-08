@@ -109,23 +109,25 @@ public class YourVideosActivity extends AppCompatActivity implements YourVideoMe
             filterVideos();
         });
 
-        chipClip.setOnClickListener(v -> {
-            currentFilter = "Clip";
+        chipVideos.setOnClickListener(v -> {
+            currentFilter = "Video";
+            chipVideos.setChecked(true); // Làm nổi bật chip đang chọn
+            chipClip.setChecked(false);
             filterVideos();
         });
     }
     private void filterVideos() {
+        if (allVideosList == null) return;
         videoList.clear();
 
         for (Video video : allVideosList) {
-            long duration = video.getDuration(); // Lấy duration (giây)
-            if (duration < 0) {
-                duration = 0;
-            }
+            if (video == null) continue; // Chống NullPointerException
 
-            // Phân loại dựa vào thời lượng
-            boolean isClip = duration < 60; // Clip < 60s
-            boolean isVideo = duration >= 60; // Video ≥ 60s
+            long durationMs = video.getDuration();
+
+            // 🛠 SỬA TẠI ĐÂY: Clip là video dưới 60 giây (60,000 ms)
+            boolean isClip = durationMs > 0 && durationMs < 60000;
+            boolean isVideo = durationMs >= 60000 || durationMs <= 0; // Video dài hoặc chưa có dữ liệu duration
 
             if (currentFilter.equals("Video") && isVideo) {
                 videoList.add(video);
@@ -134,16 +136,17 @@ public class YourVideosActivity extends AppCompatActivity implements YourVideoMe
             }
         }
 
-        // Hiển thị Empty State nếu không có video phù hợp
-        if (videoList.isEmpty()) {
-            rvYourVideos.setVisibility(View.GONE);
-            layoutEmptyState.setVisibility(View.VISIBLE);
-        } else {
-            rvYourVideos.setVisibility(View.VISIBLE);
-            layoutEmptyState.setVisibility(View.GONE);
-        }
-
-        adapter.notifyDataSetChanged();
+        // Cập nhật giao diện
+        runOnUiThread(() -> {
+            if (videoList.isEmpty()) {
+                rvYourVideos.setVisibility(View.GONE);
+                layoutEmptyState.setVisibility(View.VISIBLE);
+            } else {
+                rvYourVideos.setVisibility(View.VISIBLE);
+                layoutEmptyState.setVisibility(View.GONE);
+            }
+            adapter.notifyDataSetChanged();
+        });
     }
     private void showSortMenu(View v) {
         android.widget.PopupMenu popup = new android.widget.PopupMenu(this, v);
@@ -269,17 +272,15 @@ public class YourVideosActivity extends AppCompatActivity implements YourVideoMe
         }
 
         if ("Private".equalsIgnoreCase(visibility)) {
-            // Hiển thị dialog bắt chọn Public hoặc Unlisted
             MakeShareableDialog dialog = new MakeShareableDialog(this, newVisibility -> {
-                // Callback sau khi user chọn
                 updateVideoVisibility(video, newVisibility, () -> {
-                    // Sau khi update xong mới share
+                    // ✅ SỬA: Dùng this thay vì getContext()
                     ShareUtil.shareVideo(this, video.getVideoURL());
                 });
             });
             dialog.show();
         } else {
-            // Video đã public/unlisted rồi, share luôn
+            // ✅ SỬA: Dùng this thay vì getContext()
             ShareUtil.shareVideo(this, video.getVideoURL());
         }
     }

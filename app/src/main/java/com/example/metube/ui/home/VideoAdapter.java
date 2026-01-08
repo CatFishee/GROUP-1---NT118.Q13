@@ -215,9 +215,20 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                 new VideoOptionsBottomSheet.OnOptionSelectedListener() {
                     @Override
                     public void onPlayNext(Video video) {
+                        // 1. Thêm video vào hàng đợi phát kế tiếp
                         VideoQueueManager.getInstance().playNext(video);
-                        Toast.makeText(context, "Added to play next", Toast.LENGTH_SHORT).show();
+
+                        // 2. Hiển thị thông báo (Option)
+                        Toast.makeText(context, "Playing now...", Toast.LENGTH_SHORT).show();
+
+                        // 3. Mở VideoActivity để phát ngay lập tức
+                        if (video.getVideoID() != null) {
+                            Intent intent = new Intent(context, VideoActivity.class);
+                            intent.putExtra("video_id", video.getVideoID());
+                            context.startActivity(intent);
+                        }
                     }
+
 
                     @Override
                     public void onSaveToPlaylist(Video video) {

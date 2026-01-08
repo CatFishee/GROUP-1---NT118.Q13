@@ -32,8 +32,6 @@ public class NotificationSettingActivity extends AppCompatActivity {
         setupToggleItem(R.id.item_activity_comments, "Activity on my comments",
                 "Notify me about replies, likes, and other activity on my comments", "key_comments");
 
-        setupToggleItem(R.id.item_mentions, "Mentions",
-                "Notify me when others mention my channel", "key_mentions");
     }
 
     private void setupToggleItem(int viewId, String title, String description, String prefKey) {

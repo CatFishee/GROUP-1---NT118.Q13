@@ -59,6 +59,8 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
     private String currentFilter = "All";
     private View layoutPausedBanner;
     private Button btnTurnOn;
+    private android.widget.EditText etSearch;
+    private String currentSearchText = ""; // Lưu từ khóa tìm kiếm hiện tại
     private com.google.firebase.firestore.ListenerRegistration historyStatusListener;
 
 
@@ -78,10 +80,25 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
 
         layoutPausedBanner = findViewById(R.id.layout_paused_banner);
         btnTurnOn = findViewById(R.id.btn_turn_on_history);
+        etSearch = findViewById(R.id.et_search_history);
 
         btnTurnOn.setOnClickListener(v -> {
             // Bật lại lịch sử (isPaused = false)
             updateHistoryPauseState(false);
+        });
+        etSearch.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // Cập nhật từ khóa tìm kiếm và lọc lại danh sách
+                currentSearchText = s.toString().toLowerCase().trim();
+                filterHistory();
+            }
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {}
         });
 
         chipGroupFilters = findViewById(R.id.chip_group_filters);
@@ -103,6 +120,75 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
         android.widget.ImageButton btnBack = findViewById(R.id.btn_back);
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
+    }
+    // Thay thế hàm filterHistoryByTopic cũ bằng hàm này
+    private void filterHistory() {
+        uiList.clear();
+        String lastDateHeader = "";
+        List<Object> filteredList = new ArrayList<>();
+
+        for (Object item : allHistoryItems) {
+            if (item instanceof HistoryItem) {
+                HistoryItem historyItem = (HistoryItem) item;
+                Video video = historyItem.getVideo();
+
+                // Nếu video null thì bỏ qua
+                if (video == null) continue;
+
+                // --- ĐIỀU KIỆN 1: LỌC THEO TOPIC ---
+                boolean matchTopic = false;
+                if (currentFilter.equals("All")) {
+                    matchTopic = true;
+                } else {
+                    if (video.getTopics() != null) {
+                        for (String videoTopic : video.getTopics()) {
+                            if (videoTopic.equalsIgnoreCase(currentFilter)) {
+                                matchTopic = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // --- ĐIỀU KIỆN 2: LỌC THEO TỪ KHÓA SEARCH ---
+                boolean matchSearch = false;
+                if (currentSearchText.isEmpty()) {
+                    matchSearch = true; // Không nhập gì thì coi như đúng
+                } else {
+                    String title = video.getTitle() != null ? video.getTitle().toLowerCase() : "";
+                    String desc = video.getDescription() != null ? video.getDescription().toLowerCase() : "";
+
+                    // Kiểm tra xem Title hoặc Description có chứa từ khóa không
+                    if (title.contains(currentSearchText) || desc.contains(currentSearchText)) {
+                        matchSearch = true;
+                    }
+                }
+
+                // CHỈ THÊM VÀO LIST NẾU THỎA MÃN CẢ 2 ĐIỀU KIỆN
+                if (matchTopic && matchSearch) {
+                    filteredList.add(item);
+                }
+            }
+        }
+
+        // --- XỬ LÝ LẠI DATE HEADER CHO DANH SÁCH ĐÃ LỌC ---
+        for (Object item : filteredList) {
+            if (item instanceof HistoryItem) {
+                // Tính toán lại Header ngày tháng vì danh sách đã bị cắt bớt
+                String currentDateHeader = getFormattedDate(((HistoryItem) item).getWatchedAt().toDate().getTime());
+
+                if (!currentDateHeader.equals(lastDateHeader)) {
+                    uiList.add(new DateHeader(currentDateHeader));
+                    lastDateHeader = currentDateHeader;
+                }
+                uiList.add(item);
+            }
+        }
+
+        adapter.notifyDataSetChanged();
+
+        // Log kiểm tra
+        Log.d(TAG, "Filtering: Topic=" + currentFilter + ", Search='" + currentSearchText + "'. Items found: " + (uiList.size() - filteredList.size())); // Trừ đi số lượng header
     }
     private void startListeningToHistoryStatus() {
         if (currentUserId == null) return;
@@ -476,6 +562,7 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
 
         // Đặt các thuộc tính cần thay đổi động
         chip.setText(text);
+        chip.setId(View.generateViewId());
 //        chip.setCheckable(true);
 
         // Các thuộc tính trong style (màu sắc, font chữ...) sẽ được tự động áp dụng.
@@ -490,7 +577,8 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
         chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 // Chỉ lọc khi chip được chọn (tránh trường hợp bỏ chọn chip cũ cũng kích hoạt filter)
-                filterHistoryByTopic(text);
+                currentFilter = text; // Cập nhật biến global
+                filterHistory();
             }
         });
         return chip;

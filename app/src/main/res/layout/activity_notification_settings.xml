@@ -41,7 +41,6 @@
             <include android:id="@+id/item_subscriptions" layout="@layout/item_notification_toggle" />
             <include android:id="@+id/item_activity_channel" layout="@layout/item_notification_toggle" />
             <include android:id="@+id/item_activity_comments" layout="@layout/item_notification_toggle" />
-            <include android:id="@+id/item_mentions" layout="@layout/item_notification_toggle" />
 
         </LinearLayout>
     </ScrollView>

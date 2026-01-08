@@ -35,6 +35,7 @@ import com.example.metube.model.Subscription;
 import com.example.metube.model.User;
 import com.example.metube.model.UserWatchStat;
 import com.example.metube.ui.notifications.NotificationHelper;
+import com.example.metube.ui.playlist.AddToPlaylistBottomSheet;
 import com.example.metube.ui.video.QueueAdapter;
 import com.example.metube.model.Video;
 import com.example.metube.utils.DownloadUtil;
@@ -133,7 +134,7 @@ public class VideoActivity extends AppCompatActivity {
 
     private LinearLayout bottomSheetQueue;
     private BottomSheetBehavior<LinearLayout> queueBottomSheetBehavior;
-    private RecyclerView rvQueue;
+    private RecyclerView rvQueue, rvRecommended;
     private QueueAdapter queueAdapter;
     private TextView tvQueueTitle, tvQueueCount, tvPlaylistOwner;
     private ImageButton btnCloseQueue;
@@ -141,6 +142,8 @@ public class VideoActivity extends AppCompatActivity {
     private TextView tvNextVideoTitle, tvNextVideoInfo;
     private ImageButton btnCollapseQueue;
     private MaterialButton btnShare, btnDownload;
+    private RecommendedVideosAdapter recommendedAdapter;
+    private List<Video> recommendedVideosList = new ArrayList<>();
 
     private MaterialCardView cardComments;
 
@@ -195,6 +198,26 @@ public class VideoActivity extends AppCompatActivity {
         tvNextVideoTitle = findViewById(R.id.tv_next_video_title);
         tvNextVideoInfo = findViewById(R.id.tv_next_video_info);
         btnCollapseQueue = findViewById(R.id.btn_collapse_queue);
+        rvRecommended = findViewById(R.id.rv_recommended);
+        rvRecommended.setLayoutManager(new LinearLayoutManager(this));
+        recommendedAdapter = new RecommendedVideosAdapter(this, recommendedVideosList, new RecommendedVideosAdapter.OnItemClickListener() {
+            @Override
+            public void onItemClick(Video video) {
+                // Logic cũ: Chuyển video
+                Intent intent = new Intent(VideoActivity.this, VideoActivity.class);
+                intent.putExtra("video_id", video.getVideoID());
+                startActivity(intent);
+                finish();
+            }
+
+            @Override
+            public void onOptionClick(Video video) {
+                // Logic mới: Hiện BottomSheet
+                showRecommendedOptions(video);
+            }
+        });
+
+        rvRecommended.setAdapter(recommendedAdapter);
 
         rvQueue.setLayoutManager(new LinearLayoutManager(this));
 
@@ -315,6 +338,75 @@ public class VideoActivity extends AppCompatActivity {
             @Override
             public void onSlide(@NonNull View bottomSheet, float slideOffset) {}
         });
+    }
+    private void showRecommendedOptions(Video video) {
+        RecommendedVideoBottomSheet bottomSheet = new RecommendedVideoBottomSheet(video, new RecommendedVideoBottomSheet.BottomSheetListener() {
+            @Override
+            public void onPlayNext(Video video) {
+                // 1. Cập nhật vào VideoQueueManager (Logic quản lý)
+                VideoQueueManager.getInstance().playNext(video);
+
+                // 2. QUAN TRỌNG: Cập nhật trực tiếp vào danh sách phát của ExoPlayer (Logic phát)
+                if (player != null) {
+                    MediaItem mediaItem = MediaItem.fromUri(Uri.parse(video.getVideoURL()))
+                            .buildUpon()
+                            .setTag(video)
+                            .build();
+
+                    // Chèn video vào ngay sau video đang phát hiện tại
+                    int nextIndex = player.getCurrentMediaItemIndex() + 1;
+
+                    // Kiểm tra bounds an toàn
+                    if (nextIndex <= player.getMediaItemCount()) {
+                        player.addMediaItem(nextIndex, mediaItem);
+                    } else {
+                        player.addMediaItem(mediaItem);
+                    }
+
+                    // Nếu player đang ở trạng thái ENDED (đã hết bài), tự động play tiếp luôn
+                    if (player.getPlaybackState() == Player.STATE_ENDED) {
+                        player.seekToNextMediaItem();
+                        player.play();
+                    }
+                }
+
+                // 3. Cập nhật UI
+                Toast.makeText(VideoActivity.this, "Added to queue as next video", Toast.LENGTH_SHORT).show();
+                updateQueueUI();
+                updateMiniPlayer();
+            }
+
+            @Override
+            public void onSaveToPlaylist(Video video) {
+                // 2. Logic Save Playlist (Mở BottomSheet Playlist có sẵn)
+                AddToPlaylistBottomSheet playlistSheet = new AddToPlaylistBottomSheet(video);
+                playlistSheet.show(getSupportFragmentManager(), "AddToPlaylistBottomSheet");
+            }
+
+            @Override
+            public void onDownload(Video video) {
+                // 3. Logic Download (Sử dụng DownloadUtil)
+                if (video.getVideoURL() != null && !video.getVideoURL().isEmpty()) {
+                    DownloadUtil.downloadVideo(
+                            VideoActivity.this,
+                            video.getVideoURL(),
+                            video.getTitle() != null ? video.getTitle() : "video"
+                    );
+                } else {
+                    Toast.makeText(VideoActivity.this, "Video URL not available", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onShare(Video video) {
+                // 4. Logic Share (Sử dụng ShareUtil)
+                if (video != null && video.getVideoURL() != null) {
+                    ShareUtil.shareVideo(VideoActivity.this, video.getVideoURL());
+                }
+            }
+        });
+
+        bottomSheet.show(getSupportFragmentManager(), "RecommendedVideoOptions");
     }
     private void openQueueBottomSheet() {
         updateQueueUI();
@@ -949,6 +1041,94 @@ public class VideoActivity extends AppCompatActivity {
             currentUploaderName = "Unknown";
             tvUploader.setText("Unknown");
         }
+        fetchRecommendedVideos(video);
+    }
+    private void fetchRecommendedVideos(Video currentVideo) {
+        if (currentVideo == null) return;
+
+        List<String> topics = currentVideo.getTopics();
+
+        // Lấy danh sách ID của các video đang có trong Queue để loại trừ
+        List<Video> currentQueue = VideoQueueManager.getInstance().getQueue();
+        List<String> excludedIds = new ArrayList<>();
+
+        // Thêm video hiện tại vào danh sách loại trừ
+        excludedIds.add(currentVideo.getVideoID());
+
+        // Thêm các video trong queue vào danh sách loại trừ (để không recommend lại cái sắp phát)
+        if (currentQueue != null) {
+            for (Video v : currentQueue) {
+                if (v.getVideoID() != null) excludedIds.add(v.getVideoID());
+            }
+        }
+
+        com.google.firebase.firestore.Query query = firestore.collection("videos")
+                .whereEqualTo("visibility", "Public")
+                .limit(20); // Lấy tối đa 20 video để lọc
+
+        // Nếu video hiện tại có topics, ưu tiên lọc theo topic
+        // Lưu ý: Firestore 'whereArrayContainsAny' chỉ hỗ trợ tối đa 10 giá trị so sánh
+        if (topics != null && !topics.isEmpty()) {
+            List<String> searchTopics = topics.size() > 10 ? topics.subList(0, 10) : topics;
+            query = query.whereArrayContainsAny("topics", searchTopics);
+        } else {
+            // Nếu không có topic, lấy theo ngày mới nhất
+            query = query.orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING);
+        }
+
+        query.get().addOnSuccessListener(queryDocumentSnapshots -> {
+            recommendedVideosList.clear();
+            for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                Video vid = doc.toObject(Video.class);
+                if (vid != null) {
+                    vid.setVideoID(doc.getId()); // Đảm bảo set ID
+
+                    // Lọc phía Client: Loại bỏ video trùng với video đang phát hoặc trong queue
+                    if (!excludedIds.contains(vid.getVideoID())) {
+                        recommendedVideosList.add(vid);
+                    }
+                }
+            }
+
+            // Nếu danh sách lọc theo topic quá ít (< 5 video), lấy thêm video mới nhất bù vào
+            if (recommendedVideosList.size() < 5) {
+                fetchMoreRandomVideos(excludedIds);
+            } else {
+                // Random trộn danh sách để trải nghiệm mới mẻ hơn
+                Collections.shuffle(recommendedVideosList);
+                recommendedAdapter.notifyDataSetChanged();
+            }
+        }).addOnFailureListener(e -> Log.e(TAG, "Error fetching recommended", e));
+    }
+
+    // 5. Hàm phụ để lấy thêm video nếu ít kết quả
+    private void fetchMoreRandomVideos(List<String> excludedIds) {
+        firestore.collection("videos")
+                .whereEqualTo("visibility", "Public")
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(10)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    for (DocumentSnapshot doc : snapshots) {
+                        Video vid = doc.toObject(Video.class);
+                        if (vid != null) {
+                            vid.setVideoID(doc.getId());
+                            // Kiểm tra trùng lặp (cả với list hiện tại và list excluded)
+                            boolean alreadyAdded = false;
+                            for (Video existing : recommendedVideosList) {
+                                if (existing.getVideoID().equals(vid.getVideoID())) {
+                                    alreadyAdded = true;
+                                    break;
+                                }
+                            }
+
+                            if (!alreadyAdded && !excludedIds.contains(vid.getVideoID())) {
+                                recommendedVideosList.add(vid);
+                            }
+                        }
+                    }
+                    recommendedAdapter.notifyDataSetChanged();
+                });
     }
 
     private void setupCustomPlayerControls() {

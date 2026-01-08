@@ -281,9 +281,26 @@
                             android:textColor="@android:color/darker_gray"
                             android:textSize="14sp"/>
 
+
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
                 <!-- ============================================================== -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="Recommended for you"
+                    android:textColor="@color/blwhite_text"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_recommended"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false" />
 
             </LinearLayout>
 
