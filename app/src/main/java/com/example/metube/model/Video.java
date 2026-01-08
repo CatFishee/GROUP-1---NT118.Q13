@@ -4,6 +4,7 @@ import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.Exclude;
 import com.google.firebase.firestore.ServerTimestamp;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Video {
@@ -16,6 +17,7 @@ public class Video {
     private String videoURL;     // Supabase Videos bucket URL
     private long duration;
     private List<String> searchKeywords;
+    private List<String> aiLabels;
     @Exclude
     private String uploaderName;
     @Exclude
@@ -29,7 +31,9 @@ public class Video {
     private boolean allowComments = true;
 
     public Video() {
+
         this.visibility = "Public";
+        this.aiLabels = new ArrayList<>();
     }
 
     public Video(String videoID, String uploaderID, String title, String description,
@@ -103,4 +107,6 @@ public class Video {
     public void setVisibility(String visibility) { this.visibility = visibility; }
     public boolean isAllowComments() { return allowComments; }
     public void setAllowComments(boolean allowComments) { this.allowComments = allowComments; }
+    public List<String> getAiLabels() { return aiLabels; }
+    public void setAiLabels(List<String> aiLabels) { this.aiLabels = aiLabels; }
 }

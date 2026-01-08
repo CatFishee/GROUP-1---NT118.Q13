@@ -31,7 +31,7 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
         if (playlists != null) this.playlists = playlists;
     }
     public interface OnPlaylistMoreClickListener {
-        void onMoreClick(Playlist playlist);
+        void onMoreClick(Playlist playlist, View view);
     }
     private OnPlaylistMoreClickListener moreClickListener;
 
@@ -83,7 +83,8 @@ public class PlaylistsAdapter extends RecyclerView.Adapter<PlaylistsAdapter.View
         });
         holder.btnMore.setOnClickListener(v -> {
             if (moreClickListener != null) {
-                moreClickListener.onMoreClick(playlist);
+                // Truyền thêm v (chính là cái nút 3 chấm)
+                moreClickListener.onMoreClick(playlist, v);
             }
         });
     }

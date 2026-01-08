@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 public class UserStatisticsActivity extends AppCompatActivity {
 
-    private TextView tvTotalTime, tvVideoCount, tvNoTopics;
+    private TextView tvTotalTime, tvVideoCount, tvNoTopics, tvPlaylistCount;
     private LinearLayout layoutTopicsContainer;
     private FirebaseFirestore firestore;
     private BarChart barChart;
@@ -50,6 +50,7 @@ public class UserStatisticsActivity extends AppCompatActivity {
         layoutTopicsContainer = findViewById(R.id.layout_topics_container);
         tvNoTopics = findViewById(R.id.tv_no_topics);
         barChart = findViewById(R.id.barChart);
+        tvPlaylistCount = findViewById(R.id.tv_playlist_count);
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
@@ -78,6 +79,17 @@ public class UserStatisticsActivity extends AppCompatActivity {
                     }
                 })
                 .addOnFailureListener(e -> Log.e("UserStats", "Error loading stats", e));
+        loadPlaylistCount(userId);
+    }
+    private void loadPlaylistCount(String userId) {
+        firestore.collection("playlists")
+                .whereEqualTo("ownerId", userId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int count = queryDocumentSnapshots.size();
+                    tvPlaylistCount.setText(String.valueOf(count));
+                })
+                .addOnFailureListener(e -> Log.e("UserStats", "Error loading playlist count", e));
     }
 
     private void displayData(UserWatchStat stat) {

@@ -142,6 +142,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:nestedScrollingEnabled="false" />
+            <TextView
+                android:id="@+id/tv_empty_playlists"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No public playlists available"
+                android:textAlignment="center"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:padding="24dp"
+                android:visibility="gone"/>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

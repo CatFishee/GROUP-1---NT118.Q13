@@ -62,6 +62,8 @@ dependencies {
 
     // --- Glide ---
     implementation(libs.glide)
+    implementation(libs.image.labeling.common)
+    implementation(libs.image.labeling.default.common)
     annotationProcessor(libs.glide.compiler)
 
     // --- Google Sign-In ---
@@ -103,6 +105,12 @@ dependencies {
     implementation(libs.mpandroidchart)
 
     implementation("com.google.firebase:firebase-messaging:23.4.1")
+
+    implementation("com.google.mlkit:image-labeling:17.0.9")
+    implementation("com.google.android.gms:play-services-mlkit-image-labeling:16.0.8")
+
+    // Đảm bảo có dòng này cho Tasks.await (Video AI cần)
+    implementation("com.google.android.gms:play-services-tasks:18.1.0")
 
     // --- Testing ---
     testImplementation(libs.junit)

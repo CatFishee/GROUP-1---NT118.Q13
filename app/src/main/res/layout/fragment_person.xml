@@ -252,12 +252,6 @@
                     android:textColor="@color/app_main_color"
                     app:drawableStartCompat="@drawable/ic_statistics" />
 
-                <TextView
-                    android:id="@+id/btn_get_premium"
-                    style="@style/PersonMenuItem"
-                    android:text="Get MeTube Premium"
-                    android:textColor="@color/app_main_color"
-                    app:drawableStartCompat="@drawable/ic_premium" />
 
             </LinearLayout>
 

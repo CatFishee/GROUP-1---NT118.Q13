@@ -99,35 +99,6 @@
 
     </LinearLayout>
 
-    <!-- Action Buttons: Repeat + Shuffle -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingBottom="16dp"
-        android:gravity="center_horizontal">
-
-        <ImageButton
-            android:id="@+id/btn_repeat_queue"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_repeat"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:layout_marginEnd="24dp"
-            android:contentDescription="Repeat"
-            app:tint="@color/icon_tint" />
-
-        <ImageButton
-            android:id="@+id/btn_shuffle_queue"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_shuffle"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Shuffle"
-            app:tint="@color/icon_tint"/>
-
-    </LinearLayout>
 
     <!-- Queue List -->
     <androidx.recyclerview.widget.RecyclerView

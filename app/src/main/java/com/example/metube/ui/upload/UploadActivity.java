@@ -32,10 +32,16 @@ import com.example.metube.R;
 import com.example.metube.model.Video;
 import com.example.metube.ui.notifications.NotificationHelper;
 import com.example.metube.ui.playlist.VisibilityBottomSheet;
+import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.label.ImageLabel;
+import com.google.mlkit.vision.label.ImageLabeler;
+import com.google.mlkit.vision.label.ImageLabeling;
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -44,7 +50,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import com.google.android.material.chip.Chip;
@@ -60,33 +65,29 @@ public class UploadActivity extends AppCompatActivity {
     private static final String TAG = "UploadActivity";
     private static final String CLOUDINARY_UPLOAD_PRESET = "metube";
 
-    // UI
     private ImageView ivThumbnailPreview;
     private Button btnSelectThumbnail, btnSelectVideo, btnUploadVideo;
-    private TextView tvSelectedVideoName;
+    private TextView tvSelectedVideoName, tvVisibilityStatus;
     private EditText etVideoTitle, etVideoDescription;
     private ProgressBar progressBar;
-    private String currentVisibility = "Public"; // Mặc định là Public
-    private TextView tvVisibilityStatus;
+    private String currentVisibility = "Public";
     private ImageView ivVisibilityIcon;
     private LinearLayout layoutSelectVisibility;
-    // URIs
-    private Uri thumbnailUri;
-    private Uri videoUri;
+    private Uri thumbnailUri, videoUri;
     private ChipGroup chipGroupTopics;
     private AutoCompleteTextView acAddTopic;
 
-    // Firebase
     private FirebaseAuth mAuth;
     private FirebaseFirestore firestore;
 
-    // Activity result launchers
     private final ActivityResultLauncher<Intent> thumbnailPickerLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && result.getData() != null) {
                     thumbnailUri = result.getData().getData();
                     Glide.with(this).load(thumbnailUri).into(ivThumbnailPreview);
+                    // AI Quét ảnh ngay khi chọn
+                    checkImageContentAI(thumbnailUri);
                 }
             }
     );
@@ -105,8 +106,12 @@ public class UploadActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_upload);
+        initViews();
+        mAuth = FirebaseAuth.getInstance();
+        firestore = FirebaseFirestore.getInstance();
+    }
 
-        // initialize UI
+    private void initViews() {
         ivThumbnailPreview = findViewById(R.id.iv_thumbnail_preview);
         btnSelectThumbnail = findViewById(R.id.btn_select_thumbnail);
         btnSelectVideo = findViewById(R.id.btn_select_video);
@@ -120,327 +125,250 @@ public class UploadActivity extends AppCompatActivity {
         tvVisibilityStatus = findViewById(R.id.tv_visibility_status);
         ivVisibilityIcon = findViewById(R.id.iv_visibility_icon);
         layoutSelectVisibility = findViewById(R.id.layout_select_visibility);
+
         setupTopicInput();
-        ImageView ivClose = findViewById(R.id.iv_close_upload);
-        ivClose.setOnClickListener(v -> {
-            finish();
-        });
-
-        // Initialize Firebase
-        mAuth = FirebaseAuth.getInstance();
-        firestore = FirebaseFirestore.getInstance();
-
+        findViewById(R.id.iv_close_upload).setOnClickListener(v -> finish());
         btnSelectThumbnail.setOnClickListener(v -> openPicker("image/*", thumbnailPickerLauncher));
         btnSelectVideo.setOnClickListener(v -> openPicker("video/*", videoPickerLauncher));
         btnUploadVideo.setOnClickListener(v -> uploadFiles());
+
         layoutSelectVisibility.setOnClickListener(v -> {
-            VisibilityBottomSheet bottomSheet = new VisibilityBottomSheet(visibility -> {
-                // Cập nhật biến và giao diện sau khi chọn
+            new VisibilityBottomSheet(visibility -> {
                 currentVisibility = visibility;
                 tvVisibilityStatus.setText(visibility);
-
-                // Thay đổi icon tương ứng (Tùy chọn)
                 switch (visibility) {
                     case "Public": ivVisibilityIcon.setImageResource(R.drawable.ic_public); break;
                     case "Unlisted": ivVisibilityIcon.setImageResource(R.drawable.ic_link); break;
                     case "Private": ivVisibilityIcon.setImageResource(R.drawable.ic_lock); break;
                 }
-            });
-            bottomSheet.show(getSupportFragmentManager(), "VisibilityBottomSheet");
+            }).show(getSupportFragmentManager(), "VisibilityBottomSheet");
         });
     }
 
+    // Thay đổi cách mở picker
     private void openPicker(String type, ActivityResultLauncher<Intent> launcher) {
-        Intent intent = new Intent(Intent.ACTION_PICK);
-        intent.setType(type);
         if ("image/*".equals(type)) {
-            thumbnailPickerLauncher.launch(intent);
+            // Dùng launcher trực tiếp với string type
+            thumbnailPickerLauncher.launch(new Intent(Intent.ACTION_GET_CONTENT).setType(type));
         } else {
-            videoPickerLauncher.launch(intent);
+            videoPickerLauncher.launch(new Intent(Intent.ACTION_GET_CONTENT).setType(type));
         }
     }
 
     private void uploadFiles() {
-        String title = etVideoTitle.getText() != null ? etVideoTitle.getText().toString().trim() : "";
-        String description = etVideoDescription.getText() != null ? etVideoDescription.getText().toString().trim() : "";
-
+        String title = etVideoTitle.getText().toString().trim();
         if (videoUri == null || title.isEmpty()) {
-            Toast.makeText(this, "Please select a video and enter a title.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Please select a video and title.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if (mAuth.getCurrentUser() == null) {
-            Toast.makeText(this, "You must be logged in to upload.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        setUploadingState(true);
-
-        // If thumbnail not selected, extract first frame (may throw — handled here)
-        if (thumbnailUri == null) {
-            try {
-                thumbnailUri = extractFirstFrameAsJpeg(videoUri);
-                if (thumbnailUri != null) Glide.with(this).load(thumbnailUri).into(ivThumbnailPreview);
-            } catch (Exception e) {
-                Log.w(TAG, "Failed to extract thumbnail from video: " + e.getMessage(), e);
-                thumbnailUri = null; // proceed without thumbnail
+        // BẮT ĐẦU QUÉT AI CHO VIDEO TRƯỚC KHI LÊN CLOUDINARY
+        checkVideoContentAI(videoUri, () -> {
+            setUploadingState(true);
+            if (thumbnailUri == null) {
+                try {
+                    thumbnailUri = extractFirstFrameAsJpeg(videoUri);
+                } catch (Exception e) { thumbnailUri = null; }
             }
+            uploadThumbnailAndThenVideo(title, etVideoDescription.getText().toString().trim());
+        });
+    }
+
+    private void checkImageContentAI(Uri uri) {
+        try {
+            InputImage image = InputImage.fromFilePath(this, uri);
+            ImageLabeler labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS);
+
+            labeler.process(image)
+                    .addOnSuccessListener(labels -> {
+                        List<String> found = new ArrayList<>();
+                        for (ImageLabel l : labels) {
+                            String text = l.getText().toLowerCase();
+                            // confidence > 0.6 để tránh nhận diện nhầm
+                            if (l.getConfidence() > 0.6 && (text.contains("cat") || text.contains("dog") || text.contains("frog") || text.contains("animal"))) {
+                                found.add(text);
+                            }
+                        }
+                        if (!found.isEmpty()) {
+                            showSimpleAIWarning(found, null);
+                        }
+                        labeler.close();
+                    })
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "AI Thumbnail Error: " + e.getMessage());
+                        // Không crash, cho phép tiếp tục nếu AI lỗi
+                    });
+        } catch (Exception e) {
+            Log.e(TAG, "InputImage Error: " + e.getMessage());
         }
-        uploadThumbnailAndThenVideo(title, description);
+    }
+
+    private void checkVideoContentAI(Uri uri, Runnable onSuccessAction) {
+        setUploadingState(true);
+        Toast.makeText(this, "AI đang kiểm duyệt video...", Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+            ImageLabeler labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS);
+            try {
+                retriever.setDataSource(this, uri);
+                long duration = Long.parseLong(retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)) * 1000;
+                long[] checkPoints = {duration / 10, duration / 2, (duration * 9) / 10};
+                List<String> found = new ArrayList<>();
+
+                for (long timeUs : checkPoints) {
+                    Bitmap frame = retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                    if (frame != null) {
+                        InputImage image = InputImage.fromBitmap(frame, 0);
+                        List<ImageLabel> labels = Tasks.await(labeler.process(image));
+                        for (ImageLabel l : labels) {
+                            String t = l.getText().toLowerCase();
+                            if (l.getConfidence() > 0.6 && (t.contains("cat") || t.contains("dog") || t.contains("frog") || t.contains("animal"))) {
+                                if (!found.contains(t)) found.add(t);
+                            }
+                        }
+                    }
+                }
+                runOnUiThread(() -> {
+                    if (!found.isEmpty()) {
+                        setUploadingState(false);
+                        showSimpleAIWarning(found, onSuccessAction);
+                    } else {
+                        onSuccessAction.run();
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(onSuccessAction);
+            } finally {
+                try { retriever.release(); } catch (IOException e) {}
+                labeler.close();
+            }
+        }).start();
+    }
+
+    private void showSimpleAIWarning(List<String> animals, Runnable onSuccessAction) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("AI Content Warning!")
+                .setMessage("AI phát hiện nội dung không phù hợp: " + String.join(", ", animals) +
+                        ".\n\nBạn có muốn tiếp tục đăng không?")
+                .setCancelable(false)
+                .setPositiveButton("Vẫn đăng", (d, w) -> {
+                    if (onSuccessAction != null) onSuccessAction.run();
+                })
+                .setNegativeButton("Hủy & Xóa file", (d, w) -> {
+                    // 1. Reset dữ liệu Thumbnail
+                    thumbnailUri = null;
+                    ivThumbnailPreview.setImageResource(android.R.color.transparent); // Xóa hình trên giao diện
+                    // Nếu bạn có icon mặc định thì dùng: ivThumbnailPreview.setImageResource(R.drawable.ic_add_photo);
+
+                    // 2. Nếu AI phát hiện con mèo TRONG VIDEO (khi onSuccessAction != null)
+                    // thì chúng ta cũng xóa luôn video đã chọn để bắt user chọn video khác
+                    if (onSuccessAction != null) {
+                        videoUri = null;
+                        tvSelectedVideoName.setText("No video selected");
+                    }
+
+                    // 3. Tắt trạng thái loading (nếu đang bật)
+                    setUploadingState(false);
+
+                    Toast.makeText(this, "Đã hủy và xóa file vi phạm.", Toast.LENGTH_SHORT).show();
+                })
+                .show();
     }
 
     private void uploadThumbnailAndThenVideo(String title, String description) {
-        if (thumbnailUri != null) {
-            // Trường hợp có thumbnail
-            uploadToCloudinary(thumbnailUri, "image", new com.cloudinary.android.callback.UploadCallback() {
-                @Override
-                public void onSuccess(String requestId, Map resultData) {
-                    String thumbnailUrl = resultData.get("secure_url").toString();
-                    Log.d(TAG, "Thumbnail uploaded: " + thumbnailUrl);
-                    uploadVideo(title, description, thumbnailUrl);
-                }
-                @Override
-                public void onError(String requestId, ErrorInfo error) {
-                    showUploadError(new Exception("Thumbnail upload failed: " + error.getDescription()));
-                }
-                @Override public void onStart(String requestId) {}
-                @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
-                @Override public void onReschedule(String requestId, ErrorInfo error) {}
-            });
-        } else {
-            // Trường hợp không có thumbnail
-            uploadVideo(title, description, ""); // Thumbnail URL là rỗng
-        }
+        uploadToCloudinary(thumbnailUri, "image", new UploadCallback() {
+            @Override
+            public void onSuccess(String requestId, Map resultData) {
+                uploadVideo(title, description, resultData.get("secure_url").toString());
+            }
+            @Override public void onError(String requestId, ErrorInfo error) { showUploadError(new Exception(error.getDescription())); }
+            @Override public void onStart(String requestId) {}
+            @Override public void onProgress(String requestId, long b, long t) {}
+            @Override public void onReschedule(String requestId, ErrorInfo e) {}
+        });
     }
 
     private void uploadVideo(String title, String description, String thumbnailUrl) {
         uploadToCloudinary(videoUri, "video", new UploadCallback() {
             @Override
             public void onSuccess(String requestId, Map resultData) {
-                String videoUrl = resultData.get("secure_url").toString();
-                Log.d(TAG, "Video uploaded: " + videoUrl);
-                long durationMillis = 0;
+                long duration = 0;
                 if (resultData.containsKey("duration")) {
-                    Object durationObj = resultData.get("duration");
-                    if (durationObj instanceof Double) {
-                        // Đổi từ Giây sang Mili-giây để khớp với TimeUtil
-                        durationMillis = (long) ((Double) durationObj * 1000);
-                    } else if (durationObj instanceof Integer) {
-                        durationMillis = ((Integer) durationObj) * 1000L;
-                    }
+                    duration = (long) (Double.parseDouble(resultData.get("duration").toString()) * 1000);
                 }
-                saveVideoInfoToFirestore(title, description, thumbnailUrl, videoUrl, durationMillis);
+                saveVideoInfoToFirestore(title, description, thumbnailUrl, resultData.get("secure_url").toString(), duration);
             }
-            @Override
-            public void onError(String requestId, ErrorInfo error) {
-                showUploadError(new Exception("Video upload failed: " + error.getDescription()));
-            }
+            @Override public void onError(String requestId, ErrorInfo error) { showUploadError(new Exception(error.getDescription())); }
             @Override public void onStart(String requestId) {}
-            @Override public void onProgress(String requestId, long bytes, long totalBytes) {}
-            @Override public void onReschedule(String requestId, ErrorInfo error) {}
+            @Override public void onProgress(String requestId, long b, long t) {}
+            @Override public void onReschedule(String requestId, ErrorInfo e) {}
         });
     }
 
-    private void uploadToCloudinary(Uri fileUri, String resourceType, UploadCallback callback) {
-        MediaManager.get().upload(fileUri)
-                .unsigned(CLOUDINARY_UPLOAD_PRESET)
-                .option("resource_type", resourceType)
-                .callback(callback)
-                .dispatch();
-    }
-    private void setupTopicInput() {
-        String[] suggestedTopics = new String[]{"Gaming", "Music", "VLOG", "Education", "Sports"};
-
-        // Tạo adapter cho AutoCompleteTextView
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_dropdown_item_1line, suggestedTopics);
-        acAddTopic.setAdapter(adapter);
-
-        // Xử lý khi người dùng nhấn Enter hoặc nút Done
-        acAddTopic.setOnEditorActionListener((v, actionId, event) -> {
-            boolean handled = false;
-            if (actionId == EditorInfo.IME_ACTION_DONE ||
-                    (event != null && event.getKeyCode() == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN)) {
-
-                String topic = acAddTopic.getText().toString().trim();
-
-                String sanitizedTopic = topic.replaceAll("[^a-zA-Z0-9 ]", "");
-
-                if (!sanitizedTopic.isEmpty()) {
-                    addTopicChip(sanitizedTopic);
-                    acAddTopic.setText("");
-                }
-                handled = true;
-            }
-            return handled;
-        });
+    private void uploadToCloudinary(Uri uri, String type, UploadCallback callback) {
+        if (uri == null) return;
+        MediaManager.get().upload(uri).unsigned(CLOUDINARY_UPLOAD_PRESET).option("resource_type", type).callback(callback).dispatch();
     }
 
-    private void addTopicChip(String topicText) {
-        Chip chip = new Chip(this);
-        chip.setText(topicText);
-        chip.setCloseIconVisible(true); // Hiển thị nút 'x' để xóa
-        chip.setOnCloseIconClickListener(v -> chipGroupTopics.removeView(chip));
-        chipGroupTopics.addView(chip);
-    }
-    private void saveVideoInfoToFirestore(String title, String description, String thumbnailUrl, String videoUrl, long duration) {
+    private void saveVideoInfoToFirestore(String title, String description, String thumb, String url, long duration) {
         String uploaderId = mAuth.getCurrentUser().getUid();
         String videoId = firestore.collection("videos").document().getId();
-
-        List<String> topics = new ArrayList<>();
-        for (int i = 0; i < chipGroupTopics.getChildCount(); i++) {
-            Chip chip = (Chip) chipGroupTopics.getChildAt(i);
-            topics.add(chip.getText().toString());
-        }
-
-        // Tạo danh sách từ khóa tìm kiếm
-        String topicString = String.join(" ", topics);
-        String searchableContent = title.toLowerCase() + " " + description.toLowerCase();
-        HashSet<String> keywords = new HashSet<>(Arrays.asList(searchableContent.split("\\s+")));
-
         Video video = new Video();
         video.setVideoID(videoId);
         video.setUploaderID(uploaderId);
         video.setTitle(title);
         video.setDescription(description);
-        video.setTopics(topics);
-        video.setThumbnailURL(thumbnailUrl);
-        video.setVideoURL(videoUrl);
-        video.setSearchKeywords(new ArrayList<>(keywords));
-        // createdAt sẽ được tự động thêm bởi @ServerTimestamp
-        video.setVisibility(currentVisibility);
-
+        video.setThumbnailURL(thumb);
+        video.setVideoURL(url);
         video.setDuration(duration);
-
-        Log.d(TAG, "=== SAVING VIDEO TO FIRESTORE ===");
-        Log.d(TAG, "Video ID: " + videoId);
-        Log.d(TAG, "Uploader ID: " + uploaderId);
-        Log.d(TAG, "Title: " + title);
+        video.setVisibility(currentVisibility);
 
         firestore.collection("videos").document(videoId).set(video)
                 .addOnSuccessListener(aVoid -> {
-                    Log.d(TAG, "✅ Video saved to Firestore successfully");
-                    createVideoStatInRealtimeDB(videoId);
-                    sendNotificationToSubscribers(video);
-                    Toast.makeText(UploadActivity.this, "Upload successful!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Upload successful!", Toast.LENGTH_SHORT).show();
                     finish();
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "❌ Failed to save video to Firestore", e);
-                    showUploadError(e);
-                });
-    }
-    private void sendNotificationToSubscribers(Video video) {
-        // Lấy tên của uploader để hiển thị trong notification
-        firestore.collection("users").document(mAuth.getCurrentUser().getUid())
-                .get()
-                .addOnSuccessListener(doc -> {
-                    String uploaderName = "Unknown";
-                    if (doc.exists() && doc.getString("name") != null) {
-                        uploaderName = doc.getString("name");
-                    }
-
-                    Log.d(TAG, "📢 Sending notifications to subscribers...");
-                    NotificationHelper.notifySubscribersAboutNewVideo(video, uploaderName);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "Failed to get uploader name for notification", e);
-                    // Vẫn gửi notification với tên mặc định
-                    NotificationHelper.notifySubscribersAboutNewVideo(video, "A channel you subscribed");
-                });
-    }
-
-    private void createVideoStatInRealtimeDB(String videoId) {
-        Log.d(TAG, "=== CREATING VIDEO STAT IN REALTIME DB ===");
-        Log.d(TAG, "Video ID: " + videoId);
-
-        // ✅ FIXED: Added "videostat" parent node
-        DatabaseReference statRef = FirebaseDatabase.getInstance()
-                .getReference("videostat")
-                .child(videoId);
-
-        Log.d(TAG, "Path: videostat/" + videoId);
-
-        statRef.child("viewCount").setValue(0);
-        statRef.child("likeCount").setValue(0);
-        statRef.child("dislikeCount").setValue(0);
-        statRef.child("createdAt").setValue(System.currentTimeMillis())
-                .addOnSuccessListener(unused -> {
-                    Log.d(TAG, "✅ RealtimeDB VideoStat created successfully for " + videoId);
-                })
-                .addOnFailureListener(e -> {
-                    Log.e(TAG, "❌ Failed to create VideoStat in RealtimeDB for " + videoId, e);
                 });
     }
 
     private void setUploadingState(boolean isUploading) {
         progressBar.setVisibility(isUploading ? View.VISIBLE : View.GONE);
         btnUploadVideo.setEnabled(!isUploading);
-        btnSelectThumbnail.setEnabled(!isUploading);
-        btnSelectVideo.setEnabled(!isUploading);
     }
 
     private void showUploadError(Exception e) {
         setUploadingState(false);
-        Toast.makeText(this, "Upload failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        Log.e(TAG, "Upload failed", e);
-    }
-
-    private String getFileExtensionFromUri(Uri uri) {
-        String extension = "";
-        try {
-            String type = getContentResolver().getType(uri);
-            if (type != null) {
-                String ext = MimeTypeMap.getSingleton().getExtensionFromMimeType(type);
-                if (ext != null) extension = "." + ext;
-            }
-        } catch (Exception e) {
-            Log.w(TAG, "Could not get extension: " + e.getMessage());
-        }
-        return extension;
+        Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
     }
 
     private String getFileNameFromUri(Uri uri) {
-        if (uri == null) {
-            return "Unknown file";
-        }
+        if (uri == null) return "Unknown file";
         String result = null;
-        if (uri.getScheme() != null && uri.getScheme().equals("content")) {
+        if ("content".equals(uri.getScheme())) {
             try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
                 if (cursor != null && cursor.moveToFirst()) {
+                    // SỬA TẠI ĐÂY: Lưu index vào biến và kiểm tra >= 0
                     int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    result = cursor.getString(nameIndex);
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get file name from content URI", e);
-            }
-        }
-        if (result == null) {
-            result = uri.getPath();
-            if (result != null) {
-                int cut = result.lastIndexOf('/');
-                if (cut != -1) {
-                    result = result.substring(cut + 1);
+                    if (nameIndex >= 0) {
+                        result = cursor.getString(nameIndex);
+                    }
                 }
             }
         }
-        return result != null ? result : "Unknown file";
+        return result != null ? result : uri.getPath();
     }
 
     private Uri extractFirstFrameAsJpeg(Uri videoUri) throws Exception {
-        if (videoUri == null) throw new IllegalArgumentException("videoUri == null");
         MediaMetadataRetriever retriever = new MediaMetadataRetriever();
         retriever.setDataSource(this, videoUri);
-        Bitmap frame = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST);
+        Bitmap frame = retriever.getFrameAtTime(0);
         retriever.release();
-        if (frame == null) throw new Exception("Could not extract frame from video");
-
         File cacheFile = new File(getCacheDir(), "thumb_" + UUID.randomUUID().toString() + ".jpg");
-        try (FileOutputStream fos = new FileOutputStream(cacheFile)) {
-            frame.compress(Bitmap.CompressFormat.JPEG, 80, fos);
-            fos.flush();
-        }
+        try (FileOutputStream fos = new FileOutputStream(cacheFile)) { frame.compress(Bitmap.CompressFormat.JPEG, 80, fos); }
         return Uri.fromFile(cacheFile);
     }
 
+    private void setupTopicInput() {
+        acAddTopic.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new String[]{"Gaming", "Music", "VLOG"}));
+    }
 }

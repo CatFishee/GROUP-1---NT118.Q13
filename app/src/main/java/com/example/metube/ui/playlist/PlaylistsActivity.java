@@ -1,5 +1,6 @@
 package com.example.metube.ui.playlist;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -11,6 +12,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -18,6 +20,7 @@ import com.example.metube.R;
 import com.example.metube.model.Playlist;
 import com.example.metube.ui.playlist.CreatePlaylistBottomSheet;
 
+import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -26,7 +29,9 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class PlaylistsActivity extends AppCompatActivity {
 
@@ -85,6 +90,9 @@ public class PlaylistsActivity extends AppCompatActivity {
             });
             dialog.show(getSupportFragmentManager(), "CreatePlaylistDialog");
         });
+        adapter.setOnPlaylistMoreClickListener((playlist, view) -> {
+            showPlaylistOptionsMenu(playlist, view);
+        });
 
         // 5. Logic Filter Chips
         chipGroupFilters.setOnCheckedChangeListener((group, checkedId) -> {
@@ -111,23 +119,22 @@ public class PlaylistsActivity extends AppCompatActivity {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     allPlaylists.clear();
+                    Set<String> allUniqueTopics = new HashSet<>();
 
                     for (DocumentSnapshot doc : querySnapshot) {
-                        try {
-                            Playlist p = doc.toObject(Playlist.class);
-                            if (p != null) {
-                                p.setPlaylistId(doc.getId());
-                                if (p.getVideoIds() == null) p.setVideoIds(new ArrayList<>());
-
-                                // Thêm vào danh sách gốc
-                                allPlaylists.add(p);
+                        Playlist p = doc.toObject(Playlist.class);
+                        if (p != null) {
+                            p.setPlaylistId(doc.getId());
+                            allPlaylists.add(p);
+                            // Gom topic để tạo chip
+                            if (p.getContainedTopics() != null) {
+                                allUniqueTopics.addAll(p.getContainedTopics());
                             }
-                        } catch (Exception e) {
-                            Log.e("Playlists", "Error parsing", e);
                         }
                     }
 
                     // Sau khi tải xong, áp dụng bộ lọc và sắp xếp để hiển thị
+                    updateTopicsFromPlaylists();
                     applyFilterAndSort();
                 });
     }
@@ -138,14 +145,22 @@ public class PlaylistsActivity extends AppCompatActivity {
         displayedPlaylists.clear();
 
         // 1. LỌC (FILTER)
-        if (currentTopicFilter.equals("All")) {
-            displayedPlaylists.addAll(allPlaylists);
-        } else {
-            for (Playlist p : allPlaylists) {
-                if (p.getContainedTopics() != null &&
-                        p.getContainedTopics().contains(currentTopicFilter)) {
-                    displayedPlaylists.add(p);
+        for (Playlist p : allPlaylists) {
+            // 1. Kiểm tra lọc Topic
+            boolean matchesTopic = false;
+            if (currentTopicFilter.equals("All")) {
+                matchesTopic = true;
+            } else if (p.getContainedTopics() != null) {
+                for (String topic : p.getContainedTopics()) {
+                    if (topic.equalsIgnoreCase(currentTopicFilter)) {
+                        matchesTopic = true;
+                        break;
+                    }
                 }
+            }
+
+            if (matchesTopic) {
+                displayedPlaylists.add(p);
             }
         }
 
@@ -183,6 +198,61 @@ public class PlaylistsActivity extends AppCompatActivity {
         // 3. CẬP NHẬT GIAO DIỆN
         adapter.notifyDataSetChanged();
     }
+    private void updateTopicsFromPlaylists() {
+        Set<String> uniqueTopics = new HashSet<>();
+
+        // Duyệt qua tất cả playlist để lấy các topic bên trong trường containedTopics
+        for (Playlist p : allPlaylists) {
+            if (p.getContainedTopics() != null && !p.getContainedTopics().isEmpty()) {
+                uniqueTopics.addAll(p.getContainedTopics());
+            }
+        }
+
+        // Chuyển Set thành List và sắp xếp theo alphabet
+        List<String> sortedTopics = new ArrayList<>(uniqueTopics);
+        Collections.sort(sortedTopics);
+
+        // Gọi hàm tạo Chip giao diện
+        setupDynamicFilterChips(sortedTopics);
+    }
+    private void setupDynamicFilterChips(List<String> topicList) {
+        chipGroupFilters.removeAllViews();
+
+        // 1. Luôn tạo Chip "All" đầu tiên
+        Chip allChip = createFilterChip("All");
+        allChip.setId(View.generateViewId());
+        allChip.setChecked(true); // Mặc định chọn All
+        chipGroupFilters.addView(allChip);
+
+        // 2. Tạo các Chip cho từng Topic động
+        for (String topic : topicList) {
+            Chip chip = createFilterChip(topic);
+            chip.setId(View.generateViewId());
+            chipGroupFilters.addView(chip);
+        }
+    }
+    private Chip createFilterChip(String text) {
+        Chip chip = new Chip(this);
+        chip.setText(text);
+        chip.setCheckable(true);
+        chip.setClickable(true);
+
+        // Gán màu sắc từ các selector bạn đã tạo trong XML
+        chip.setTextColor(ContextCompat.getColorStateList(this, R.color.chip_text_color_selector));
+        chip.setChipBackgroundColor(ContextCompat.getColorStateList(this, R.color.chip_background_color_selector));
+        chip.setChipStrokeWidth(0f); // Bỏ viền cho giống YouTube
+
+        // Sự kiện khi người dùng nhấn chọn Chip
+        chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                currentTopicFilter = text; // Cập nhật filter hiện tại (All, Gaming, Music...)
+                applyFilterAndSort();      // Gọi hàm lọc lại danh sách hiển thị
+            }
+        });
+
+        return chip;
+    }
+
 
     // --- MENU SẮP XẾP ---
     private void showSortMenu(View v) {
@@ -215,5 +285,52 @@ public class PlaylistsActivity extends AppCompatActivity {
         // Gọi lại hàm load dữ liệu mỗi khi màn hình này xuất hiện
         // Để cập nhật các thay đổi (Thumbnail mới, Tên mới...)
         loadUserPlaylists();
+    }
+    private void showPlaylistOptionsMenu(Playlist playlist, View view) {
+        PopupMenu popup = new PopupMenu(this, view);
+        popup.getMenu().add(0, 0, 0, "Edit playlist");
+        popup.getMenu().add(0, 1, 1, "Delete playlist");
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 0: // Edit
+                    Intent intent = new Intent(this, EditPlaylistActivity.class);
+                    intent.putExtra("playlist_id", playlist.getPlaylistId());
+                    intent.putExtra("title", playlist.getTitle());
+                    intent.putExtra("visibility", playlist.getVisibility());
+                    startActivity(intent);
+                    return true;
+
+                case 1: // Delete
+                    confirmDeletePlaylist(playlist);
+                    return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    private void confirmDeletePlaylist(Playlist playlist) {
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Delete Playlist")
+                .setMessage("Are you sure you want to delete \"" + playlist.getTitle() + "\"?")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    deletePlaylist(playlist);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void deletePlaylist(Playlist playlist) {
+        firestore.collection("playlists").document(playlist.getPlaylistId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Playlist deleted", Toast.LENGTH_SHORT).show();
+                    // Tải lại dữ liệu để cập nhật danh sách
+                    loadUserPlaylists();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 }

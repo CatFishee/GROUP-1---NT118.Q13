@@ -1,5 +1,6 @@
 package com.example.metube.ui.video;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,24 +18,26 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.QueueViewHolder> {
 
-    private List<Video> queueList;
+    private static final String TAG = "QueueAdapter";
+    private List<Video> queueList = new ArrayList<>();
     private int currentPlayingPosition = -1;
     private OnQueueItemClickListener listener;
     private FirebaseFirestore firestore;
 
     public interface OnQueueItemClickListener {
-        void onItemClick(int position);
-        void onMoreClick(int position, View view);
+        void onItemClick(int absolutePosition);
+        void onMoreClick(int absolutePosition, View view);
         void onItemMove(int fromPosition, int toPosition);
     }
 
     public QueueAdapter(List<Video> queueList, OnQueueItemClickListener listener) {
-        this.queueList = queueList;
+        this.queueList = new ArrayList<>(queueList);
         this.listener = listener;
         this.firestore = FirebaseFirestore.getInstance();
     }
@@ -49,9 +52,12 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.QueueViewHol
 
     @Override
     public void onBindViewHolder(@NonNull QueueViewHolder holder, int position) {
+        // ✅ position ở đây đã là ABSOLUTE position trong queue
         Video video = queueList.get(position);
+
         holder.tvTitle.setText(video.getTitle());
 
+        // Load thumbnail
         if (video.getThumbnailURL() != null && !video.getThumbnailURL().isEmpty()) {
             Glide.with(holder.itemView.getContext())
                     .load(video.getThumbnailURL())
@@ -59,38 +65,35 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.QueueViewHol
                     .into(holder.ivThumbnail);
         }
 
+        // Load channel name
         loadChannelName(video.getUploaderID(), holder.tvChannel);
 
-        // GỌI HÀM LOAD STATS TỪ REALTIME DB
+        // Load video stats
         loadVideoStats(video, holder.tvStats);
 
-        // Trạng thái đang phát
-        holder.viewNowPlayingBorder.setVisibility(position == currentPlayingPosition ? View.VISIBLE : View.GONE);
-        holder.tvNextUpBadge.setVisibility((currentPlayingPosition != -1 && position == currentPlayingPosition + 1) ? View.VISIBLE : View.GONE);
+        // ✅ Highlight video đang phát
+        boolean isPlaying = (position == currentPlayingPosition);
+        holder.viewNowPlayingBorder.setVisibility(isPlaying ? View.VISIBLE : View.GONE);
 
+        // ✅ Badge "Next up" cho video tiếp theo
+        boolean isNextUp = (currentPlayingPosition != -1 && position == currentPlayingPosition + 1);
+        holder.tvNextUpBadge.setVisibility(isNextUp ? View.VISIBLE : View.GONE);
+
+        // ✅ Click listeners với ABSOLUTE position
         holder.itemView.setOnClickListener(v -> {
-            if (listener != null) listener.onItemClick(holder.getBindingAdapterPosition());
+            if (listener != null) {
+                int absolutePos = holder.getBindingAdapterPosition();
+                Log.d(TAG, "onItemClick: absolutePos = " + absolutePos);
+                listener.onItemClick(absolutePos);
+            }
         });
 
         holder.btnMore.setOnClickListener(v -> {
-            if (listener != null) listener.onMoreClick(holder.getBindingAdapterPosition(), v);
-        });
-    }
-
-    // ĐƯA HÀM NÀY RA NGOÀI onBindViewHolder
-    private void loadVideoStats(Video video, TextView textView) {
-        if (video.getVideoID() == null) return;
-        DatabaseReference statRef = FirebaseDatabase.getInstance().getReference("videostat")
-                .child(video.getVideoID()).child("viewCount");
-
-        statRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                long views = snapshot.exists() ? snapshot.getValue(Long.class) : 0;
-                String timeStr = (video.getCreatedAt() != null) ? getRelativeTime(video.getCreatedAt()) : "";
-                textView.setText(formatNumber(views) + " views • " + timeStr);
+            if (listener != null) {
+                int absolutePos = holder.getBindingAdapterPosition();
+                Log.d(TAG, "onMoreClick: absolutePos = " + absolutePos);
+                listener.onMoreClick(absolutePos, v);
             }
-            @Override public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
@@ -99,32 +102,49 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.QueueViewHol
         return queueList.size();
     }
 
+    // ✅ Update queue với absolute current position
+    public void updateQueue(List<Video> newQueue, int currentPos) {
+        Log.d(TAG, "updateQueue: " + newQueue.size() + " videos, currentPos = " + currentPos);
+        this.queueList = new ArrayList<>(newQueue);
+        this.currentPlayingPosition = currentPos;
+        notifyDataSetChanged();
+    }
+
     public void setCurrentPlayingPosition(int position) {
         int oldPosition = this.currentPlayingPosition;
         this.currentPlayingPosition = position;
 
+        Log.d(TAG, "setCurrentPlayingPosition: " + oldPosition + " -> " + position);
+
         // Update both old and new positions
         if (oldPosition >= 0 && oldPosition < queueList.size()) {
             notifyItemChanged(oldPosition);
-            // Also update the next video badge
             if (oldPosition + 1 < queueList.size()) {
                 notifyItemChanged(oldPosition + 1);
             }
         }
         if (position >= 0 && position < queueList.size()) {
             notifyItemChanged(position);
-            // Also update the next video badge
             if (position + 1 < queueList.size()) {
                 notifyItemChanged(position + 1);
             }
         }
     }
 
+    // ✅ FIXED: onItemMove với absolute positions
     public void onItemMove(int fromPosition, int toPosition) {
+        if (fromPosition < 0 || fromPosition >= queueList.size() ||
+                toPosition < 0 || toPosition >= queueList.size()) {
+            return;
+        }
+
+        Log.d(TAG, "onItemMove: " + fromPosition + " -> " + toPosition);
+
+        // Swap in local list
         Collections.swap(queueList, fromPosition, toPosition);
         notifyItemMoved(fromPosition, toPosition);
 
-        // Update current playing position if affected by the move
+        // Update current playing position
         if (currentPlayingPosition == fromPosition) {
             currentPlayingPosition = toPosition;
         } else if (fromPosition < currentPlayingPosition && toPosition >= currentPlayingPosition) {
@@ -133,12 +153,19 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.QueueViewHol
             currentPlayingPosition++;
         }
 
+        // Notify listener
         if (listener != null) {
             listener.onItemMove(fromPosition, toPosition);
         }
     }
 
     public void removeItem(int position) {
+        if (position < 0 || position >= queueList.size()) {
+            return;
+        }
+
+        Log.d(TAG, "removeItem: position = " + position);
+
         queueList.remove(position);
         notifyItemRemoved(position);
 
@@ -150,10 +177,33 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.QueueViewHol
         }
     }
 
-    public void updateQueue(List<Video> newQueue, int currentPos) {
-        this.queueList = newQueue;
-        this.currentPlayingPosition = currentPos;
-        notifyDataSetChanged();
+    // ✅ Load video stats từ Realtime Database
+    private void loadVideoStats(Video video, TextView textView) {
+        if (video.getVideoID() == null) {
+            textView.setText("No stats");
+            return;
+        }
+
+        DatabaseReference statRef = FirebaseDatabase.getInstance()
+                .getReference("videostat")
+                .child(video.getVideoID())
+                .child("viewCount");
+
+        statRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                long views = snapshot.exists() ? snapshot.getValue(Long.class) : 0;
+                String timeStr = (video.getCreatedAt() != null)
+                        ? getRelativeTime(video.getCreatedAt())
+                        : "";
+                textView.setText(formatNumber(views) + " views • " + timeStr);
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                textView.setText("Stats unavailable");
+            }
+        });
     }
 
     private void loadChannelName(String uploaderID, TextView textView) {
@@ -174,16 +224,12 @@ public class QueueAdapter extends RecyclerView.Adapter<QueueAdapter.QueueViewHol
                 .addOnFailureListener(e -> textView.setText("Unknown"));
     }
 
-    private String formatViewCount(Video video) {
-        // You might want to load this from Firebase Realtime Database
-        return "views";
-    }
-    // Hàm format số (1500 -> 1.5K)
     private String formatNumber(long count) {
         if (count < 1000) return String.valueOf(count);
         if (count < 1000000) return String.format("%.1fK", count / 1000.0);
         return String.format("%.1fM", count / 1000000.0);
     }
+
     private String getRelativeTime(com.google.firebase.Timestamp timestamp) {
         long timeInMillis = timestamp.toDate().getTime();
         long now = System.currentTimeMillis();

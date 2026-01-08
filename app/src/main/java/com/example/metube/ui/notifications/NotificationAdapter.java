@@ -103,22 +103,18 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
                     });
 
             // Load thumbnail của video
-            if (notification.getThumbnailURL() != null) {
+            if (notification.getThumbnailURL() != null && !notification.getThumbnailURL().isEmpty()) {
+                videoThumbnail.setVisibility(View.VISIBLE);
                 Glide.with(context)
                         .load(notification.getThumbnailURL())
                         .placeholder(R.color.light_green_background)
                         .into(videoThumbnail);
+            } else {
+                videoThumbnail.setVisibility(View.GONE); // ✅ Ẩn nếu không có thumbnail
             }
-
-            // Click vào notification → Mở video
             itemView.setOnClickListener(v -> {
-                // Đánh dấu đã đọc
                 markAsRead(notification);
-
-                // Mở VideoActivity
-                Intent intent = new Intent(context, VideoActivity.class);
-                intent.putExtra("video_id", notification.getVideoID());
-                context.startActivity(intent);
+                handleNotificationClick(notification, context); // ✅ GỌI HÀM NÀY
             });
         }
         private void handleNotificationClick(Notification notification, Context context) {

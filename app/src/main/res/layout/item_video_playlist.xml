@@ -58,7 +58,6 @@
             android:text="Video Title"
             android:textColor="@color/blwhite_text"
             android:textSize="18sp"
-            android:textStyle="bold"
             android:maxLines="2"
             android:ellipsize="end"/>
 

@@ -10,6 +10,8 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.google.firebase.firestore.FirebaseFirestore;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -17,13 +19,16 @@ import java.util.Locale;
 public class VideoPickerAdapter extends RecyclerView.Adapter<VideoPickerAdapter.ViewHolder> {
     private List<Video> videoList = new ArrayList<>();
     private OnVideoSelectedListener listener;
+    private FirebaseFirestore firestore;
 
     public interface OnVideoSelectedListener {
         void onVideoSelected(Video video);
     }
 
     public VideoPickerAdapter(OnVideoSelectedListener listener) {
+
         this.listener = listener;
+        this.firestore = FirebaseFirestore.getInstance();
     }
 
     public void setVideos(List<Video> videos) {
@@ -46,7 +51,8 @@ public class VideoPickerAdapter extends RecyclerView.Adapter<VideoPickerAdapter.
         holder.tvTitle.setText(video.getTitle());
         // Use Uploader Name if available, otherwise just "Unknown"
         // (You might need to join user table in real app, but for now use static or object data)
-        holder.tvUploader.setText(video.getUploaderName() != null ? video.getUploaderName() : "Unknown Uploader");
+//        holder.tvUploader.setText(video.getUploaderName() != null ? video.getUploaderName() : "Unknown Uploader");
+        holder.tvUploader.setText("Loading...");
 
         // Format duration
         long sec = video.getDuration() / 1000;
@@ -58,6 +64,24 @@ public class VideoPickerAdapter extends RecyclerView.Adapter<VideoPickerAdapter.
                     .load(video.getThumbnailURL())
                     .centerCrop()
                     .into(holder.ivThumbnail);
+        }
+        if (video.getUploaderID() != null && !video.getUploaderID().isEmpty()) {
+            firestore.collection("users")
+                    .document(video.getUploaderID())
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String name = doc.getString("name");
+                            holder.tvUploader.setText(name != null ? name : "Unknown Uploader");
+                        } else {
+                            holder.tvUploader.setText("Unknown Uploader");
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        holder.tvUploader.setText("Unknown Uploader");
+                    });
+        } else {
+            holder.tvUploader.setText("Unknown Uploader");
         }
 
         holder.itemView.setOnClickListener(v -> listener.onVideoSelected(video));

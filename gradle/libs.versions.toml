@@ -48,6 +48,8 @@ javamail = "1.6.7"
 exoplayer = "2.19.1"
 cloudinary = "3.1.2"
 mpandroidchart = "v3.1.0"
+imageLabelingCommon = "18.1.0"
+imageLabelingDefaultCommon = "17.0.0"
 
 [libraries]
 # --- AndroidX ---
@@ -104,6 +106,8 @@ cloudinary-android = { group = "com.cloudinary", name = "cloudinary-android", ve
 exoplayer-core = { group = "com.google.android.exoplayer", name = "exoplayer", version.ref = "exoplayer" }
 exoplayer-ui = { group = "com.google.android.exoplayer", name = "exoplayer-ui", version.ref = "exoplayer" }
 mpandroidchart = { group = "com.github.PhilJay", name = "MPAndroidChart", version.ref = "mpandroidchart" }
+image-labeling-common = { group = "com.google.mlkit", name = "image-labeling-common", version.ref = "imageLabelingCommon" }
+image-labeling-default-common = { group = "com.google.mlkit", name = "image-labeling-default-common", version.ref = "imageLabelingDefaultCommon" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

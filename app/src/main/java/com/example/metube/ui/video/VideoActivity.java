@@ -136,7 +136,7 @@ public class VideoActivity extends AppCompatActivity {
     private RecyclerView rvQueue;
     private QueueAdapter queueAdapter;
     private TextView tvQueueTitle, tvQueueCount, tvPlaylistOwner;
-    private ImageButton btnCloseQueue, btnRepeatQueue, btnShuffleQueue;
+    private ImageButton btnCloseQueue;
     private LinearLayout miniPlayerNext, layoutEmptyQueue;
     private TextView tvNextVideoTitle, tvNextVideoInfo;
     private ImageButton btnCollapseQueue;
@@ -190,8 +190,6 @@ public class VideoActivity extends AppCompatActivity {
         tvQueueCount = findViewById(R.id.tv_queue_count);
         tvPlaylistOwner = findViewById(R.id.tv_playlist_owner);
         btnCloseQueue = findViewById(R.id.btn_close_queue);
-        btnRepeatQueue = findViewById(R.id.btn_repeat_queue);
-        btnShuffleQueue = findViewById(R.id.btn_shuffle_queue);
         miniPlayerNext = findViewById(R.id.mini_player_next);
         layoutEmptyQueue = findViewById(R.id.layout_empty_queue);
         tvNextVideoTitle = findViewById(R.id.tv_next_video_title);
@@ -203,51 +201,76 @@ public class VideoActivity extends AppCompatActivity {
         queueAdapter = new QueueAdapter(new ArrayList<>(), new QueueAdapter.OnQueueItemClickListener() {
             @Override
             public void onItemClick(int position) {
+                // position ở đây là relative position trong adapter (đã trừ currentPosition)
+                // Cần convert về absolute position trong queue
+
+                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+                int absolutePosition = currentPos + position;
+
                 List<Video> fullQueue = VideoQueueManager.getInstance().getQueue();
-                if (position >= 0 && position < fullQueue.size()) {
-                    Video selectedVideo = fullQueue.get(position);
 
-                    // CẬP NHẬT currentVideoId TRƯỚC KHI SEEK
+                if (absolutePosition >= 0 && absolutePosition < fullQueue.size()) {
+                    Video selectedVideo = fullQueue.get(absolutePosition);
+
+                    Log.d(TAG, "onItemClick: Switching to position " + absolutePosition +
+                            " (relative: " + position + ")");
+
+                    // Update currentVideoId và object TRƯỚC KHI seek
                     currentVideoId = selectedVideo.getVideoID();
+                    currentVideoObject = selectedVideo;
+                    currentUploaderID = selectedVideo.getUploaderID();
 
+                    // Cleanup old listeners
                     if (videoStatRef != null && statListener != null) {
                         videoStatRef.removeEventListener(statListener);
                         videoStatRef = null;
                         statListener = null;
                     }
 
+                    // Reset view count flag
                     hasViewCountBeenIncremented = false;
-                    player.seekTo(position, 0);
-                    VideoQueueManager.getInstance().setCurrentPosition(position);
 
+                    // Seek to new position in ExoPlayer
+                    player.seekTo(absolutePosition, 0);
+
+                    // Update manager
+                    VideoQueueManager.getInstance().setCurrentPosition(absolutePosition);
+
+                    // Update UI
                     updateUIForCurrentVideo(selectedVideo);
                     updateQueueUI();
+
+                    // Close bottom sheet
                     queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
                 }
             }
 
             @Override
             public void onMoreClick(int position, View view) {
-                showQueueItemMenu(position, view);
+                // position cũng là relative, cần convert
+                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+                int absolutePosition = currentPos + position;
+                showQueueItemMenu(absolutePosition, view);
             }
 
             @Override
             public void onItemMove(int fromPosition, int toPosition) {
-                List<Video> queue = VideoQueueManager.getInstance().getQueue();
-                if (fromPosition < queue.size() && toPosition < queue.size()) {
-                    Video movedVideo = queue.remove(fromPosition);
-                    queue.add(toPosition, movedVideo);
-                    player.moveMediaItem(fromPosition, toPosition);
+                // fromPosition và toPosition đã là relative trong adapter
+                // Cần convert về absolute
+                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+                int absFrom = currentPos + fromPosition;
+                int absTo = currentPos + toPosition;
 
-                    int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
-                    if (fromPosition == currentPos) {
-                        VideoQueueManager.getInstance().setCurrentPosition(toPosition);
-                    } else if (fromPosition < currentPos && toPosition >= currentPos) {
-                        VideoQueueManager.getInstance().setCurrentPosition(currentPos - 1);
-                    } else if (fromPosition > currentPos && toPosition <= currentPos) {
-                        VideoQueueManager.getInstance().setCurrentPosition(currentPos + 1);
-                    }
-                }
+                Log.d(TAG, "onItemMove: from " + absFrom + " to " + absTo);
+
+                // Update manager
+                VideoQueueManager.getInstance().moveVideo(absFrom, absTo);
+
+                // Update ExoPlayer
+                player.moveMediaItem(absFrom, absTo);
+
+                // Refresh UI
+                updateQueueUI();
             }
         });
 
@@ -276,13 +299,7 @@ public class VideoActivity extends AppCompatActivity {
 
         btnCloseQueue.setOnClickListener(v -> queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN));
         btnCollapseQueue.setOnClickListener(v -> queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED));
-        btnShuffleQueue.setOnClickListener(v -> shuffleQueue());
-        btnRepeatQueue.setOnClickListener(v -> Toast.makeText(this, "Repeat toggled", Toast.LENGTH_SHORT).show());
 
-        btnRepeatQueue.setOnClickListener(v -> {
-            // Toggle repeat mode
-            Toast.makeText(this, "Repeat toggled", Toast.LENGTH_SHORT).show();
-        });
 
         // Listen to bottom sheet state changes
         queueBottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
@@ -305,8 +322,11 @@ public class VideoActivity extends AppCompatActivity {
     }
 
     private void updateQueueUI() {
-        List<Video> fullQueue = VideoQueueManager.getInstance().getQueue();
-        int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+        VideoQueueManager manager = VideoQueueManager.getInstance();
+        List<Video> fullQueue = manager.getQueue();
+        int currentPos = manager.getCurrentPosition();
+
+        Log.d(TAG, "updateQueueUI: Queue size=" + fullQueue.size() + ", currentPos=" + currentPos);
 
         if (fullQueue.isEmpty()) {
             layoutEmptyQueue.setVisibility(View.VISIBLE);
@@ -319,12 +339,16 @@ public class VideoActivity extends AppCompatActivity {
         rvQueue.setVisibility(View.VISIBLE);
         tvQueueCount.setText((currentPos + 1) + "/" + fullQueue.size());
 
+        // Load channel name
         if (currentPos < fullQueue.size()) {
             Video currentVideo = fullQueue.get(currentPos);
             loadChannelName(currentVideo.getUploaderID(), tvPlaylistOwner);
         }
-        queueAdapter.updateQueue(new ArrayList<>(fullQueue), currentPos);
+
+        // Update adapter with FULL queue and current position
+        queueAdapter.updateQueue(fullQueue, currentPos);
     }
+
 
     private void updateMiniPlayer() {
         List<Video> queue = VideoQueueManager.getInstance().getQueue();
@@ -339,31 +363,51 @@ public class VideoActivity extends AppCompatActivity {
             miniPlayerNext.setVisibility(View.GONE);
         }
     }
-    private void shuffleQueue() {
-        List<Video> queue = VideoQueueManager.getInstance().getQueue();
-        int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+//    private void shuffleQueue() {
+//        VideoQueueManager manager = VideoQueueManager.getInstance();
+//        List<Video> queue = manager.getQueue();
+//        int currentPos = manager.getCurrentPosition();
+//
+//        // Không shuffle nếu không có video nào sau video đang phát
+//        if (currentPos + 1 >= queue.size()) {
+//            Toast.makeText(this, "No videos to shuffle", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+//
+//        // Lấy danh sách video sau video hiện tại
+//        List<Video> upcomingVideos = new ArrayList<>(queue.subList(currentPos + 1, queue.size()));
+//        java.util.Collections.shuffle(upcomingVideos);
+//
+//        // Xóa các video cũ sau currentPos
+//        for (int i = queue.size() - 1; i > currentPos; i--) {
+//            queue.remove(i);
+//        }
+//
+//        // Thêm lại các video đã shuffle
+//        queue.addAll(upcomingVideos);
+//
+//        // Rebuild ExoPlayer playlist
+//        rebuildPlayerPlaylist(queue, currentPos);
+//
+//        // Refresh UI
+//        updateQueueUI();
+//        updateMiniPlayer();
+//
+//        Toast.makeText(this, "Queue shuffled", Toast.LENGTH_SHORT).show();
+//
+//        Log.d(TAG, "shuffleQueue: Shuffled " + upcomingVideos.size() + " videos");
+//        manager.printQueueState();
+//    }
 
-        if (currentPos + 1 >= queue.size()) {
-            Toast.makeText(this, "No videos to shuffle", Toast.LENGTH_SHORT).show();
-            return;
-        }
 
-        List<Video> upcomingVideos = new ArrayList<>(queue.subList(currentPos + 1, queue.size()));
-        Collections.shuffle(upcomingVideos);
-
-        for (int i = 0; i < upcomingVideos.size(); i++) {
-            queue.set(currentPos + 1 + i, upcomingVideos.get(i));
-        }
-
-        rebuildPlayerPlaylist(queue, currentPos);
-        updateQueueUI();
-        Toast.makeText(this, "Queue shuffled", Toast.LENGTH_SHORT).show();
-    }
 
     private void rebuildPlayerPlaylist(List<Video> queue, int currentPos) {
         long currentPosition = player.getCurrentPosition();
 
+        Log.d(TAG, "rebuildPlayerPlaylist: Rebuilding with " + queue.size() + " videos");
+
         player.clearMediaItems();
+
         for (Video v : queue) {
             MediaItem mediaItem = MediaItem.fromUri(Uri.parse(v.getVideoURL()))
                     .buildUpon()
@@ -371,22 +415,35 @@ public class VideoActivity extends AppCompatActivity {
                     .build();
             player.addMediaItem(mediaItem);
         }
+
+        // Seek về vị trí hiện tại và thời gian đang phát
         player.seekTo(currentPos, currentPosition);
+
+        Log.d(TAG, "rebuildPlayerPlaylist: Seeked to position " + currentPos +
+                " at time " + currentPosition);
     }
 
-    private void showQueueItemMenu(int adapterPosition, View view) {
+    private void showQueueItemMenu(int absolutePosition, View view) {
         PopupMenu popup = new PopupMenu(this, view);
         popup.inflate(R.menu.queue_item);
 
-        int currentQueuePos = VideoQueueManager.getInstance().getCurrentPosition();
-        int actualPosition = currentQueuePos + adapterPosition;
+        int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+        Video video = VideoQueueManager.getInstance().getVideoAt(absolutePosition);
+
+        if (video == null) return;
+
+        // Disable "Remove" nếu đang phát video đó
+        if (absolutePosition == currentPos) {
+            popup.getMenu().findItem(R.id.menu_remove_from_queue).setEnabled(false);
+            popup.getMenu().findItem(R.id.menu_remove_from_queue).setTitle("Cannot remove (playing)");
+        }
 
         popup.setOnMenuItemClickListener(item -> {
             if (item.getItemId() == R.id.menu_remove_from_queue) {
-                removeFromQueue(actualPosition);
+                removeFromQueue(absolutePosition);
                 return true;
             } else if (item.getItemId() == R.id.menu_play_next) {
-                moveToPlayNext(actualPosition);
+                moveToPlayNext(absolutePosition);
                 return true;
             }
             return false;
@@ -395,42 +452,80 @@ public class VideoActivity extends AppCompatActivity {
         popup.show();
     }
 
-    private void removeFromQueue(int position) {
-        List<Video> queue = VideoQueueManager.getInstance().getQueue();
-        int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+    private void removeFromQueue(int absolutePosition) {
+        VideoQueueManager manager = VideoQueueManager.getInstance();
+        int currentPos = manager.getCurrentPosition();
 
-        if (position == currentPos) {
+        // KHÔNG CHO XÓA VIDEO ĐANG PHÁT
+        if (absolutePosition == currentPos) {
             Toast.makeText(this, "Cannot remove currently playing video", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        queue.remove(position);
-        player.removeMediaItem(position);
+        Video video = manager.getVideoAt(absolutePosition);
+        if (video == null) return;
 
-        if (position < currentPos) {
-            VideoQueueManager.getInstance().setCurrentPosition(currentPos - 1);
+        Log.d(TAG, "removeFromQueue: Removing " + video.getTitle() + " at position " + absolutePosition);
+
+        // Xóa khỏi manager trước
+        boolean removed = manager.removeVideo(absolutePosition);
+
+        if (removed) {
+            // Xóa khỏi ExoPlayer
+            player.removeMediaItem(absolutePosition);
+
+            // Refresh UI
+            updateQueueUI();
+            updateMiniPlayer();
+
+            Toast.makeText(this, "Removed: " + video.getTitle(), Toast.LENGTH_SHORT).show();
+
+            // Debug
+            manager.printQueueState();
+        } else {
+            Toast.makeText(this, "Failed to remove video", Toast.LENGTH_SHORT).show();
         }
-
-        updateQueueUI();
-        Toast.makeText(this, "Removed from queue", Toast.LENGTH_SHORT).show();
     }
 
+
     private void moveToPlayNext(int fromPosition) {
-        int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+        VideoQueueManager manager = VideoQueueManager.getInstance();
+        int currentPos = manager.getCurrentPosition();
         int toPosition = currentPos + 1;
 
-        if (fromPosition == toPosition || fromPosition == currentPos) {
+        // Không di chuyển nếu đã ở vị trí next rồi
+        if (fromPosition == toPosition) {
+            Toast.makeText(this, "Already next in queue", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        List<Video> queue = VideoQueueManager.getInstance().getQueue();
-        Video video = queue.remove(fromPosition);
-        queue.add(toPosition, video);
+        // Không di chuyển video đang phát
+        if (fromPosition == currentPos) {
+            Toast.makeText(this, "Cannot move currently playing video", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
+        Video video = manager.getVideoAt(fromPosition);
+        if (video == null) return;
+
+        Log.d(TAG, "moveToPlayNext: Moving from " + fromPosition + " to " + toPosition);
+
+        // Di chuyển trong manager
+        manager.moveVideo(fromPosition, toPosition);
+
+        // Di chuyển trong ExoPlayer
         player.moveMediaItem(fromPosition, toPosition);
+
+        // Refresh UI
         updateQueueUI();
-        Toast.makeText(this, "Will play next", Toast.LENGTH_SHORT).show();
+        updateMiniPlayer();
+
+        Toast.makeText(this, video.getTitle() + " will play next", Toast.LENGTH_SHORT).show();
+
+        // Debug
+        manager.printQueueState();
     }
+
     private void loadChannelName(String uploaderID, TextView textView) {
         if (uploaderID == null || uploaderID.isEmpty()) return;
 

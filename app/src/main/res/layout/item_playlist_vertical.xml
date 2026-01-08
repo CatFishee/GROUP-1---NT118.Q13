@@ -97,8 +97,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Playlist Title"
-            android:textStyle="bold"
-            android:textColor="@color/black"
+            android:textColor="@color/blwhite_text"
             android:textSize="16sp"
             android:maxLines="2"
             android:ellipsize="end"/>
