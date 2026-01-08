@@ -227,8 +227,9 @@ public class VideoActivity extends AppCompatActivity {
                 // position ở đây là relative position trong adapter (đã trừ currentPosition)
                 // Cần convert về absolute position trong queue
 
-                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
-                int absolutePosition = currentPos + position;
+//                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+//                int absolutePosition = currentPos + position;
+                int absolutePosition = position;
 
                 List<Video> fullQueue = VideoQueueManager.getInstance().getQueue();
 
@@ -237,42 +238,53 @@ public class VideoActivity extends AppCompatActivity {
 
                     Log.d(TAG, "onItemClick: Switching to position " + absolutePosition +
                             " (relative: " + position + ")");
-
-                    // Update currentVideoId và object TRƯỚC KHI seek
-                    currentVideoId = selectedVideo.getVideoID();
-                    currentVideoObject = selectedVideo;
-                    currentUploaderID = selectedVideo.getUploaderID();
-
-                    // Cleanup old listeners
-                    if (videoStatRef != null && statListener != null) {
-                        videoStatRef.removeEventListener(statListener);
-                        videoStatRef = null;
-                        statListener = null;
-                    }
-
-                    // Reset view count flag
-                    hasViewCountBeenIncremented = false;
-
-                    // Seek to new position in ExoPlayer
-                    player.seekTo(absolutePosition, 0);
-
-                    // Update manager
                     VideoQueueManager.getInstance().setCurrentPosition(absolutePosition);
+                    player.seekTo(absolutePosition, 0);
+                    player.prepare(); // Đảm bảo player ở trạng thái sẵn sàng
+                    player.play();    // Bắt buộc phát ngay lập tức
 
-                    // Update UI
-                    updateUIForCurrentVideo(selectedVideo);
+                    // 4. Cập nhật giao diện Queue (để highlight dòng đang chọn)
                     updateQueueUI();
 
-                    // Close bottom sheet
+                    // 5. Đóng BottomSheet để người dùng xem video (Tùy chọn)
                     queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
+
+                    // Update currentVideoId và object TRƯỚC KHI seek
+//                    currentVideoId = selectedVideo.getVideoID();
+//                    currentVideoObject = selectedVideo;
+//                    currentUploaderID = selectedVideo.getUploaderID();
+//
+//                    // Cleanup old listeners
+//                    if (videoStatRef != null && statListener != null) {
+//                        videoStatRef.removeEventListener(statListener);
+//                        videoStatRef = null;
+//                        statListener = null;
+//                    }
+//
+//                    // Reset view count flag
+//                    hasViewCountBeenIncremented = false;
+//
+//                    // Seek to new position in ExoPlayer
+//                    player.seekTo(absolutePosition, 0);
+//
+//                    // Update manager
+//                    VideoQueueManager.getInstance().setCurrentPosition(absolutePosition);
+//
+//                    // Update UI
+//                    updateUIForCurrentVideo(selectedVideo);
+//                    updateQueueUI();
+//
+//                    // Close bottom sheet
+//                    queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
                 }
             }
 
             @Override
             public void onMoreClick(int position, View view) {
                 // position cũng là relative, cần convert
-                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
-                int absolutePosition = currentPos + position;
+//                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+//                int absolutePosition = currentPos + position;
+                int absolutePosition = position;
                 showQueueItemMenu(absolutePosition, view);
             }
 
@@ -280,20 +292,25 @@ public class VideoActivity extends AppCompatActivity {
             public void onItemMove(int fromPosition, int toPosition) {
                 // fromPosition và toPosition đã là relative trong adapter
                 // Cần convert về absolute
-                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
-                int absFrom = currentPos + fromPosition;
-                int absTo = currentPos + toPosition;
+//                int currentPos = VideoQueueManager.getInstance().getCurrentPosition();
+//                int absFrom = currentPos + fromPosition;
+//                int absTo = currentPos + toPosition;
 
-                Log.d(TAG, "onItemMove: from " + absFrom + " to " + absTo);
+//                Log.d(TAG, "onItemMove: from " + absFrom + " to " + absTo);
+//
+//                // Update manager
+//                VideoQueueManager.getInstance().moveVideo(absFrom, absTo);
+//
+//                // Update ExoPlayer
+//                player.moveMediaItem(absFrom, absTo);
+                Log.d(TAG, "onItemMove: from " + fromPosition + " to " + toPosition);
 
-                // Update manager
-                VideoQueueManager.getInstance().moveVideo(absFrom, absTo);
-
-                // Update ExoPlayer
-                player.moveMediaItem(absFrom, absTo);
+                VideoQueueManager.getInstance().moveVideo(fromPosition, toPosition);
+                player.moveMediaItem(fromPosition, toPosition);
+                updateQueueUI();
 
                 // Refresh UI
-                updateQueueUI();
+//                updateQueueUI();
             }
         });
 
