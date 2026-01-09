@@ -22,7 +22,7 @@ public class PlaylistVerticalAdapter extends RecyclerView.Adapter<PlaylistVertic
 
     public interface OnPlaylistClickListener {
         void onPlaylistClick(Playlist playlist);
-        void onMoreClick(Playlist playlist, View view);
+//        void onMoreClick(Playlist playlist, View view);
     }
 
     public PlaylistVerticalAdapter(Context context, OnPlaylistClickListener listener) {
@@ -94,11 +94,12 @@ public class PlaylistVerticalAdapter extends RecyclerView.Adapter<PlaylistVertic
             }
         });
 
-        holder.btnMore.setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onMoreClick(playlist, v);
-            }
-        });
+//        holder.btnMore.setOnClickListener(v -> {
+//            if (listener != null) {
+//                listener.onMoreClick(playlist, v);
+//            }
+//        });
+        holder.btnMore.setVisibility(View.GONE);
     }
 
     @Override

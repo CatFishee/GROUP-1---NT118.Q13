@@ -103,16 +103,34 @@ public class CreatorProfileActivity extends AppCompatActivity {
         // Setup Playlists RecyclerView
         rvPlaylists.setLayoutManager(new LinearLayoutManager(this));
         playlistAdapter = new PlaylistVerticalAdapter(this, new PlaylistVerticalAdapter.OnPlaylistClickListener() {
-            @Override
-            public void onPlaylistClick(Playlist playlist) {
-                // TODO: Navigate to PlaylistDetailActivity
-                Toast.makeText(CreatorProfileActivity.this, "Open playlist: " + playlist.getTitle(), Toast.LENGTH_SHORT).show();
-            }
+//            @Override
+//            public void onPlaylistClick(Playlist playlist) {
+////                // TODO: Navigate to PlaylistDetailActivity
+////                Toast.makeText(CreatorProfileActivity.this, "Open playlist: " + playlist.getTitle(), Toast.LENGTH_SHORT).show();
+//
+//            }
+@Override
+public void onPlaylistClick(Playlist playlist) {
+    // --- LOGIC MỚI: KIỂM TRA QUYỀN VÀ HÀNH ĐỘNG ---
 
-            @Override
-            public void onMoreClick(Playlist playlist, View view) {
-                showPlaylistMenu(playlist, view);
-            }
+    boolean isOwner = currentUserId != null && currentUserId.equals(creatorId);
+
+    if (isOwner) {
+        // Nếu là CHỦ SỞ HỮU -> Mở PlaylistDetailActivity để quản lý (xóa, sửa, thêm video)
+        Intent intent = new Intent(CreatorProfileActivity.this, com.example.metube.ui.playlist.PlaylistDetailActivity.class);
+        intent.putExtra("playlist_id", playlist.getPlaylistId());
+        startActivity(intent);
+    } else {
+        // Nếu là KHÁCH -> Mở VideoActivity để xem luôn (Play All)
+        playPlaylistDirectly(playlist);
+    }
+}
+
+
+//            @Override
+//            public void onMoreClick(Playlist playlist, View view) {
+//                showPlaylistMenu(playlist, view);
+//            }
         });
         rvPlaylists.setAdapter(playlistAdapter);
 
@@ -136,6 +154,59 @@ public class CreatorProfileActivity extends AppCompatActivity {
             }
             updateSubscribeButtonUI();
         });
+    }
+    private void playPlaylistDirectly(Playlist playlist) {
+        if (playlist.getVideoIds() == null || playlist.getVideoIds().isEmpty()) {
+            Toast.makeText(this, "This playlist is empty", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        Toast.makeText(this, "Loading playlist...", Toast.LENGTH_SHORT).show();
+
+        // Lấy danh sách ID video
+        List<String> videoIds = playlist.getVideoIds();
+
+        // Query Firestore để lấy chi tiết Video (vì Queue cần object Video đầy đủ)
+        db.collection("videos")
+                .whereIn(com.google.firebase.firestore.FieldPath.documentId(), videoIds)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) return;
+
+                    List<Video> videosToPlay = new ArrayList<>();
+                    // Firestore không trả về theo thứ tự ID truyền vào, cần sắp xếp lại
+                    // Tạo Map để tra cứu nhanh
+                    java.util.Map<String, Video> videoMap = new java.util.HashMap<>();
+
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot) {
+                        Video v = doc.toObject(Video.class);
+                        if (v != null) {
+                            v.setVideoID(doc.getId());
+                            videoMap.put(doc.getId(), v);
+                        }
+                    }
+
+                    // Sắp xếp lại theo đúng thứ tự trong Playlist
+                    for (String id : videoIds) {
+                        if (videoMap.containsKey(id)) {
+                            videosToPlay.add(videoMap.get(id));
+                        }
+                    }
+
+                    if (!videosToPlay.isEmpty()) {
+                        // 1. Set Queue
+                        com.example.metube.utils.VideoQueueManager.getInstance().playPlaylist(videosToPlay);
+
+                        // 2. Mở VideoActivity với video đầu tiên
+                        Intent intent = new Intent(CreatorProfileActivity.this, VideoActivity.class);
+                        intent.putExtra("video_id", videosToPlay.get(0).getVideoID());
+                        startActivity(intent);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "Failed to play playlist", Toast.LENGTH_SHORT).show();
+                    Log.e("CreatorProfile", "Play playlist error", e);
+                });
     }
 
     private void toggleSubscription() {
@@ -238,7 +309,7 @@ public class CreatorProfileActivity extends AppCompatActivity {
 
         // Nếu không phải profile của mình, chỉ lấy playlist PUBLIC
         if (!isOwnProfile) {
-            query = query.whereEqualTo("visibility", "PUBLIC");
+            query = query.whereIn("visibility", Arrays.asList("Public", "PUBLIC"));
             Log.d("CreatorProfile", "Filtering for PUBLIC playlists only");
         } else {
             Log.d("CreatorProfile", "Loading all playlists (own profile)");

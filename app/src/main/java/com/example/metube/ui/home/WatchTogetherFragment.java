@@ -320,19 +320,36 @@ public class WatchTogetherFragment extends Fragment {
             refToClean.child("participants").addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(@NonNull DataSnapshot snapshot) {
+//                    if (snapshot.exists() && snapshot.getChildrenCount() <= 1) {
+//                        // CASE A: I am the last person (or list is empty).
+//                        // Delete the ENTIRE session node.
+//                        refToClean.removeValue();
+//                    } else {
+//                        // CASE B: Others are still here.
+//                        // 1. Remove myself
+//                        refToClean.child("participants").child(uidToRemove).removeValue();
+//
+//                        // 2. If I was host, remove hostId to trigger auto-promotion for others
+//                        if (wasHost) {
+//                            refToClean.child("hostId").removeValue();
+//                        }
+//                    }
                     if (snapshot.exists() && snapshot.getChildrenCount() <= 1) {
-                        // CASE A: I am the last person (or list is empty).
-                        // Delete the ENTIRE session node.
+                        // Nếu là người cuối cùng -> Xóa luôn phòng
                         refToClean.removeValue();
                     } else {
-                        // CASE B: Others are still here.
-                        // 1. Remove myself
-                        refToClean.child("participants").child(uidToRemove).removeValue();
+                        // Nếu còn người khác -> Xóa mình ra
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("participants/" + uidToRemove, null); // Xóa khỏi danh sách
 
-                        // 2. If I was host, remove hostId to trigger auto-promotion for others
                         if (wasHost) {
-                            refToClean.child("hostId").removeValue();
+                            // ✅ SỬA LỖI: Dùng đúng key "hostID" (chữ D hoa)
+                            // Xóa hostID để các client khác phát hiện ra host bị mất
+                            updates.put("hostID", null);
                         }
+
+                        // Cập nhật 1 lần (Atomic update) để giảm độ trễ
+                        refToClean.updateChildren(updates);
                     }
                 }
 
@@ -646,9 +663,19 @@ public class WatchTogetherFragment extends Fragment {
                 oldestUid = entry.getKey();
             }
         }
+//        if (oldestUid != null && oldestUid.equals(myUid)) {
+//            currentSessionRef.child("hostID").setValue(myUid);
+//            currentSessionRef.child("hostID").onDisconnect().removeValue();
+//        }
         if (oldestUid != null && oldestUid.equals(myUid)) {
+            // Set hostID mới
             currentSessionRef.child("hostID").setValue(myUid);
+
+            // ✅ QUAN TRỌNG: Đăng ký lại onDisconnect cho Host mới
+            // Để nếu Host mới này crash app, quyền host lại được chuyển tiếp
             currentSessionRef.child("hostID").onDisconnect().removeValue();
+
+            Toast.makeText(getContext(), "You are now the Host", Toast.LENGTH_SHORT).show();
         }
     }
 

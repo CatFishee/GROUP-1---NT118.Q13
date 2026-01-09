@@ -14,7 +14,6 @@ public class VideoOptionsBottomSheet {
         void onSaveToPlaylist(Video video);
         void onDownload(Video video);
         void onShare(Video video);
-        void onDontRecommend(Video video);
         void onRemoveFromHistory(Video video);
     }
 

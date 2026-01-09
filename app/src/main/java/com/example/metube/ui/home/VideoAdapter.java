@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.example.metube.ui.playlist.AddToPlaylistBottomSheet;
 import com.example.metube.ui.video.VideoActivity;
 import com.example.metube.utils.DownloadUtil;
 import com.example.metube.utils.ShareUtil;
@@ -232,8 +233,13 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
 
                     @Override
                     public void onSaveToPlaylist(Video video) {
-                        Toast.makeText(context, "Save to playlist feature coming soon", Toast.LENGTH_SHORT).show();
+                        AddToPlaylistBottomSheet bottomSheet = new AddToPlaylistBottomSheet(video);
+                        // Cần ép kiểu context về FragmentActivity để gọi getSupportFragmentManager
+                        if (context instanceof androidx.fragment.app.FragmentActivity) {
+                            bottomSheet.show(((androidx.fragment.app.FragmentActivity) context).getSupportFragmentManager(), "AddToPlaylistBottomSheet");
+                        }
                     }
+
 
                     @Override
                     public void onDownload(Video video) {
@@ -254,11 +260,6 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoAdapter.VideoViewHol
                         if (video != null && video.getVideoURL() != null) {
                             ShareUtil.shareVideo(context, video.getVideoURL());
                         }
-                    }
-
-                    @Override
-                    public void onDontRecommend(Video video) {
-                        Toast.makeText(context, "Channel will not be recommended", Toast.LENGTH_SHORT).show();
                     }
 
                     @Override

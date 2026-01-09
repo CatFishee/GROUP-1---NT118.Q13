@@ -18,15 +18,14 @@
             android:id="@+id/btn_back"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="@color/black" />
+            android:src="@drawable/ic_arrow_back" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="Downloads"
-            android:textColor="@color/black"
+            android:textColor="@color/app_main_color"
             android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>

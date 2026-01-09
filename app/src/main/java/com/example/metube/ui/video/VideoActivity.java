@@ -247,7 +247,7 @@ public class VideoActivity extends AppCompatActivity {
                     player.play();    // Bắt buộc phát ngay lập tức
 
                     // 4. Cập nhật giao diện Queue (để highlight dòng đang chọn)
-                    updateQueueUI();
+//                    updateQueueUI();
 
                     // 5. Đóng BottomSheet để người dùng xem video (Tùy chọn)
                     queueBottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
@@ -458,7 +458,18 @@ public class VideoActivity extends AppCompatActivity {
         }
 
         // Update adapter with FULL queue and current position
-        queueAdapter.updateQueue(fullQueue, currentPos);
+        if (queueAdapter != null) {
+            queueAdapter.updateQueue(fullQueue, currentPos);
+
+            // ✅ SỬA LỖI: Tự động cuộn tới video đang phát để thấy khung xanh
+            if (currentPos >= 0 && currentPos < fullQueue.size()) {
+                // Dùng post để đảm bảo layout đã vẽ xong trước khi cuộn
+                rvQueue.post(() -> {
+                    // smoothScrollToPosition giúp cuộn mượt, người dùng thấy được sự thay đổi
+                    rvQueue.smoothScrollToPosition(currentPos);
+                });
+            }
+        }
     }
 
 
@@ -897,10 +908,19 @@ public class VideoActivity extends AppCompatActivity {
 
                         int newIndex = player.getCurrentMediaItemIndex();
                         VideoQueueManager.getInstance().setCurrentPosition(newIndex);
-                        if (queueBottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
-                            updateQueueUI();
-                        }
+//                        if (queueBottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+//                            updateQueueUI();
+//                        }
+//                        updateMiniPlayer();
                         updateMiniPlayer();
+                        updateQueueUI();
+
+                        // ✅ SỬA LỖI: Nếu BottomSheet đang mở, cập nhật ngay lập tức
+                        // Nếu đang đóng, lần sau mở ra updateQueueUI() sẽ được gọi trong openQueueBottomSheet()
+//                        if (queueBottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED ||
+//                                queueBottomSheetBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED) {
+//                            updateQueueUI();
+//                        }
                     }
                 }
             });
@@ -1428,6 +1448,11 @@ public class VideoActivity extends AppCompatActivity {
         btnDislike.setEnabled(false);
         btnShare.setEnabled(false);
         btnDownload.setEnabled(false);
+        View btnQueue = findViewById(R.id.btn_queue);
+        if (btnQueue != null) {
+            btnQueue.setEnabled(false);
+            // Hoặc dùng btnQueue.setVisibility(View.GONE); nếu muốn ẩn luôn
+        }
 
         // Ẩn avatar hoặc set ảnh mặc định
         ivChannelAvatar.setImageResource(R.drawable.ic_person); // Hoặc icon folder
