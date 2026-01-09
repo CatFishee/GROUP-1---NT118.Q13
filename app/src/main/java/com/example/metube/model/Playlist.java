@@ -6,10 +6,10 @@ import java.util.List;
 
 public class Playlist {
     private String playlistId;
-    private String ownerId; // ID của người tạo
+    private String ownerId;
     private String title;
-    private String visibility; // "PUBLIC", "UNLISTED", "PRIVATE"
-    private List<String> videoIds; // Danh sách ID các video trong playlist
+    private String visibility;
+    private List<String> videoIds;
     private List<String> containedTopics;
     private String thumbnailURL;
     private String description;
@@ -29,7 +29,6 @@ public class Playlist {
 
     }
 
-    // Getters and Setters
     public String getPlaylistId() { return playlistId; }
     public void setPlaylistId(String playlistId) { this.playlistId = playlistId; }
 

@@ -6,7 +6,7 @@ public class QueueItem {
     private String url;
     private String addedBy;
 
-    public QueueItem() {} // Required for Firebase
+    public QueueItem() {}
 
     public QueueItem(String title, String url, String addedBy) {
         this.title = title;

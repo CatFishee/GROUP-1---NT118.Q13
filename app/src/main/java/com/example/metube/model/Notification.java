@@ -4,17 +4,16 @@ import com.google.firebase.Timestamp;
 
 public class Notification {
     private String notificationID;
-    private String recipientID;      // User nhận thông báo
-    private String senderID;         // Channel đăng video (uploaderID)
-    private String videoID;          // Video mới
-    private String type;             // "NEW_VIDEO", "MENTION", "LIKE", etc.
-    private String title;            // "CatFishe uploaded a new video"
-    private String message;          // "Dog taking a bath"
-    private String thumbnailURL;     // Thumbnail của video
-    private boolean isRead;          // Đã đọc chưa
+    private String recipientID;
+    private String senderID;
+    private String videoID;
+    private String type;
+    private String title;
+    private String message;
+    private String thumbnailURL;
+    private boolean isRead;
     private Timestamp createdAt;
 
-    // Constructor rỗng cho Firestore
     public Notification() {}
 
     public Notification(String notificationID, String recipientID, String senderID,
@@ -32,7 +31,6 @@ public class Notification {
         this.createdAt = createdAt;
     }
 
-    // Getters and Setters
     public String getNotificationID() { return notificationID; }
     public void setNotificationID(String notificationID) { this.notificationID = notificationID; }
 

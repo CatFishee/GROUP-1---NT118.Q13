@@ -81,7 +81,6 @@ public class CreatorProfileActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
-        // Setup Videos RecyclerView
         rvVideos.setLayoutManager(new LinearLayoutManager(this));
         videoAdapter = new VideoAdapter(this, new ArrayList<>(), new VideoAdapter.OnVideoClickListener() {
             @Override
@@ -134,7 +133,6 @@ public void onPlaylistClick(Playlist playlist) {
         });
         rvPlaylists.setAdapter(playlistAdapter);
 
-        // Subscribe button
         btnSub.setOnClickListener(v -> toggleSubscription());
     }
 
@@ -322,7 +320,6 @@ public void onPlaylistClick(Playlist playlist) {
 
                     List<Playlist> playlists = querySnapshot.toObjects(Playlist.class);
 
-                    // ✅ Load thumbnail cho mỗi playlist
                     for (Playlist playlist : playlists) {
                         loadPlaylistThumbnail(playlist);
                     }

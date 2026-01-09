@@ -13,8 +13,8 @@ public class Video {
     private String title;
     private String description;
     private List<String> topics;
-    private String thumbnailURL; // Supabase Thumbnails bucket URL
-    private String videoURL;     // Supabase Videos bucket URL
+    private String thumbnailURL;
+    private String videoURL;
     private long duration;
     private List<String> searchKeywords;
     private List<String> aiLabels;
@@ -25,8 +25,8 @@ public class Video {
     @ServerTimestamp
     private Timestamp createdAt;
     @Exclude
-    private String historyDocId; // ID để xóa lịch sử
-    private long viewCount; // Temporary field for sorting (not stored in Firestore)
+    private String historyDocId;
+    private long viewCount;
     private String visibility = "Public";;
     private boolean allowComments = true;
 

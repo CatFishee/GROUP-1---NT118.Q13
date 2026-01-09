@@ -2,29 +2,18 @@ package com.example.metube.model;
 
 import com.google.firebase.Timestamp;
 
-/**
- * Daily snapshot of a creator's statistics.
- * One document per creator per day.
- */
 public class ContentCreatorStat {
 
-    // Firestore document ID
     private String contentCreatorStatID;
 
-    // Creator
     private String userID;
-
-    // Date key in format yyyy-MM-dd (used to prevent duplicates)
     private String dateKey;
 
-    // Aggregated totals at end of day
     private long totalVideos;
     private long totalViews;
 
-    // Snapshot timestamp (usually end of day or creation time)
     private Timestamp createdAt;
 
-    // Required empty constructor for Firestore
     public ContentCreatorStat() {}
 
     public ContentCreatorStat(
@@ -42,10 +31,6 @@ public class ContentCreatorStat {
         this.totalViews = totalViews;
         this.createdAt = createdAt;
     }
-
-    // --------------------
-    // Getters & Setters
-    // --------------------
 
     public String getContentCreatorStatID() {
         return contentCreatorStatID;

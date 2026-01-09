@@ -11,7 +11,6 @@ public class HistoryItem {
     private String userID;
     private Timestamp watchedAt;
 
-    // Transient fields: These are not stored in Firestore, but populated at runtime
     private Video video;
     private long resumePosition;
     private User uploader;
@@ -20,7 +19,6 @@ public class HistoryItem {
 
     public HistoryItem() {}
 
-    // Getters and Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 

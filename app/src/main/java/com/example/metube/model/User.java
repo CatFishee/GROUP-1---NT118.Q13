@@ -20,7 +20,7 @@ public class User implements Serializable {
     private Map<String, Boolean> notificationSettings = new HashMap<>();
 
     public User() {
-        // Needed for Firebase deserialization
+
     }
 
     public User(String userID, String name, String email, boolean isAdmin, boolean isPremium, String profileURL) {
@@ -36,7 +36,7 @@ public class User implements Serializable {
     public List<String> getSearchKeywords() { return searchKeywords; }
     public void setSearchKeywords(List<String> searchKeywords) { this.searchKeywords = searchKeywords; }
 
-    // 4. Hàm hỗ trợ cắt chữ thành mảng keywords (Helper Method)
+
     public static List<String> generateKeywords(String name) {
         List<String> keywords = new ArrayList<>();
         if (name == null || name.isEmpty()) return keywords;
