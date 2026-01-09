@@ -11,11 +11,8 @@ public class Comment {
     private String text;
     private Timestamp createdAt;
     private int likeCount;
-
-    // --- NEW ADDITIONS ---
     @Exclude private String authorName;
     @Exclude private String authorAvatarUrl;
-    // ---------------------
 
     public Comment() {}
 
@@ -27,13 +24,7 @@ public class Comment {
         this.text = text;
         this.createdAt = createdAt;
     }
-
-    // ... Keep existing Getters/Setters ...
-
-    // Fix: Make sure getters match Firestore field names exactly or use @PropertyName if they differ.
-    // Assuming your fields match, here are the new getters:
-
-    public String getCommentID() { return commentID; } // Fixed naming convention
+    public String getCommentID() { return commentID; }
     public void setCommentID(String commentID) { this.commentID = commentID; }
 
     public String getVideoID() { return videoID; }

@@ -16,7 +16,6 @@ public class UserWatchStat {
     public Timestamp createdAt;
     private Map<String, Long> dailyWatchTime;
     public UserWatchStat() {
-        // Init map để tránh null
         this.topicCounts = new HashMap<>();
         this.dailyWatchTime = new HashMap<>();
     }

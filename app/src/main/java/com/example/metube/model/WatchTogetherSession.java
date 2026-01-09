@@ -5,10 +5,10 @@ import java.util.Map;
 
 public class WatchTogetherSession {
     private String sessionID;
-    private String videoID; // Stores URL
+    private String videoID;
     private String videoTitle;
     private String hostID;
-    private Map<String, Long> participants = new HashMap<>(); // Key: UserID, Value: Join Timestamp
+    private Map<String, Long> participants = new HashMap<>();
     private PlaybackState playbackState;
     private long currentTimestamp;
     private float playbackSpeed;
