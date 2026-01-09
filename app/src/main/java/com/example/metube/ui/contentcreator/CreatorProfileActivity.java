@@ -14,17 +14,19 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
+import com.example.metube.model.ContentCreatorStat;
 import com.example.metube.model.Playlist;
 import com.example.metube.model.Subscription;
 import com.example.metube.model.Video;
 import com.example.metube.ui.home.VideoAdapter;
 import com.example.metube.ui.video.VideoActivity;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.Timestamp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -48,6 +50,10 @@ public class CreatorProfileActivity extends AppCompatActivity {
     private VideoAdapter videoAdapter;
     private PlaylistVerticalAdapter playlistAdapter;
 
+    // State variables for Stats (to prevent overwriting during async calls)
+    private long mSubscriberCount = 0;
+    private long mTotalVideosCount = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,6 +73,7 @@ public class CreatorProfileActivity extends AppCompatActivity {
         loadCreatorVideos();
         loadCreatorPlaylists();
         checkSubscriptionStatus();
+        loadCreatorStats(); // New method to get total videos from Stats collection
     }
 
     private void initViews() {
@@ -81,6 +88,7 @@ public class CreatorProfileActivity extends AppCompatActivity {
 
         findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
+        // Setup Videos RecyclerView
         rvVideos.setLayoutManager(new LinearLayoutManager(this));
         videoAdapter = new VideoAdapter(this, new ArrayList<>(), new VideoAdapter.OnVideoClickListener() {
             @Override
@@ -102,38 +110,60 @@ public class CreatorProfileActivity extends AppCompatActivity {
         // Setup Playlists RecyclerView
         rvPlaylists.setLayoutManager(new LinearLayoutManager(this));
         playlistAdapter = new PlaylistVerticalAdapter(this, new PlaylistVerticalAdapter.OnPlaylistClickListener() {
-//            @Override
-//            public void onPlaylistClick(Playlist playlist) {
-////                // TODO: Navigate to PlaylistDetailActivity
-////                Toast.makeText(CreatorProfileActivity.this, "Open playlist: " + playlist.getTitle(), Toast.LENGTH_SHORT).show();
-//
-//            }
-@Override
-public void onPlaylistClick(Playlist playlist) {
-    // --- LOGIC MỚI: KIỂM TRA QUYỀN VÀ HÀNH ĐỘNG ---
+            @Override
+            public void onPlaylistClick(Playlist playlist) {
+                boolean isOwner = currentUserId != null && currentUserId.equals(creatorId);
 
-    boolean isOwner = currentUserId != null && currentUserId.equals(creatorId);
-
-    if (isOwner) {
-        // Nếu là CHỦ SỞ HỮU -> Mở PlaylistDetailActivity để quản lý (xóa, sửa, thêm video)
-        Intent intent = new Intent(CreatorProfileActivity.this, com.example.metube.ui.playlist.PlaylistDetailActivity.class);
-        intent.putExtra("playlist_id", playlist.getPlaylistId());
-        startActivity(intent);
-    } else {
-        // Nếu là KHÁCH -> Mở VideoActivity để xem luôn (Play All)
-        playPlaylistDirectly(playlist);
-    }
-}
-
-
-//            @Override
-//            public void onMoreClick(Playlist playlist, View view) {
-//                showPlaylistMenu(playlist, view);
-//            }
+                if (isOwner) {
+                    // Owner -> Open Details to manage
+                    Intent intent = new Intent(CreatorProfileActivity.this, com.example.metube.ui.playlist.PlaylistDetailActivity.class);
+                    intent.putExtra("playlist_id", playlist.getPlaylistId());
+                    startActivity(intent);
+                } else {
+                    // Visitor -> Play All directly
+                    playPlaylistDirectly(playlist);
+                }
+            }
         });
         rvPlaylists.setAdapter(playlistAdapter);
 
         btnSub.setOnClickListener(v -> toggleSubscription());
+    }
+
+    // --- NEW: Centralized method to update the stats text line ---
+    private void updateStatsUI() {
+        String subText = formatCount(mSubscriberCount) + " subscribers";
+        String vidText = mTotalVideosCount + " videos";
+        tvStats.setText(subText + " • " + vidText);
+    }
+
+    // --- NEW: Load Stats from ContentCreatorStat collection ---
+    private void loadCreatorStats() {
+        /*
+           NOTE: Ensure your Firestore Security Rules allow 'read' access to
+           'contentCreatorStats' for public users if you want visitors to see this count.
+         */
+        db.collection("contentCreatorStats")
+                .whereEqualTo("userID", creatorId)
+                .orderBy("createdAt", Query.Direction.DESCENDING) // Get the latest stat entry
+                .limit(1)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (!querySnapshot.isEmpty()) {
+                        ContentCreatorStat stat = querySnapshot.getDocuments().get(0).toObject(ContentCreatorStat.class);
+                        if (stat != null) {
+                            mTotalVideosCount = stat.getTotalVideos();
+                            updateStatsUI();
+                        }
+                    } else {
+                        Log.d("CreatorProfile", "No stats found for user, defaulting to 0");
+                        mTotalVideosCount = 0;
+                        updateStatsUI();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("CreatorProfile", "Error loading stats", e);
+                });
     }
 
     private void checkSubscriptionStatus() {
@@ -153,6 +183,7 @@ public void onPlaylistClick(Playlist playlist) {
             updateSubscribeButtonUI();
         });
     }
+
     private void playPlaylistDirectly(Playlist playlist) {
         if (playlist.getVideoIds() == null || playlist.getVideoIds().isEmpty()) {
             Toast.makeText(this, "This playlist is empty", Toast.LENGTH_SHORT).show();
@@ -161,10 +192,8 @@ public void onPlaylistClick(Playlist playlist) {
 
         Toast.makeText(this, "Loading playlist...", Toast.LENGTH_SHORT).show();
 
-        // Lấy danh sách ID video
         List<String> videoIds = playlist.getVideoIds();
 
-        // Query Firestore để lấy chi tiết Video (vì Queue cần object Video đầy đủ)
         db.collection("videos")
                 .whereIn(com.google.firebase.firestore.FieldPath.documentId(), videoIds)
                 .get()
@@ -172,8 +201,6 @@ public void onPlaylistClick(Playlist playlist) {
                     if (querySnapshot.isEmpty()) return;
 
                     List<Video> videosToPlay = new ArrayList<>();
-                    // Firestore không trả về theo thứ tự ID truyền vào, cần sắp xếp lại
-                    // Tạo Map để tra cứu nhanh
                     java.util.Map<String, Video> videoMap = new java.util.HashMap<>();
 
                     for (com.google.firebase.firestore.DocumentSnapshot doc : querySnapshot) {
@@ -184,7 +211,7 @@ public void onPlaylistClick(Playlist playlist) {
                         }
                     }
 
-                    // Sắp xếp lại theo đúng thứ tự trong Playlist
+                    // Sort to match playlist order
                     for (String id : videoIds) {
                         if (videoMap.containsKey(id)) {
                             videosToPlay.add(videoMap.get(id));
@@ -192,10 +219,7 @@ public void onPlaylistClick(Playlist playlist) {
                     }
 
                     if (!videosToPlay.isEmpty()) {
-                        // 1. Set Queue
                         com.example.metube.utils.VideoQueueManager.getInstance().playPlaylist(videosToPlay);
-
-                        // 2. Mở VideoActivity với video đầu tiên
                         Intent intent = new Intent(CreatorProfileActivity.this, VideoActivity.class);
                         intent.putExtra("video_id", videosToPlay.get(0).getVideoID());
                         startActivity(intent);
@@ -271,8 +295,8 @@ public void onPlaylistClick(Playlist playlist) {
                 .whereIn("status", Arrays.asList("SUBSCRIBED", "MEMBERSHIP"))
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    long count = querySnapshot.size();
-                    tvStats.setText(formatCount(count) + " subscribers • 0 videos");
+                    mSubscriberCount = querySnapshot.size();
+                    updateStatsUI(); // Update UI with cached video count and new sub count
                 });
     }
 
@@ -284,12 +308,8 @@ public void onPlaylistClick(Playlist playlist) {
                 .addOnSuccessListener(querySnapshot -> {
                     List<Video> videos = querySnapshot.toObjects(Video.class);
                     videoAdapter.setVideos(videos);
-
-                    // Update video count in stats
-                    String[] parts = tvStats.getText().toString().split(" • ");
-                    if (parts.length > 0) {
-                        tvStats.setText(parts[0] + " • " + videos.size() + " videos");
-                    }
+                    // REMOVED: Logic that updated tvStats based on list size.
+                    // We now rely on loadCreatorStats() for the count.
                 })
                 .addOnFailureListener(e -> {
                     Log.e("CreatorProfile", "Error loading videos", e);
@@ -298,26 +318,15 @@ public void onPlaylistClick(Playlist playlist) {
 
     private void loadCreatorPlaylists() {
         boolean isOwnProfile = creatorId.equals(currentUserId);
+        Query query = db.collection("playlists").whereEqualTo("ownerId", creatorId);
 
-        Log.d("CreatorProfile", "Loading playlists for creatorId: " + creatorId);
-        Log.d("CreatorProfile", "Is own profile: " + isOwnProfile);
-
-        Query query = db.collection("playlists")
-                .whereEqualTo("ownerId", creatorId);
-
-        // Nếu không phải profile của mình, chỉ lấy playlist PUBLIC
         if (!isOwnProfile) {
             query = query.whereIn("visibility", Arrays.asList("Public", "PUBLIC"));
-            Log.d("CreatorProfile", "Filtering for PUBLIC playlists only");
-        } else {
-            Log.d("CreatorProfile", "Loading all playlists (own profile)");
         }
 
         query.orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
-                    Log.d("CreatorProfile", "Query successful, documents: " + querySnapshot.size());
-
                     List<Playlist> playlists = querySnapshot.toObjects(Playlist.class);
 
                     for (Playlist playlist : playlists) {
@@ -325,141 +334,41 @@ public void onPlaylistClick(Playlist playlist) {
                     }
 
                     if (playlists.isEmpty()) {
-                        // Hiển thị thông báo khi không có playlist
                         rvPlaylists.setVisibility(View.GONE);
                         tvEmptyPlaylists.setVisibility(View.VISIBLE);
-
                         if (isOwnProfile) {
                             tvEmptyPlaylists.setText("You don't have any playlists yet");
                         } else {
                             tvEmptyPlaylists.setText("No public playlists available");
                         }
-                        Log.d("CreatorProfile", "No playlists found");
                     } else {
-                        // Hiển thị danh sách playlist
                         rvPlaylists.setVisibility(View.VISIBLE);
                         tvEmptyPlaylists.setVisibility(View.GONE);
                         playlistAdapter.setPlaylists(playlists);
-
-                        Log.d("CreatorProfile", "Loaded " + playlists.size() + " playlists");
-                        for (Playlist p : playlists) {
-                            Log.d("CreatorProfile", "  - " + p.getTitle() + " (" + p.getVisibility() + ")");
-                        }
                     }
                 })
                 .addOnFailureListener(e -> {
                     Log.e("CreatorProfile", "Error loading playlists", e);
-                    Log.e("CreatorProfile", "Error message: " + e.getMessage());
-
                     rvPlaylists.setVisibility(View.GONE);
                     tvEmptyPlaylists.setVisibility(View.VISIBLE);
-                    tvEmptyPlaylists.setText("Failed to load playlists: " + e.getMessage());
-
-                    // Check if it's an index error
-                    if (e.getMessage() != null && e.getMessage().contains("index")) {
-                        Toast.makeText(this, "Missing Firestore index. Check console for link.", Toast.LENGTH_LONG).show();
-                    }
                 });
     }
 
-    // ✅ Load thumbnail từ video đầu tiên trong playlist
     private void loadPlaylistThumbnail(Playlist playlist) {
         if (playlist.getVideoIds() == null || playlist.getVideoIds().isEmpty()) {
-            // Nếu không có video, dùng thumbnail mặc định
             playlist.setThumbnailURL(null);
             return;
         }
 
-        // Lấy video đầu tiên
         String firstVideoId = playlist.getVideoIds().get(0);
-
         db.collection("videos").document(firstVideoId).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
                         String thumbnailUrl = doc.getString("thumbnailURL");
                         playlist.setThumbnailURL(thumbnailUrl);
-                        // Refresh adapter để hiển thị thumbnail
                         playlistAdapter.notifyDataSetChanged();
                     }
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("CreatorProfile", "Failed to load thumbnail for playlist: " + playlist.getTitle(), e);
                 });
-    }
-
-    // ✅ Hiển thị popup menu cho playlist
-    private void showPlaylistMenu(Playlist playlist, View anchorView) {
-        androidx.appcompat.widget.PopupMenu popup = new androidx.appcompat.widget.PopupMenu(this, anchorView);
-        popup.inflate(R.menu.playlist_options);
-
-        // Nếu không phải playlist của mình, ẩn option "Edit"
-        boolean isOwnPlaylist = creatorId.equals(currentUserId);
-        if (!isOwnPlaylist) {
-            popup.getMenu().findItem(R.id.menu_edit_playlist).setVisible(false);
-        }
-
-        popup.setOnMenuItemClickListener(item -> {
-            int id = item.getItemId();
-
-            if (id == R.id.menu_play_playlist) {
-                playPlaylist(playlist);
-                return true;
-            } else if (id == R.id.menu_edit_playlist) {
-                editPlaylist(playlist);
-                return true;
-            } else if (id == R.id.menu_delete_playlist) {
-                deletePlaylist(playlist);
-                return true;
-            }
-
-            return false;
-        });
-
-        popup.show();
-    }
-
-    // ✅ Play playlist
-    private void playPlaylist(Playlist playlist) {
-        if (playlist.getVideoIds() == null || playlist.getVideoIds().isEmpty()) {
-            Toast.makeText(this, "This playlist is empty", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        // Load tất cả videos trong playlist
-        List<String> videoIds = playlist.getVideoIds();
-
-        // TODO: Load videos và mở VideoActivity với queue
-        Toast.makeText(this, "Playing playlist: " + playlist.getTitle(), Toast.LENGTH_SHORT).show();
-
-        // Implementation: Load videos và chuyển sang VideoActivity
-        // Bạn có thể implement chi tiết sau
-    }
-
-    // ✅ Edit playlist
-    private void editPlaylist(Playlist playlist) {
-        Intent intent = new Intent(this, com.example.metube.ui.playlist.EditPlaylistActivity.class);
-        intent.putExtra("playlist_id", playlist.getPlaylistId());
-        startActivity(intent);
-    }
-
-    // ✅ Delete playlist
-    private void deletePlaylist(Playlist playlist) {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Delete Playlist")
-                .setMessage("Are you sure you want to delete \"" + playlist.getTitle() + "\"?")
-                .setPositiveButton("Delete", (dialog, which) -> {
-                    db.collection("playlists").document(playlist.getPlaylistId())
-                            .delete()
-                            .addOnSuccessListener(aVoid -> {
-                                Toast.makeText(this, "Playlist deleted", Toast.LENGTH_SHORT).show();
-                                loadCreatorPlaylists(); // Refresh list
-                            })
-                            .addOnFailureListener(e -> {
-                                Toast.makeText(this, "Failed to delete playlist", Toast.LENGTH_SHORT).show();
-                            });
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
     }
 
     private String formatCount(long count) {
