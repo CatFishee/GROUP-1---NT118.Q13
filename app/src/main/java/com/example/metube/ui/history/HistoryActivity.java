@@ -1,5 +1,6 @@
 package com.example.metube.ui.history;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.format.DateUtils;
 import android.util.Log;
@@ -22,6 +23,7 @@ import com.example.metube.model.User;
 import com.example.metube.model.Video;
 import com.example.metube.ui.playlist.AddToPlaylistBottomSheet;
 import com.example.metube.ui.playlist.PlaylistDetailActivity;
+import com.example.metube.ui.video.VideoActivity;
 import com.example.metube.utils.ShareUtil;
 import com.example.metube.utils.VideoQueueManager;
 import com.google.android.material.chip.Chip;
@@ -686,7 +688,24 @@ public class HistoryActivity extends AppCompatActivity implements HistoryMenuBot
     }
     @Override
     public void onPlayNextInQueue(Video video) {
+        // 1. Thêm video vào Queue Manager (vị trí current + 1)
         VideoQueueManager.getInstance().playNext(video);
-        Toast.makeText(this, "Added to queue as next video", Toast.LENGTH_SHORT).show();
+
+        // 2. Tự động set video này làm video hiện tại để phát ngay
+        int newPosition = VideoQueueManager.getInstance().getCurrentPosition() + 1;
+        VideoQueueManager.getInstance().setCurrentPosition(newPosition);
+
+        Toast.makeText(this, "Playing now: " + video.getTitle(), Toast.LENGTH_SHORT).show();
+
+        if (video.getVideoID() != null) {
+            Intent intent = new Intent(this, VideoActivity.class);
+            intent.putExtra("video_id", video.getVideoID());
+
+            // QUAN TRỌNG: Dùng cờ này để Reset VideoActivity nếu nó đang chạy nền
+            // Điều này ép buộc onCreate chạy lại -> nhận Intent mới -> phát video mới
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            startActivity(intent);
+        }
     }
 }

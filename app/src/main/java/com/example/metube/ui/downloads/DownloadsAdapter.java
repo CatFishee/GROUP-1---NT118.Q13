@@ -58,13 +58,50 @@ public class DownloadsAdapter extends RecyclerView.Adapter<DownloadsAdapter.View
             intent.putExtra("local_video_path", video.getVideoURL()); // Truyền thêm đường dẫn file
             context.startActivity(intent);
         });
-
-        // Ẩn nút 3 chấm hoặc xử lý xóa file nếu muốn
-        holder.btnMore.setVisibility(View.GONE);
+        holder.btnMore.setVisibility(View.VISIBLE); // Hiện nút 3 chấm
+        holder.btnMore.setOnClickListener(v -> {
+            showPopupMenu(context, v, video, position);
+        });
     }
 
     @Override
     public int getItemCount() { return videos.size(); }
+    // Hàm hiển thị Menu xóa
+    private void showPopupMenu(Context context, View view, Video video, int position) {
+        android.widget.PopupMenu popup = new android.widget.PopupMenu(context, view);
+        // Bạn có thể tạo file menu xml hoặc add trực tiếp bằng code
+        popup.getMenu().add("Delete");
+
+        popup.setOnMenuItemClickListener(item -> {
+            if (item.getTitle().equals("Delete")) {
+                deleteVideoFile(context, video, position);
+                return true;
+            }
+            return false;
+        });
+        popup.show();
+    }
+
+    // Hàm thực hiện xóa file và cập nhật list
+    private void deleteVideoFile(Context context, Video video, int position) {
+        try {
+            java.io.File file = new java.io.File(video.getVideoURL());
+            if (file.exists()) {
+                boolean deleted = file.delete();
+                if (deleted) {
+                    // Xóa khỏi danh sách hiển thị
+                    videos.remove(position);
+                    notifyItemRemoved(position);
+                    notifyItemRangeChanged(position, videos.size());
+                    android.widget.Toast.makeText(context, "Deleted", android.widget.Toast.LENGTH_SHORT).show();
+                } else {
+                    android.widget.Toast.makeText(context, "Failed to delete file", android.widget.Toast.LENGTH_SHORT).show();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView ivThumbnail, btnMore;
@@ -80,4 +117,5 @@ public class DownloadsAdapter extends RecyclerView.Adapter<DownloadsAdapter.View
             btnMore = itemView.findViewById(R.id.btn_more);
         }
     }
+
 }

@@ -118,6 +118,7 @@ public class VideoActivity extends AppCompatActivity {
     private String currentUploaderID = "";
     private Video currentVideoObject;
     private boolean isSubscribed = false;
+    private boolean isOfflineMode = false;
 
     private DatabaseReference videoStatRef;
     private ValueEventListener statListener;
@@ -166,13 +167,15 @@ public class VideoActivity extends AppCompatActivity {
             }
 
             initViews();
+
             setupDescriptionToggle();
             checkUserHistorySetting();
             initQueueBottomSheet();
 
             String localPath = getIntent().getStringExtra("local_video_path");
             if (localPath != null) {
-                // Handle offline video
+                isOfflineMode = true; // Đánh dấu là offline
+                playLocalVideo(localPath);
                 return;
             }
 
@@ -781,6 +784,10 @@ public class VideoActivity extends AppCompatActivity {
     @Override
     protected void onStart() {
         super.onStart();
+        if (isOfflineMode) {
+            return;
+        }
+
         initializePlayer();
         startListeningToUserStatus();
     }
@@ -1388,6 +1395,45 @@ public class VideoActivity extends AppCompatActivity {
                     updateSubscribeButton();
                     updateSubscriberCount();
                 });
+    }
+    private void playLocalVideo(String path) {
+        // 1. Khởi tạo Player nếu chưa có
+        if (player == null) {
+            trackSelector = new DefaultTrackSelector(this);
+            player = new ExoPlayer.Builder(this).setTrackSelector(trackSelector).build();
+            playerView.setPlayer(player);
+            setupCustomPlayerControls();
+        }
+
+        // 2. Tạo MediaItem từ đường dẫn file
+        Uri videoUri = Uri.parse(path); // Hoặc Uri.fromFile(new File(path));
+        MediaItem mediaItem = MediaItem.fromUri(videoUri);
+
+        player.setMediaItem(mediaItem);
+        player.prepare();
+        player.play();
+
+        // 3. Cập nhật giao diện đơn giản cho Offline
+        // Lấy tên file làm tiêu đề
+        String filename = new java.io.File(path).getName().replace(".mp4", "").replace("_", " ");
+
+        tvTitle.setText(filename);
+        tvUploader.setText("Offline Video");
+        tvDescription.setText("Video downloaded on device.");
+        tvVideoStats.setText("Local File");
+
+        // 4. Ẩn các tính năng Online
+        btnSubscribe.setVisibility(View.GONE);
+        btnLike.setEnabled(false);
+        btnDislike.setEnabled(false);
+        btnShare.setEnabled(false);
+        btnDownload.setEnabled(false);
+
+        // Ẩn avatar hoặc set ảnh mặc định
+        ivChannelAvatar.setImageResource(R.drawable.ic_person); // Hoặc icon folder
+
+        // Vô hiệu hóa tính năng Queue/History cho video offline để tránh lỗi
+        // (Hoặc bạn có thể tự implement logic riêng nếu muốn)
     }
 
     private void updateSubscribeButton() {
