@@ -81,17 +81,6 @@
                 android:src="@drawable/ic_check"
                 app:tint="@color/app_main_color"/>
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/btn_edit_channel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Edit channel"
-            android:textColor="@color/app_main_color"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:paddingTop="8dp"
-            android:layout_marginStart="56dp"/>
     </LinearLayout>
 
     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#E0E0E0"/>

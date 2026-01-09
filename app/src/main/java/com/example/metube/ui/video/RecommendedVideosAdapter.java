@@ -17,6 +17,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.metube.R;
 import com.example.metube.model.Video;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
@@ -53,6 +57,7 @@ public class RecommendedVideosAdapter extends RecyclerView.Adapter<RecommendedVi
 
         holder.tvTitle.setText(video.getTitle());
         holder.tvViewCount.setText(formatViewCount(video.getViewCount()));
+        loadRealtimeViewCount(video.getVideoID(), holder.tvViewCount);
 
         // Format thời lượng
         if (video.getDuration() > 0) {
@@ -89,6 +94,36 @@ public class RecommendedVideosAdapter extends RecyclerView.Adapter<RecommendedVi
     public int getItemCount() {
         return videoList.size();
     }
+    private void loadRealtimeViewCount(String videoId, TextView tvViewCount) {
+        if (videoId == null) return;
+
+        // Dùng addListenerForSingleValueEvent để lấy 1 lần, tránh performance kém khi scroll list
+        FirebaseDatabase.getInstance().getReference("videostat")
+                .child(videoId)
+                .child("viewCount")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+                        if (snapshot.exists()) {
+                            long views = 0;
+                            Object val = snapshot.getValue();
+                            if (val instanceof Long) {
+                                views = (Long) val;
+                            } else if (val instanceof Integer) {
+                                views = ((Integer) val).longValue();
+                            }
+
+                            // Cập nhật lại UI với số view chính xác
+                            tvViewCount.setText(formatViewCount(views));
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+                        // Nếu lỗi thì giữ nguyên số cũ
+                    }
+                });
+    }
 
     private void loadChannelName(String uploaderId, TextView textView) {
         if (uploaderId == null) return;
@@ -101,6 +136,7 @@ public class RecommendedVideosAdapter extends RecyclerView.Adapter<RecommendedVi
     }
 
     private String formatViewCount(long count) {
+        if (count == 0) return "No views";
         if (count < 1000) return count + " views";
         if (count < 1000000) return String.format(Locale.US, "%.1fK views", count / 1000.0);
         return String.format(Locale.US, "%.1fM views", count / 1000000.0);
